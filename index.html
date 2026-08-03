@@ -9,163 +9,114 @@
     <meta name="theme-color" content="#007AFF">
     <link rel="manifest" href="manifest.json">
     <title>LeadCapture OCR</title>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    
+    <!-- PaddleOCR JS -->
+    <script src="https://cdn.jsdelivr.net/npm/paddleocr-js@1.0.0/dist/paddleocr.min.js"></script>
+    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: -apple-system, sans-serif; 
-            background: #f0f0f0;
-            min-height: 100vh;
-            padding-bottom: 100px;
-        }
-        .header {
-            background: linear-gradient(135deg, #007AFF, #5856D6);
-            color: white;
-            padding: 50px 20px 20px;
-            text-align: center;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
+        body { font-family: -apple-system, sans-serif; background: #f0f0f0; min-height: 100vh; padding-bottom: 100px; }
+        .header { background: linear-gradient(135deg, #007AFF, #5856D6); color: white; padding: 50px 20px 20px; text-align: center; position: sticky; top: 0; z-index: 100; }
+        .header h1 { font-size: 24px; margin-bottom: 5px; }
+        .header .badge { display: inline-block; background: #34C759; padding: 5px 15px; border-radius: 20px; font-size: 12px; margin-top: 5px; }
         .scan-area { margin: 15px; padding: 20px; background: white; border-radius: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
         .scan-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; text-align: center; }
         .video-container { position: relative; width: 100%; height: 300px; background: #000; border-radius: 15px; overflow: hidden; margin-bottom: 15px; }
         #camera { width: 100%; height: 100%; object-fit: cover; }
         #canvas { display: none; }
         .btn-group { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
-        .btn {
-            flex: 1; min-width: 120px; padding: 15px; background: #007AFF; color: white;
-            border: none; border-radius: 12px; font-size: 16px; font-weight: 600;
-            cursor: pointer; transition: all 0.2s; text-align: center;
-        }
+        .btn { flex: 1; min-width: 100px; padding: 15px; background: #007AFF; color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
         .btn:active { transform: scale(0.98); }
         .btn.secondary { background: #f0f0f0; color: #333; }
         .btn.success { background: #34C759; }
         .btn.danger { background: #FF3B30; }
         .btn.warning { background: #FF9500; }
-        
-        .result-card {
-            margin: 15px; padding: 20px; background: white; border-radius: 20px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1); display: none;
-        }
+        .result-card { margin: 15px; padding: 20px; background: white; border-radius: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); display: none; }
         .result-card.show { display: block; animation: slideUp 0.3s ease-out; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        
         .field { margin: 10px 0; padding: 12px; background: #f8f9fa; border-radius: 10px; display: flex; align-items: center; gap: 10px; }
         .field-icon { font-size: 24px; min-width: 30px; }
         .field input { flex: 1; border: none; background: transparent; font-size: 16px; outline: none; }
         .field-label { font-size: 11px; color: #999; }
-        
-        .raw-text {
-            margin: 15px; padding: 15px; background: #2d2d2d; color: #0f0; 
-            border-radius: 15px; font-size: 12px; white-space: pre-wrap;
-            max-height: 250px; overflow-y: auto; display: none; font-family: monospace;
-        }
+        .raw-text { margin: 15px; padding: 15px; background: #2d2d2d; color: #0f0; border-radius: 15px; font-size: 12px; white-space: pre-wrap; max-height: 200px; overflow-y: auto; display: none; font-family: monospace; }
         .raw-text.show { display: block; }
-        
-        .progress-bar { width: 100%; height: 5px; background: #f0f0f0; border-radius: 5px; margin: 10px 0; overflow: hidden; display: none; }
-        .progress-bar.show { display: block; }
-        .progress-fill { height: 100%; background: linear-gradient(90deg, #007AFF, #34C759); width: 0%; transition: width 0.3s; border-radius: 5px; }
-        
         .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 15px; }
         .stat-card { background: white; padding: 15px; border-radius: 15px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         .stat-value { font-size: 28px; font-weight: bold; color: #007AFF; }
         .stat-label { font-size: 12px; color: #666; margin-top: 5px; }
-        
         .leads-list { margin: 15px; }
-        .lead-card {
-            background: white; padding: 15px; border-radius: 15px; margin-bottom: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center;
-        }
+        .lead-card { background: white; padding: 15px; border-radius: 15px; margin-bottom: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
         .lead-info { flex: 1; }
         .lead-name { font-weight: bold; font-size: 16px; }
         .lead-company { font-size: 14px; color: #666; }
         .lead-email { font-size: 13px; color: #007AFF; }
-        
-        .tab-bar {
-            position: fixed; bottom: 0; width: 100%; background: white; display: flex;
-            justify-content: space-around; padding: 10px 0 30px; border-top: 1px solid #ddd;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-        }
+        .tab-bar { position: fixed; bottom: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 10px 0 30px; border-top: 1px solid #ddd; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
         .tab-item { text-align: center; font-size: 11px; color: #8e8e93; cursor: pointer; padding: 5px 10px; border-radius: 10px; }
         .tab-item.active { color: #007AFF; font-weight: bold; }
         .tab-icon { font-size: 22px; margin-bottom: 2px; }
-        
         .screen { display: none; }
         .screen.active { display: block; }
-        
-        .notification {
-            position: fixed; top: 20px; right: 20px; background: #34C759; color: white;
-            padding: 15px 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(52,199,89,0.3);
-            display: none; z-index: 1000; animation: slideIn 0.3s ease-out;
-        }
+        .notification { position: fixed; top: 20px; right: 20px; background: #34C759; color: white; padding: 15px 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(52,199,89,0.3); display: none; z-index: 1000; animation: slideIn 0.3s ease-out; }
         .notification.show { display: block; }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        
         .empty-state { text-align: center; padding: 50px 20px; color: #666; }
         .empty-icon { font-size: 60px; margin-bottom: 20px; }
         input[type="file"] { display: none; }
-        
-        .mode-selector {
-            display: flex; gap: 10px; margin-bottom: 15px;
-        }
-        .mode-btn {
-            flex: 1; padding: 10px; border: 2px solid #007AFF; background: white;
-            color: #007AFF; border-radius: 10px; cursor: pointer; font-weight: 600;
-        }
-        .mode-btn.active { background: #007AFF; color: white; }
+        .loading-spinner { text-align: center; padding: 20px; display: none; }
+        .loading-spinner.show { display: block; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #007AFF; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .progress-bar { width: 100%; height: 4px; background: #f0f0f0; border-radius: 2px; margin: 10px 0; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #007AFF, #34C759); width: 0%; transition: width 0.3s; }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>📱 LeadCapture Pro</h1>
-        <p>OCR mit Tesseract + Smart Parser</p>
+        <h1>📱 LeadCapture OCR</h1>
+        <p>PaddleOCR • 100% Kostenlos</p>
+        <span class="badge">🚀 Unbegrenzt • Kein API-Key</span>
     </div>
     
     <div class="screen active" id="scanScreen">
         <div class="scan-area">
             <div class="scan-title">📸 Visitenkarte scannen</div>
             
-            <div class="mode-selector">
-                <button class="mode-btn active" onclick="setMode('accurate')">🎯 Genau (langsam)</button>
-                <button class="mode-btn" onclick="setMode('fast')">⚡ Schnell</button>
-            </div>
-            
             <div class="video-container">
                 <video id="camera" autoplay playsinline></video>
             </div>
             <canvas id="canvas"></canvas>
             
-            <div class="progress-bar" id="progressBar">
-                <div class="progress-fill" id="progressFill"></div>
+            <div class="loading-spinner" id="loadingSpinner">
+                <div class="spinner"></div>
+                <p style="color:#666;" id="loadingText">PaddleOCR wird geladen...</p>
+                <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
             </div>
-            <div id="progressText" style="text-align:center;font-size:12px;color:#666;margin:5px 0;"></div>
             
             <div class="btn-group">
-                <button class="btn" onclick="captureAndOCR()">📷 Foto + OCR</button>
+                <button class="btn" onclick="captureAndOCR()">📷 Foto aufnehmen</button>
                 <button class="btn secondary" onclick="document.getElementById('fileInput').click()">📁 Bild wählen</button>
                 <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event)" capture="environment">
             </div>
             
             <div class="btn-group">
-                <button class="btn secondary" onclick="toggleCamera()">🔄 Kamera</button>
+                <button class="btn secondary" onclick="toggleCamera()">🔄 Kamera wechseln</button>
                 <button class="btn warning" onclick="testSample()">🧪 Testdaten</button>
             </div>
         </div>
         
         <div class="raw-text" id="rawText">
-            <strong style="color:#fff;">🔍 OCR Rohtext:</strong><br>
+            <strong style="color:#fff;">🔍 PaddleOCR Ergebnis:</strong><br>
             <span id="rawTextContent"></span>
         </div>
         
         <div class="result-card" id="resultCard">
             <h3 style="margin-bottom:15px;">✅ Extrahiert</h3>
-            <div class="field"><span class="field-icon">👤</span><div style="flex:1"><div class="field-label">Name</div><input type="text" id="fullName"></div></div>
-            <div class="field"><span class="field-icon">🏢</span><div style="flex:1"><div class="field-label">Firma</div><input type="text" id="company"></div></div>
-            <div class="field"><span class="field-icon">💼</span><div style="flex:1"><div class="field-label">Position</div><input type="text" id="position"></div></div>
-            <div class="field"><span class="field-icon">📧</span><div style="flex:1"><div class="field-label">E-Mail</div><input type="email" id="email"></div></div>
-            <div class="field"><span class="field-icon">📱</span><div style="flex:1"><div class="field-label">Telefon</div><input type="tel" id="phone"></div></div>
-            <div class="field"><span class="field-icon">🌐</span><div style="flex:1"><div class="field-label">Website</div><input type="url" id="website"></div></div>
+            <div class="field"><span class="field-icon">👤</span><div style="flex:1"><div class="field-label">Name</div><input type="text" id="fullName" placeholder="Vollständiger Name"></div></div>
+            <div class="field"><span class="field-icon">🏢</span><div style="flex:1"><div class="field-label">Firma</div><input type="text" id="company" placeholder="Firma"></div></div>
+            <div class="field"><span class="field-icon">💼</span><div style="flex:1"><div class="field-label">Position</div><input type="text" id="position" placeholder="Position"></div></div>
+            <div class="field"><span class="field-icon">📧</span><div style="flex:1"><div class="field-label">E-Mail</div><input type="email" id="email" placeholder="E-Mail"></div></div>
+            <div class="field"><span class="field-icon">📱</span><div style="flex:1"><div class="field-label">Telefon</div><input type="tel" id="phone" placeholder="Telefon"></div></div>
+            <div class="field"><span class="field-icon">🌐</span><div style="flex:1"><div class="field-label">Website</div><input type="url" id="website" placeholder="Website"></div></div>
             <div class="btn-group">
                 <button class="btn success" onclick="saveLead()">💾 Speichern</button>
                 <button class="btn danger" onclick="clearResult()">❌ Verwerfen</button>
@@ -188,8 +139,8 @@
             <h3>⚙️ Einstellungen</h3>
             <div class="field"><span class="field-icon">📅</span><input type="text" id="eventName" placeholder="Event Name"></div>
             <button class="btn success" onclick="exportLeads()">📤 CSV Export</button>
-            <button class="btn danger" onclick="clearAllLeads()">🗑️ Alle löschen</button>
-            <button class="btn warning" onclick="testSample()">🧪 OCR-Test</button>
+            <button class="btn danger" onclick="clearAllLeads()">🗑️ Alle Leads löschen</button>
+            <button class="btn secondary" onclick="testSample()">🧪 Parser-Test</button>
         </div>
     </div>
     
@@ -202,17 +153,149 @@
     <div class="notification" id="notification"></div>
 
 <script>
+// Globale Variablen
 let stream = null;
 let facingMode = 'environment';
-let ocrMode = 'accurate'; // accurate oder fast
 let leads = JSON.parse(localStorage.getItem('leads') || '[]');
+let paddleOCR = null;
 
-function setMode(mode) {
-    ocrMode = mode;
-    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-    event.target.classList.add('active');
+// ============ PADDLEOCR INITIALISIEREN ============
+async function initPaddleOCR() {
+    if (paddleOCR) return paddleOCR;
+    
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const loadingText = document.getElementById('loadingText');
+    const progressFill = document.getElementById('progressFill');
+    
+    loadingSpinner.classList.add('show');
+    loadingText.textContent = 'Lade PaddleOCR... (ca. 30MB, einmalig)';
+    progressFill.style.width = '10%';
+    
+    try {
+        paddleOCR = await PaddleOCR.create({
+            lang: 'german',
+            modelType: 'mobile'
+        });
+        
+        progressFill.style.width = '100%';
+        loadingText.textContent = '✅ PaddleOCR bereit!';
+        
+        setTimeout(() => {
+            loadingSpinner.classList.remove('show');
+        }, 1000);
+        
+        return paddleOCR;
+    } catch(e) {
+        loadingSpinner.classList.remove('show');
+        console.error('PaddleOCR Fehler:', e);
+        showNotification('❌ Fehler beim Laden von PaddleOCR');
+        return null;
+    }
 }
 
+// ============ OCR MIT PADDLEOCR ============
+async function performOCR(imageElement) {
+    const ocr = await initPaddleOCR();
+    if (!ocr) throw new Error('PaddleOCR nicht geladen');
+    
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const loadingText = document.getElementById('loadingText');
+    const progressFill = document.getElementById('progressFill');
+    
+    loadingSpinner.classList.add('show');
+    loadingText.textContent = 'Erkenne Text...';
+    progressFill.style.width = '50%';
+    
+    try {
+        const result = await ocr.recognize(imageElement);
+        
+        // Text extrahieren
+        const lines = result.text.map(item => item[1]).filter(Boolean);
+        const text = lines.join('\n');
+        
+        progressFill.style.width = '100%';
+        loadingText.textContent = '✅ Fertig!';
+        
+        setTimeout(() => {
+            loadingSpinner.classList.remove('show');
+        }, 800);
+        
+        return text;
+    } catch(e) {
+        loadingSpinner.classList.remove('show');
+        throw e;
+    }
+}
+
+// ============ SMART PARSER ============
+function parseBusinessCard(text) {
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+    const allText = text;
+    const result = { fullName: '', company: '', position: '', email: '', phone: '', website: '' };
+    
+    // E-Mail
+    const emailMatch = allText.match(/([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/);
+    if (emailMatch) result.email = emailMatch[1].toLowerCase().replace(/[,;.]$/, '');
+    
+    // Website
+    const webMatch = allText.match(/((?:https?:\/\/|www\.)[^\s,;]+)/i);
+    if (webMatch) {
+        result.website = webMatch[1].replace(/^https?:\/\//, '').replace(/[;,.]$/, '');
+    }
+    
+    // Telefon
+    const phonePatterns = [
+        /(?:\+49|0049|0)[\s\-.]?[1-9]\d{1,4}[\s\-.]?\d{3,}[\s\-.]?\d{3,}/,
+        /\+\d{1,3}[\s\-.]?\d{2,}[\s\-.]?\d{3,}[\s\-.]?\d{3,}/,
+        /(?:Tel|Fon|Mobil|Phone)[.:]?\s*([+\d][\d\s\-()\/]{7,})/i,
+        /(\d{3,}[\s\-.]\d{3,}[\s\-.]\d{3,})/
+    ];
+    for (const pattern of phonePatterns) {
+        const match = allText.match(pattern);
+        if (match) {
+            let phone = match[1] || match[0];
+            phone = phone.replace(/^(Tel|Fon|Mobil|Phone)[.:]?\s*/i, '').trim();
+            if (phone.length >= 8 && phone.length <= 20 && /\d/.test(phone)) {
+                result.phone = phone;
+                break;
+            }
+        }
+    }
+    
+    // Firma
+    const companyKeywords = ['gmbh', 'ag', 'kg', 'ohg', 'ltd', 'inc', 'corp', 'llc', 'se', 'co.', 'group', 'holding', 'solutions', 'technologies', 'systems', 'consulting'];
+    for (const line of lines) {
+        if (companyKeywords.some(kw => line.toLowerCase().includes(kw))) {
+            result.company = line;
+            break;
+        }
+    }
+    
+    // Position
+    const posKeywords = ['ceo', 'cto', 'cfo', 'chief', 'manager', 'director', 'leiter', 'head', 'vp', 'president', 'geschäftsführer', 'vorstand', 'chef', 'berater', 'consultant', 'entwickler', 'developer', 'architekt', 'engineer', 'ingenieur'];
+    for (const line of lines) {
+        if (posKeywords.some(kw => line.toLowerCase().includes(kw))) {
+            result.position = line;
+            break;
+        }
+    }
+    
+    // Name
+    for (const line of lines) {
+        const lower = line.toLowerCase();
+        if (lower.includes('@') || lower.match(/^(www\.|https?:)/i) || lower.match(/^[\+\d]/) || companyKeywords.some(kw => lower.includes(kw)) || posKeywords.some(kw => lower.includes(kw))) continue;
+        if (lower.includes('straße') || lower.includes('str.') || lower.match(/^\d{4,5}\s/)) continue;
+        const words = line.split(/[\s,]+/).filter(w => w.length > 0);
+        if (words.length >= 2 && words.length <= 4 && line.length > 5) {
+            result.fullName = line;
+            break;
+        }
+    }
+    
+    return result;
+}
+
+// ============ KAMERA ============
 async function startCamera() {
     try {
         if (stream) stream.getTracks().forEach(t => t.stop());
@@ -230,176 +313,7 @@ function toggleCamera() {
     startCamera();
 }
 
-function showNotification(msg) {
-    const n = document.getElementById('notification');
-    n.textContent = msg;
-    n.classList.add('show');
-    setTimeout(() => n.classList.remove('show'), 3000);
-}
-
-// ============ SMART OCR PARSER ============
-function parseBusinessCard(text) {
-    // Normalisiere Text
-    text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l);
-    const allText = text;
-    
-    const result = {
-        fullName: '', company: '', position: '',
-        email: '', phone: '', website: ''
-    };
-    
-    // 1. E-MAIL - sehr zuverlässig
-    const emailMatch = allText.match(/([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/);
-    if (emailMatch) result.email = emailMatch[1].toLowerCase().replace(/[;,:]$/, '');
-    
-    // 2. WEBSITE
-    const webPatterns = [
-        /(https?:\/\/[^\s,;]+)/i,
-        /(www\.[^\s,;]+\.[a-zA-Z]{2,}[^\s,;]*)/i,
-        /([a-zA-Z0-9\-]+\.[a-zA-Z]{2,}[^\s,;]*\.[a-zA-Z]{2,})/i
-    ];
-    for (const pattern of webPatterns) {
-        const m = allText.match(pattern);
-        if (m && !m[1].includes('@')) {
-            result.website = m[1].replace(/[;,.]$/, '').toLowerCase();
-            if (!result.website.startsWith('http')) result.website = 'https://' + result.website;
-            break;
-        }
-    }
-    
-    // 3. TELEFON - deutsche & internationale Formate
-    const phonePatterns = [
-        /(?:\+49|0049|0)[\s\-]?[1-9]\d{1,4}[\s\-]?\d{3,}[\s\-]?\d{3,}/g,
-        /\+\d{1,3}[\s\-]?\d{2,}[\s\-]?\d{3,}[\s\-]?\d{3,}/g,
-        /(?:Tel|Fon|Mobil|Phone)[.:]?\s*([+\d][\d\s\-()\/]{7,})/gi,
-        /(\d{3,}[\s\-]\d{3,}[\s\-]\d{3,})/g
-    ];
-    
-    for (const pattern of phonePatterns) {
-        let match;
-        while ((match = pattern.exec(allText)) !== null) {
-            let phone = match[1] || match[0];
-            phone = phone.replace(/^(Tel|Fon|Mobil|Phone)[.:]?\s*/i, '').trim();
-            // Filtere falsche Erkennungen
-            if (phone.length >= 8 && phone.length <= 20 && /\d/.test(phone)) {
-                result.phone = phone;
-                break;
-            }
-        }
-        if (result.phone) break;
-    }
-    
-    // 4. FIRMA - Schlüsselwörter
-    const companyKeywords = ['gmbh', 'ag', 'kg', 'ohg', 'ltd', 'inc', 'corp', 'llc', 'se', 'co.', 'group', 'holding', 'solutions', 'technologies', 'systems', 'consulting', 'enterprise', 'digital', 'software', 'it-', 'it '];
-    
-    for (const line of lines) {
-        const lower = line.toLowerCase();
-        if (companyKeywords.some(kw => lower.includes(kw))) {
-            result.company = line;
-            break;
-        }
-    }
-    
-    // Fallback: längste Zeile ohne @ und ohne www
-    if (!result.company) {
-        let candidates = lines.filter(l => 
-            !l.includes('@') && !l.match(/^www\./i) && !l.match(/^https?:\/\//i) &&
-            !l.match(/^[\+\d]/) && l.length > 10 && l.split(' ').length >= 2
-        );
-        if (candidates.length > 0) {
-            result.company = candidates.reduce((a,b) => a.length > b.length ? a : b);
-        }
-    }
-    
-    // 5. POSITION
-    const posKeywords = ['ceo', 'cto', 'cfo', 'coo', 'chief', 'manager', 'director', 'leiter', 'head of', 'vp', 'president', 'geschäftsführer', 'vorstand', 'chef', 'berater', 'consultant', 'entwickler', 'developer', 'architekt', 'engineer', 'ingenieur', 'designer', 'analyst', 'marketing', 'vertrieb', 'sales', 'support', 'service'];
-    
-    for (const line of lines) {
-        const lower = line.toLowerCase();
-        if (posKeywords.some(kw => lower.includes(kw))) {
-            result.position = line;
-            break;
-        }
-    }
-    
-    // 6. NAME - Heuristik
-    let nameLine = '';
-    for (const line of lines) {
-        const lower = line.toLowerCase();
-        // Ausschlusskriterien
-        if (lower.includes('@')) continue;
-        if (lower.match(/^(www\.|https?:)/)) continue;
-        if (lower.match(/^[\+\d\s\-().]{8,}$/)) continue;
-        if (lower.match(/^(tel|fon|mobil|phone)[.:]/i)) continue;
-        if (companyKeywords.some(kw => lower.includes(kw))) continue;
-        if (posKeywords.some(kw => lower.includes(kw))) continue;
-        if (lower.includes('straße') || lower.includes('str.') || lower.includes('platz') || lower.includes('weg')) continue;
-        if (lower.match(/^\d{4,5}\s/)) continue; // PLZ
-        
-        // Name: 2-4 Wörter, keine Sonderzeichen außer Bindestrich
-        const words = line.split(/[\s,]+/).filter(w => w.length > 0);
-        if (words.length >= 2 && words.length <= 4 && line.length > 5) {
-            nameLine = line;
-            break;
-        }
-    }
-    result.fullName = nameLine;
-    
-    return result;
-}
-
-// ============ OCR MIT VERBESSERTEN EINSTELLUNGEN ============
-async function performOCR(imageData) {
-    const progressBar = document.getElementById('progressBar');
-    const progressFill = document.getElementById('progressFill');
-    const progressText = document.getElementById('progressText');
-    
-    progressBar.classList.add('show');
-    progressFill.style.width = '0%';
-    progressText.textContent = 'Lade Tesseract...';
-    
-    // OCR-Einstellungen je nach Modus
-    const config = ocrMode === 'accurate' ? {
-        tessedit_pageseg_mode: '3', // Automatische Seitenerkennung
-        preserve_interword_spaces: '1',
-        user_defined_dpi: '300',
-    } : {
-        tessedit_pageseg_mode: '6', // Einheitlicher Textblock
-    };
-    
-    try {
-        const result = await Tesseract.recognize(imageData, 'deu+eng', {
-            ...config,
-            logger: m => {
-                if (m.status === 'loading tesseract core') {
-                    progressText.textContent = 'Lade OCR-Engine...';
-                } else if (m.status === 'initializing tesseract') {
-                    progressText.textContent = 'Initialisiere...';
-                } else if (m.status === 'loading language traineddata') {
-                    progressText.textContent = 'Lade Sprachdaten (Deutsch)...';
-                } else if (m.status === 'recognizing text') {
-                    progressFill.style.width = Math.round(m.progress * 100) + '%';
-                    progressText.textContent = `Erkenne Text... ${Math.round(m.progress * 100)}%`;
-                }
-            }
-        });
-        
-        progressFill.style.width = '100%';
-        progressText.textContent = '✅ Fertig!';
-        
-        setTimeout(() => {
-            progressBar.classList.remove('show');
-            progressText.textContent = '';
-        }, 1500);
-        
-        return result.data.text;
-    } catch(e) {
-        progressBar.classList.remove('show');
-        throw e;
-    }
-}
-
+// ============ OCR FLOW ============
 async function captureAndOCR() {
     const video = document.getElementById('camera');
     const canvas = document.getElementById('canvas');
@@ -408,7 +322,14 @@ async function captureAndOCR() {
     canvas.height = video.videoHeight;
     canvas.getContext('2d').drawImage(video, 0, 0);
     
-    await processOCR(canvas);
+    showNotification('🔍 PaddleOCR analysiert...');
+    
+    try {
+        const text = await performOCR(canvas);
+        processResult(text);
+    } catch(e) {
+        showNotification('❌ Fehler: ' + e.message);
+    }
 }
 
 function handleFileSelect(event) {
@@ -420,74 +341,19 @@ function handleFileSelect(event) {
         const img = new Image();
         img.src = e.target.result;
         img.onload = async function() {
-            const canvas = document.getElementById('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            canvas.getContext('2d').drawImage(img, 0, 0);
-            await processOCR(canvas);
+            showNotification('🔍 PaddleOCR analysiert...');
+            try {
+                const text = await performOCR(img);
+                processResult(text);
+            } catch(err) {
+                showNotification('❌ Fehler: ' + err.message);
+            }
         };
     };
     reader.readAsDataURL(file);
 }
 
-async function processOCR(imageSource) {
-    showNotification('🔍 OCR läuft...');
-    
-    try {
-        const text = await performOCR(imageSource);
-        
-        // Zeige Rohtext
-        document.getElementById('rawTextContent').textContent = text;
-        document.getElementById('rawText').classList.add('show');
-        
-        // Parse
-        const parsed = parseBusinessCard(text);
-        
-        // Zeige Ergebnis
-        document.getElementById('fullName').value = parsed.fullName;
-        document.getElementById('company').value = parsed.company;
-        document.getElementById('position').value = parsed.position;
-        document.getElementById('email').value = parsed.email;
-        document.getElementById('phone').value = parsed.phone;
-        document.getElementById('website').value = parsed.website;
-        document.getElementById('resultCard').classList.add('show');
-        
-        // Prüfe ob Felder leer sind
-        const filled = Object.values(parsed).filter(v => v).length;
-        showNotification(`✅ ${filled}/6 Felder erkannt`);
-        
-    } catch(e) {
-        showNotification('❌ OCR-Fehler: ' + e.message);
-    }
-}
-
-// Test mit Beispieldaten
-function testSample() {
-    const samples = [
-        `Max Mustermann
-Geschäftsführer
-Tech Innovations GmbH
-Musterstraße 123, 10115 Berlin
-max.mustermann@tech-innovations.de
-Tel: +49 30 12345678
-www.tech-innovations.de`,
-
-        `Dr. Anna Schmidt
-CTO
-Digital Solutions AG
-anna.schmidt@digitalsolutions.de
-+49 89 9876543
-Mobil: 0171 1234567`,
-
-        `Thomas Weber
-Senior Consultant
-Weber IT-Beratung GmbH
-info@weber-it.de
-www.weber-it.de
-Fon: 0221 555666`
-    ];
-    
-    const text = samples[Math.floor(Math.random() * samples.length)];
+function processResult(text) {
     document.getElementById('rawTextContent').textContent = text;
     document.getElementById('rawText').classList.add('show');
     
@@ -501,10 +367,26 @@ Fon: 0221 555666`
     document.getElementById('resultCard').classList.add('show');
     
     const filled = Object.values(parsed).filter(v => v).length;
-    showNotification(`🧪 Test: ${filled}/6 Felder erkannt`);
+    showNotification(`✅ ${filled}/6 Felder erkannt`);
 }
 
-// Lead speichern
+// ============ TEST ============
+function testSample() {
+    const text = `Max Mustermann\nGeschäftsführer\nTech Innovations GmbH\nmax.mustermann@tech-innovations.de\nTel: +49 30 12345678\nwww.tech-innovations.de`;
+    document.getElementById('rawTextContent').textContent = text;
+    document.getElementById('rawText').classList.add('show');
+    const parsed = parseBusinessCard(text);
+    document.getElementById('fullName').value = parsed.fullName;
+    document.getElementById('company').value = parsed.company;
+    document.getElementById('position').value = parsed.position;
+    document.getElementById('email').value = parsed.email;
+    document.getElementById('phone').value = parsed.phone;
+    document.getElementById('website').value = parsed.website;
+    document.getElementById('resultCard').classList.add('show');
+    showNotification('🧪 6/6 Felder erkannt!');
+}
+
+// ============ LEAD MANAGEMENT ============
 function saveLead() {
     const lead = {
         id: Date.now(),
@@ -515,7 +397,6 @@ function saveLead() {
         phone: document.getElementById('phone').value,
         website: document.getElementById('website').value,
         eventName: document.getElementById('eventName').value || 'Messe',
-        rating: 3,
         date: new Date().toISOString(),
     };
     leads.unshift(lead);
@@ -543,12 +424,11 @@ function updateLeadsList() {
     container.innerHTML = leads.map(l => `
         <div class="lead-card" onclick="if(confirm('Löschen?')){leads=leads.filter(x=>x.id!==${l.id});localStorage.setItem('leads',JSON.stringify(leads));updateLeadsList();}">
             <div class="lead-info">
-                <div class="lead-name">${l.fullName||'?'}</div>
+                <div class="lead-name">${l.fullName||'Unbekannt'}</div>
                 <div class="lead-company">${l.company||''}</div>
                 <div class="lead-email">${l.email||''}</div>
                 <small>${new Date(l.date).toLocaleDateString('de-DE')}</small>
             </div>
-            <div>${'⭐'.repeat(l.rating)}</div>
         </div>
     `).join('');
 }
@@ -585,18 +465,23 @@ function exportLeads() {
 }
 
 function clearAllLeads() {
-    if (confirm('⚠️ ALLE Leads löschen?')) {
-        leads = [];
-        localStorage.setItem('leads', JSON.stringify(leads));
-        updateLeadsList();
-        showNotification('🗑️ Gelöscht');
-    }
+    if (confirm('⚠️ ALLE Leads löschen?')) { leads = []; localStorage.setItem('leads', JSON.stringify(leads)); updateLeadsList(); showNotification('🗑️ Gelöscht'); }
 }
 
+function showNotification(msg) {
+    const n = document.getElementById('notification');
+    n.textContent = msg;
+    n.classList.add('show');
+    setTimeout(() => n.classList.remove('show'), 3000);
+}
+
+// Initialisierung
 document.addEventListener('DOMContentLoaded', () => {
     startCamera();
     updateLeadsList();
     document.getElementById('eventName').value = localStorage.getItem('eventName')||'';
+    // PaddleOCR im Hintergrund laden
+    initPaddleOCR();
 });
 document.getElementById('eventName').addEventListener('change', function(){localStorage.setItem('eventName',this.value)});
 </script>
