@@ -652,21 +652,20 @@ function cancelOCR() {
     if (currentOcrController) currentOcrController.abort();
 }
 
-async function ocrSpace(base64Image) {
-    document.getElementById('loading').classList.add('show');
-
+// Einzelner Request an OCR.space mit eigenem Timeout. Wird von ocrSpace()
+// bis zu zweimal mit unterschiedlicher Engine aufgerufen (siehe unten).
+async function ocrSpaceRequest(base64Image, engine, timeoutMs) {
     const formData = new FormData();
     formData.append('base64Image', 'data:image/jpeg;base64,' + base64Image);
     formData.append('language', 'ger');
     formData.append('isOverlayRequired', 'false');
     formData.append('detectOrientation', 'true');
     formData.append('scale', 'true');
-    formData.append('OCREngine', '2');
+    formData.append('OCREngine', String(engine));
 
-    // Harter Timeout: verhindert, dass der Ladekreis bei einer hängenden
-    // Anfrage (überlastetes API-Limit, schlechte Verbindung) endlos weiterdreht.
     currentOcrController = new AbortController();
-    const timeoutId = setTimeout(() => currentOcrController.abort(), 30000);
+    const timeoutId = setTimeout(() => currentOcrController.abort(), timeoutMs);
+    const t0 = performance.now();
 
     try {
         const resp = await fetch(OCR_URL, {
@@ -676,24 +675,52 @@ async function ocrSpace(base64Image) {
             signal: currentOcrController.signal
         });
 
+        console.log(`[OCR] Engine ${engine}: Antwort nach ${Math.round(performance.now() - t0)}ms, Status ${resp.status}`);
+
         if (!resp.ok) throw new Error('API-Fehler: ' + resp.status);
 
         const data = await resp.json();
+        console.log(`[OCR] Engine ${engine}: ExitCode ${data.OCRExitCode}`, data.ErrorMessage || '');
 
-        if (data.OCRExitCode === 1) {
-            return data.ParsedResults[0].ParsedText;
-        } else {
-            throw new Error(data.ErrorMessage || 'OCR fehlgeschlagen');
+        if ((data.OCRExitCode === 1 || data.OCRExitCode === 2) && data.ParsedResults && data.ParsedResults[0]) {
+            const parsedText = data.ParsedResults[0].ParsedText || '';
+            if (!parsedText.trim()) throw new Error('Kein Text im Bild erkannt');
+            return parsedText;
         }
-    } catch (e) {
-        if (e.name === 'AbortError') {
-            throw new Error('Abgebrochen: Zeitüberschreitung oder manuell gestoppt. Eigenen API-Key in Settings prüfen.');
-        }
-        throw e;
+        throw new Error(Array.isArray(data.ErrorMessage) ? data.ErrorMessage.join(', ') : (data.ErrorMessage || 'OCR fehlgeschlagen'));
     } finally {
         clearTimeout(timeoutId);
         currentOcrController = null;
+    }
+}
+
+async function ocrSpace(base64Image) {
+    document.getElementById('loading').classList.add('show');
+    const loadingText = document.getElementById('loadingText');
+
+    try {
+        // 1. Versuch: OCREngine 2 (genauer, aber teils langsamer) - 20s Zeitbudget
+        loadingText.textContent = 'OCR.space analysiert...';
+        try {
+            return await ocrSpaceRequest(base64Image, 2, 20000);
+        } catch (e1) {
+            if (e1.name === 'AbortError') console.log('[OCR] Engine 2 Timeout nach 20s, versuche Engine 1...');
+            else console.log('[OCR] Engine 2 fehlgeschlagen:', e1.message, '- versuche Engine 1...');
+
+            // 2. Versuch (Fallback): OCREngine 1 (schneller, etwas weniger genau) - weitere 20s
+            loadingText.textContent = 'Dauert länger als gewohnt – versuche schnellere Engine...';
+            try {
+                return await ocrSpaceRequest(base64Image, 1, 20000);
+            } catch (e2) {
+                if (e2.name === 'AbortError') {
+                    throw new Error('Zeitüberschreitung bei beiden Versuchen. Prüfe die Internetverbindung oder ob OCR.space gerade erreichbar ist (Browser-Konsole → Netzwerk-Tab zeigt den genauen Fehler).');
+                }
+                throw e2;
+            }
+        }
+    } finally {
         document.getElementById('loading').classList.remove('show');
+        loadingText.textContent = 'OCR.space analysiert...';
     }
 }
 
