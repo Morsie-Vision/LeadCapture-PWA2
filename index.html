@@ -85,6 +85,9 @@
 
 <!-- SCAN SCREEN -->
 <div class="screen active" id="scanScreen">
+    <div class="scan-area" id="apiKeyBanner" style="display:none;background:#FFF3CD;border:1px solid #FFE69C;">
+        <p style="font-size:13px;color:#664d03;">🔑 Kein OCR.space API-Key hinterlegt. <a href="#" onclick="switchTab('settings');return false;" style="color:#007AFF;font-weight:600;">Jetzt in Settings eintragen</a> (kostenlos: <a href="https://ocr.space/ocrapi" target="_blank" style="color:#007AFF;">ocr.space/ocrapi</a>).</p>
+    </div>
     <div class="scan-area">
         <div class="scan-title">📸 Visitenkarte scannen</div>
         <div class="video-container"><video id="camera" autoplay playsinline></video></div>
@@ -185,12 +188,11 @@
 
 <script>
 // ============ CONFIG ============
-const OCR_API_KEY = 'K89798848288957'; // <-- DEIN KEY
 const OCR_URL = 'https://api.ocr.space/parse/image';
 
 let stream = null, facing = 'environment';
 let leads = JSON.parse(localStorage.getItem('leads') || '[]');
-let apiKey = localStorage.getItem('ocrspace_key') || OCR_API_KEY;
+let apiKey = localStorage.getItem('ocrspace_key') || '';
 let lastRawText = '';
 
 // ============ KAMERA ============
@@ -639,7 +641,12 @@ async function ocrSpace(base64Image) {
 }
 
 async function doOCR(b64) {
-    if (!apiKey || apiKey === 'DEIN_API_KEY_HIER') { toast('❌ Bitte API-Key in Settings eingeben'); return; }
+    if (!apiKey) {
+        toast('❌ Bitte eigenen OCR.space API-Key in Settings eintragen');
+        switchTab('settings');
+        document.getElementById('apiKeyInput').focus();
+        return;
+    }
     if (ocrInProgress) { toast('⏳ Scan läuft noch...'); return; }
     ocrInProgress = true;
     toast('🔍 OCR.space scannt...');
@@ -731,14 +738,26 @@ function exportCSV() {
 }
 
 function clearAll() { if (confirm('Alle Leads löschen?')) { leads = []; localStorage.setItem('leads', JSON.stringify(leads)); updateList(); toast('🗑️ Gelöscht'); } }
-function saveApiKey() { apiKey = document.getElementById('apiKeyInput').value; localStorage.setItem('ocrspace_key', apiKey); toast('✅ Key gespeichert'); }
+function saveApiKey() {
+    const val = document.getElementById('apiKeyInput').value.trim();
+    if (!val) { toast('❌ Bitte einen Key eingeben'); return; }
+    apiKey = val;
+    localStorage.setItem('ocrspace_key', apiKey);
+    updateApiKeyBanner();
+    toast('✅ Key gespeichert');
+}
 function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2500); }
+
+function updateApiKeyBanner() {
+    document.getElementById('apiKeyBanner').style.display = apiKey ? 'none' : 'block';
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     startCam();
     updateList();
     document.getElementById('eventName').value = localStorage.getItem('eventName')||'';
     document.getElementById('apiKeyInput').value = apiKey;
+    updateApiKeyBanner();
     renderQuestionList();
     toggleOptionsInput();
 });
