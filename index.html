@@ -62,6 +62,18 @@
         @keyframes spin { to { transform: rotate(360deg); } }
         .raw-text-box { margin: 12px; padding: 12px; background: #1a1a1a; color: #0f0; border-radius: 12px; font-size: 11px; font-family: monospace; white-space: pre-wrap; max-height: 150px; overflow-y: auto; display: none; }
         .raw-text-box.show { display: block; }
+        .q-block { margin: 10px 0; padding: 12px; background: #f2f2f7; border-radius: 10px; }
+        .q-label { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+        .choice-row { display: flex; flex-wrap: wrap; gap: 6px; }
+        .choice-btn { padding: 8px 12px; background: white; border: 1px solid #d1d1d6; border-radius: 20px; font-size: 13px; cursor: pointer; }
+        .choice-btn.selected { background: #007AFF; color: white; border-color: #007AFF; }
+        .rating-row { display: flex; gap: 6px; font-size: 26px; cursor: pointer; }
+        .rating-star { opacity: 0.3; }
+        .rating-star.selected { opacity: 1; }
+        .q-item { background: white; border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .q-item-text { font-size: 14px; font-weight: 500; }
+        .q-item-type { font-size: 11px; color: #8e8e93; margin-top: 2px; }
+        .q-edit-box { background: white; border-radius: 12px; padding: 12px; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -109,6 +121,7 @@
         <div class="field"><span class="field-icon">📧</span><div class="field-input-wrap"><div class="field-label">E-Mail</div><input type="email" id="fEmail" placeholder="max@firma.de"></div></div>
         <div class="field"><span class="field-icon">📱</span><div class="field-input-wrap"><div class="field-label">Telefon</div><input type="tel" id="fPhone" placeholder="+49 123 456789"></div></div>
         <div class="field"><span class="field-icon">🌐</span><div class="field-input-wrap"><div class="field-label">Website</div><input type="url" id="fWeb" placeholder="www.firma.de"></div></div>
+        <div id="questionnaireFields"></div>
         <div class="btn-group" style="margin-top:12px;">
             <button class="btn green" onclick="saveLead()">💾 Speichern</button>
             <button class="btn red" onclick="clearResult()">❌</button>
@@ -135,6 +148,28 @@
         <button class="btn green" onclick="saveApiKey()" style="margin-top:8px;">💾 Key speichern</button>
         <button class="btn" onclick="exportCSV()" style="margin-top:8px;">📤 CSV Export</button>
         <button class="btn red" onclick="clearAll()" style="margin-top:8px;">🗑️ Alle löschen</button>
+    </div>
+
+    <!-- FRAGEBOGEN-VERWALTUNG -->
+    <div class="scan-area">
+        <h3 style="margin-bottom:6px;">📋 Fragebogen</h3>
+        <p style="font-size:12px;color:#8e8e93;margin-bottom:10px;">Diese Fragen werden nach jedem Scan zusätzlich abgefragt und mit dem Lead sowie im CSV-Export gespeichert.</p>
+        <div id="questionList"></div>
+
+        <div class="q-edit-box">
+            <div class="field"><span class="field-icon">❓</span><div class="field-input-wrap"><div class="field-label">Frage</div><input type="text" id="newQText" placeholder="z.B. Interesse an Produkt X?"></div></div>
+            <div class="field"><span class="field-icon">🔧</span><div class="field-input-wrap"><div class="field-label">Typ</div>
+                <select id="newQType" style="width:100%;border:none;background:transparent;font-size:16px;outline:none;padding:2px 0;" onchange="toggleOptionsInput()">
+                    <option value="text">Freitext</option>
+                    <option value="yesno">Ja / Nein</option>
+                    <option value="choice">Einfachauswahl</option>
+                    <option value="multichoice">Mehrfachauswahl</option>
+                    <option value="rating">Bewertung (1–5)</option>
+                </select>
+            </div></div>
+            <div class="field" id="newQOptionsWrap" style="display:none;"><span class="field-icon">📝</span><div class="field-input-wrap"><div class="field-label">Optionen (Komma-getrennt)</div><input type="text" id="newQOptions" placeholder="Ja, Nein, Vielleicht"></div></div>
+            <button class="btn" style="margin-top:8px;" onclick="addQuestion()">➕ Frage hinzufügen</button>
+        </div>
     </div>
 </div>
 
@@ -248,7 +283,7 @@ function parseBusinessCard(text) {
     // Priorität: explizites Label > www./http-Zeile > generische Domain.
     // E-Mail-Zeilen werden dabei ausgeschlossen, damit nicht versehentlich
     // die Domain aus der E-Mail-Adresse als "Website" gezogen wird.
-    const webLabelRegex = /(?:web|website|internet|homepage)[.:]?\s*(\S+)/i;
+    const webLabelRegex = /\b(?:website|web|internet|homepage)\b[.:]?\s*(\S+)/i;
     const wwwRegex = /((?:https?:\/\/)?www\.[a-zA-Z0-9\-]+\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?[^\s,;]*)/i;
     const httpRegex = /(https?:\/\/[^\s,;]+)/i;
     const genericDomainRegex = /\b([a-zA-Z0-9\-]+\.(?:de|com|net|org|io|at|ch|eu|info|biz|shop|online))\b/i;
@@ -275,8 +310,9 @@ function parseBusinessCard(text) {
 
     // ---------- 3. TELEFON ----------
     // Mobil-/Handy-Nummern haben Priorität vor Festnetz, Fax wird ignoriert.
-    const mobileLabelRegex = /(mobil|handy|mobile|cell)[.:]?\s*([+\d][\d\s\-()\/]{5,})/i;
-    const telLabelRegex = /(tel|fon|phone|telefon)[.:]?\s*([+\d][\d\s\-()\/]{5,})/i;
+    // \b sorgt dafür, dass z.B. "Tel" nicht versehentlich in einem Wort wie "Hotel" matcht.
+    const mobileLabelRegex = /\b(?:mobil|handy|mobile|cell)\b[.:]?\s*([+\d][\d\s\-()\/]{5,})/i;
+    const telLabelRegex = /\b(?:tel|fon|phone|telefon)\b[.:]?\s*([+\d][\d\s\-()\/]{5,})/i;
     const genericPhoneRegex = /(\+\d{1,3}\s*(?:\(\d+\))?[\d\s\-.\/]{6,}|0\d{2,5}[\s\-.\/]\d{3,}[\s\-.\/]?\d{0,})/;
 
     let mobilePhone = '', telPhone = '', genericPhone = '';
@@ -285,11 +321,11 @@ function parseBusinessCard(text) {
 
         if (!mobilePhone) {
             const m = line.match(mobileLabelRegex);
-            if (m) mobilePhone = cleanPhone(m[2]);
+            if (m) mobilePhone = cleanPhone(m[1]);
         }
         if (!telPhone) {
             const m = line.match(telLabelRegex);
-            if (m) telPhone = cleanPhone(m[2]);
+            if (m) telPhone = cleanPhone(m[1]);
         }
         if (!genericPhone) {
             const m = line.match(genericPhoneRegex);
@@ -309,7 +345,7 @@ function parseBusinessCard(text) {
         'engineer', 'ingenieur', 'sales', 'vertrieb', 'marketing', 'projektleiter', 'teamleiter',
         'abteilungsleiter', 'assistenz', 'sachbearbeiter', 'key account', 'account manager'];
 
-    let companyLine = '', positionLine = '';
+    let companyLine = '', positionLine = '', companyConfident = false;
     const nameCandidates = [];
 
     lines.forEach((line, idx) => {
@@ -322,14 +358,36 @@ function parseBusinessCard(text) {
         if (/(straße|strasse|str\.|platz|weg\s|allee)/i.test(lower)) return;
         if (/^(tel|fon|mobil|phone|telefon|handy|fax)[.:]/i.test(lower)) return;
 
-        // Firma: erste passende Zeile gewinnt (nicht die letzte)
-        if (companyEndings.some(e => containsWord(lower, e))) {
-            if (!companyLine) companyLine = line;
+        // Explizite Labels haben Vorrang vor jeder Heuristik ("Firma:", "Name:", ...)
+        const companyLabel = /^(firma|company|unternehmen)[.:]\s*(.+)/i.exec(line);
+        if (companyLabel) {
+            if (!companyLine) { companyLine = companyLabel[2].trim(); companyConfident = true; }
+            return;
+        }
+        const nameLabel = /^(name|kontakt|ansprechpartner)[.:]\s*(.+)/i.exec(line);
+        if (nameLabel) {
+            nameCandidates.push({ line: nameLabel[2].trim(), score: 10 });
+            return;
+        }
+        const positionLabel = /^(position|funktion|titel|rolle)[.:]\s*(.+)/i.exec(line);
+        if (positionLabel) {
+            if (!positionLine) positionLine = positionLabel[2].trim();
             return;
         }
 
-        // Position: ebenfalls erste passende Zeile
-        if (positionKeywords.some(k => containsWord(lower, k))) {
+        // Firma über Rechtsform-Zusatz: erste passende Zeile gewinnt (nicht die letzte)
+        if (companyEndings.some(e => containsWord(lower, e))) {
+            if (!companyLine) { companyLine = line; companyConfident = true; }
+            return;
+        }
+
+        // Position: Schlüsselwörter direkt oder als Wortende (deutsche Komposita
+        // wie "Einkaufsleiter", "Objektmanager" enthalten den Begriff ohne Leerzeichen)
+        const positionSuffixes = ['leiter', 'leiterin', 'manager', 'managerin', 'berater', 'beraterin'];
+        const lineWords = lower.replace(/[:.,]/g, '').split(/\s+/);
+        const isPosition = positionKeywords.some(k => containsWord(lower, k)) ||
+            lineWords.some(w => positionSuffixes.some(s => w.endsWith(s) && w.length > s.length));
+        if (isPosition) {
             if (!positionLine) positionLine = line;
             return;
         }
@@ -345,14 +403,36 @@ function parseBusinessCard(text) {
         if (capitalizedWords === words.length) score += 2; // "Max Mustermann" statt Fließtext
         if (idx < 4) score += 2; // Name steht meist oben auf der Karte
         if (words.length <= 3) score += 1; // Vor-/Nachname eher kurz
+        if (line === line.toUpperCase()) score -= 2; // GROSSSCHRIFT deutet eher auf Firmenlogo/-schriftzug hin
+        if (line.includes('&')) score -= 2; // "&" deutet eher auf Firmenname hin (z.B. "Vision & Control")
 
         nameCandidates.push({ line, score });
     });
 
-    let nameLine = '';
-    if (nameCandidates.length) {
-        nameCandidates.sort((a, b) => b.score - a.score);
-        nameLine = nameCandidates[0].line;
+    nameCandidates.sort((a, b) => b.score - a.score);
+    let nameLine = nameCandidates.length ? nameCandidates[0].line : '';
+
+    // Fallback für Firmen OHNE Rechtsform-Zusatz (z.B. "Vision & Control" statt "Vision & Control GmbH"):
+    // Unter den übrigen Kandidaten nach typischen Firmen-Signalen suchen (Großschrift, "&"),
+    // dabei die bereits gewählte Namenszeile ausschließen.
+    if (!companyLine) {
+        const fallback = nameCandidates.find(c =>
+            c.line !== nameLine &&
+            (c.line === c.line.toUpperCase() || c.line.includes('&'))
+        );
+        if (fallback) companyLine = fallback.line;
+    }
+
+    // Sicherheitsnetz: Firma und Name dürfen niemals identisch sein.
+    if (companyLine && nameLine && companyLine.trim().toLowerCase() === nameLine.trim().toLowerCase()) {
+        const alt = nameCandidates.find(c => c.line.trim().toLowerCase() !== companyLine.trim().toLowerCase());
+        if (alt) {
+            nameLine = alt.line; // nächstbester Namens-Kandidat
+        } else if (!companyConfident) {
+            companyLine = ''; // keine Alternative und Firma war nur geraten -> lieber leer lassen
+        } else {
+            nameLine = ''; // Firma stand sicher fest (Rechtsform/Label) -> Namensfeld leer statt Duplikat
+        }
     }
 
     // Name aufteilen
@@ -379,6 +459,108 @@ function parseBusinessCard(text) {
     result.position = positionLine;
 
     return result;
+}
+
+// ============ FRAGEBOGEN ============
+let questionnaire = JSON.parse(localStorage.getItem('questionnaire') || '[]');
+let currentAnswers = {};
+
+function saveQuestionnaire() { localStorage.setItem('questionnaire', JSON.stringify(questionnaire)); }
+
+function toggleOptionsInput() {
+    const type = document.getElementById('newQType').value;
+    document.getElementById('newQOptionsWrap').style.display = (type === 'choice' || type === 'multichoice') ? 'flex' : 'none';
+}
+
+function addQuestion() {
+    const text = document.getElementById('newQText').value.trim();
+    const type = document.getElementById('newQType').value;
+    if (!text) { toast('❌ Bitte Fragetext eingeben'); return; }
+    let options = [];
+    if (type === 'choice' || type === 'multichoice') {
+        options = document.getElementById('newQOptions').value.split(',').map(o => o.trim()).filter(o => o);
+        if (options.length < 2) { toast('❌ Mind. 2 Optionen angeben'); return; }
+    }
+    questionnaire.push({ id: 'q' + Date.now(), text, type, options });
+    saveQuestionnaire();
+    document.getElementById('newQText').value = '';
+    document.getElementById('newQOptions').value = '';
+    document.getElementById('newQType').value = 'text';
+    toggleOptionsInput();
+    renderQuestionList();
+    toast('✅ Frage hinzugefügt');
+}
+
+function deleteQuestion(id) {
+    if (!confirm('Frage löschen?')) return;
+    questionnaire = questionnaire.filter(q => q.id !== id);
+    saveQuestionnaire();
+    renderQuestionList();
+}
+
+function renderQuestionList() {
+    const c = document.getElementById('questionList');
+    if (!questionnaire.length) { c.innerHTML = '<p style="font-size:12px;color:#8e8e93;">Noch keine Fragen angelegt.</p>'; return; }
+    const typeLabels = { text: 'Freitext', yesno: 'Ja/Nein', choice: 'Einfachauswahl', multichoice: 'Mehrfachauswahl', rating: 'Bewertung 1–5' };
+    c.innerHTML = questionnaire.map(q => `<div class="q-item"><div><div class="q-item-text">${q.text}</div><div class="q-item-type">${typeLabels[q.type] || q.type}${q.options && q.options.length ? ': ' + q.options.join(', ') : ''}</div></div><div onclick="deleteQuestion('${q.id}')" style="cursor:pointer;">🗑️</div></div>`).join('');
+}
+
+function renderQuestionnaireFields() {
+    currentAnswers = {};
+    const c = document.getElementById('questionnaireFields');
+    if (!questionnaire.length) { c.innerHTML = ''; return; }
+
+    c.innerHTML = '<h3 style="margin:16px 0 8px;font-size:15px;">📋 Fragebogen</h3>' + questionnaire.map(q => {
+        if (q.type === 'text') {
+            return `<div class="q-block"><div class="q-label">${q.text}</div><input type="text" style="width:100%;padding:8px;border-radius:8px;border:1px solid #d1d1d6;font-size:14px;" oninput="currentAnswers['${q.id}']=this.value"></div>`;
+        }
+        if (q.type === 'yesno') {
+            return `<div class="q-block"><div class="q-label">${q.text}</div><div class="choice-row">
+                <button type="button" class="choice-btn" onclick="selectSingleAnswer('${q.id}','Ja',this)">Ja</button>
+                <button type="button" class="choice-btn" onclick="selectSingleAnswer('${q.id}','Nein',this)">Nein</button>
+            </div></div>`;
+        }
+        if (q.type === 'choice') {
+            return `<div class="q-block"><div class="q-label">${q.text}</div><div class="choice-row">${q.options.map(o => `<button type="button" class="choice-btn" onclick="selectSingleAnswer('${q.id}','${o.replace(/'/g, "\\'")}',this)">${o}</button>`).join('')}</div></div>`;
+        }
+        if (q.type === 'multichoice') {
+            return `<div class="q-block"><div class="q-label">${q.text}</div><div class="choice-row">${q.options.map(o => `<button type="button" class="choice-btn" onclick="toggleMultiAnswer('${q.id}','${o.replace(/'/g, "\\'")}',this)">${o}</button>`).join('')}</div></div>`;
+        }
+        if (q.type === 'rating') {
+            return `<div class="q-block"><div class="q-label">${q.text}</div><div class="rating-row" id="rating-${q.id}">${[1, 2, 3, 4, 5].map(n => `<span class="rating-star" onclick="selectRating('${q.id}',${n})">★</span>`).join('')}</div></div>`;
+        }
+        return '';
+    }).join('');
+}
+
+function selectSingleAnswer(qid, value, btn) {
+    currentAnswers[qid] = value;
+    btn.parentElement.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+}
+
+function toggleMultiAnswer(qid, value, btn) {
+    if (!Array.isArray(currentAnswers[qid])) currentAnswers[qid] = [];
+    const idx = currentAnswers[qid].indexOf(value);
+    if (idx > -1) { currentAnswers[qid].splice(idx, 1); btn.classList.remove('selected'); }
+    else { currentAnswers[qid].push(value); btn.classList.add('selected'); }
+}
+
+function selectRating(qid, n) {
+    currentAnswers[qid] = n;
+    document.getElementById('rating-' + qid).querySelectorAll('.rating-star').forEach((s, i) => s.classList.toggle('selected', i < n));
+}
+
+function collectAnswers() {
+    // Wandelt die internen Antworten in eine {Fragetext: Antwort}-Struktur um,
+    // damit Anzeige & CSV-Export unabhängig von der Fragen-ID lesbar bleiben.
+    const out = {};
+    questionnaire.forEach(q => {
+        let val = currentAnswers[q.id];
+        if (Array.isArray(val)) val = val.join(', ');
+        out[q.text] = val || '';
+    });
+    return out;
 }
 
 // ============ OCR FLOW ============
@@ -425,6 +607,7 @@ function showResult(p) {
     document.getElementById('fEmail').value = p.email || '';
     document.getElementById('fPhone').value = p.phone || '';
     document.getElementById('fWeb').value = p.web || '';
+    renderQuestionnaireFields();
     document.getElementById('resultCard').classList.add('show');
 }
 
@@ -444,6 +627,7 @@ function saveLead() {
         email: document.getElementById('fEmail').value,
         phone: document.getElementById('fPhone').value,
         web: document.getElementById('fWeb').value,
+        answers: collectAnswers(),
         event: document.getElementById('eventName').value || 'Messe',
         date: new Date().toISOString()
     };
@@ -460,7 +644,10 @@ function updateList() {
     document.getElementById('todayLeads').textContent = leads.filter(l => new Date(l.date).toDateString() === today).length;
     const c = document.getElementById('leadsList');
     if (!leads.length) { c.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>Keine Leads</p></div>'; return; }
-    c.innerHTML = leads.map(l => `<div class="lead-card" onclick="if(confirm('Löschen?')){leads=leads.filter(x=>x.id!==${l.id});localStorage.setItem('leads',JSON.stringify(leads));updateList();}"><div><div class="lead-name">${l.firstName||''} ${l.lastName||''}</div><div class="lead-detail">${l.company||''} • ${l.position||''}</div><div class="lead-detail" style="color:#007AFF;">${l.email||''} • ${l.phone||''}</div></div><div>🗑️</div></div>`).join('');
+    c.innerHTML = leads.map(l => {
+        const answeredCount = l.answers ? Object.values(l.answers).filter(v => v).length : 0;
+        return `<div class="lead-card" onclick="if(confirm('Löschen?')){leads=leads.filter(x=>x.id!==${l.id});localStorage.setItem('leads',JSON.stringify(leads));updateList();}"><div><div class="lead-name">${l.firstName || ''} ${l.lastName || ''}</div><div class="lead-detail">${l.company || ''} • ${l.position || ''}</div><div class="lead-detail" style="color:#007AFF;">${l.email || ''} • ${l.phone || ''}</div>${answeredCount ? `<div class="lead-detail">📋 ${answeredCount} Antwort${answeredCount > 1 ? 'en' : ''}</div>` : ''}</div><div>🗑️</div></div>`;
+    }).join('');
 }
 
 function switchTab(t) {
@@ -468,13 +655,19 @@ function switchTab(t) {
     document.querySelectorAll('.tab-item').forEach(i => i.classList.remove('active'));
     if (t === 'scan') { document.getElementById('scanScreen').classList.add('active'); document.querySelectorAll('.tab-item')[0].classList.add('active'); startCam(); }
     else if (t === 'leads') { document.getElementById('leadsScreen').classList.add('active'); document.querySelectorAll('.tab-item')[1].classList.add('active'); updateList(); if(stream) stream.getTracks().forEach(tr => tr.stop()); }
-    else { document.getElementById('settingsScreen').classList.add('active'); document.querySelectorAll('.tab-item')[2].classList.add('active'); if(stream) stream.getTracks().forEach(tr => tr.stop()); document.getElementById('apiKeyInput').value = apiKey; }
+    else { document.getElementById('settingsScreen').classList.add('active'); document.querySelectorAll('.tab-item')[2].classList.add('active'); if(stream) stream.getTracks().forEach(tr => tr.stop()); document.getElementById('apiKeyInput').value = apiKey; renderQuestionList(); }
 }
 
 function exportCSV() {
     if (!leads.length) { toast('❌ Keine Leads'); return; }
-    let csv = 'Vorname,Nachname,Firma,Position,E-Mail,Telefon,Website,Event,Datum\n';
-    leads.forEach(l => csv += `"${l.firstName}","${l.lastName}","${l.company}","${l.position}","${l.email}","${l.phone}","${l.web}","${l.event}","${new Date(l.date).toLocaleDateString('de-DE')}"\n`);
+    const qHeaders = questionnaire.map(q => q.text);
+    const esc = s => `"${(s || '').toString().replace(/"/g, '""')}"`;
+    let csv = 'Vorname,Nachname,Firma,Position,E-Mail,Telefon,Website,Event,Datum' + (qHeaders.length ? ',' + qHeaders.map(esc).join(',') : '') + '\n';
+    leads.forEach(l => {
+        let row = `${esc(l.firstName)},${esc(l.lastName)},${esc(l.company)},${esc(l.position)},${esc(l.email)},${esc(l.phone)},${esc(l.web)},${esc(l.event)},${esc(new Date(l.date).toLocaleDateString('de-DE'))}`;
+        if (qHeaders.length) row += ',' + qHeaders.map(h => esc(l.answers && l.answers[h])).join(',');
+        csv += row + '\n';
+    });
     const b = new Blob(['\ufeff'+csv],{type:'text/csv'});
     const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'leads.csv'; a.click();
     toast('📤 Exportiert!');
@@ -489,6 +682,8 @@ document.addEventListener('DOMContentLoaded', () => {
     updateList();
     document.getElementById('eventName').value = localStorage.getItem('eventName')||'';
     document.getElementById('apiKeyInput').value = apiKey;
+    renderQuestionList();
+    toggleOptionsInput();
 });
 document.getElementById('eventName').addEventListener('change', function(){localStorage.setItem('eventName',this.value)});
 </script>
