@@ -7,7 +7,6 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="LeadCapture">
     <meta name="theme-color" content="#007AFF">
-    <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="manifest" href="manifest.json">
     <title>LeadCapture OCR</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -28,103 +27,16 @@
             top: 0;
             z-index: 100;
         }
-        .header h1 { font-size: 24px; margin-bottom: 5px; }
-        .header p { font-size: 14px; opacity: 0.9; }
-        
-        .stats {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            padding: 15px;
-        }
-        .stat-card {
-            background: white;
-            padding: 15px;
-            border-radius: 15px;
-            text-align: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .stat-value {
-            font-size: 28px;
-            font-weight: bold;
-            color: #007AFF;
-        }
-        .stat-label { font-size: 12px; color: #666; margin-top: 5px; }
-        
-        .scan-area {
-            margin: 15px;
-            padding: 20px;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-        }
-        .scan-title {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-        
-        .video-container {
-            position: relative;
-            width: 100%;
-            height: 300px;
-            background: #000;
-            border-radius: 15px;
-            overflow: hidden;
-            margin-bottom: 15px;
-        }
-        #camera {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        #canvas {
-            display: none;
-        }
-        
-        .scan-overlay {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 80%;
-            height: 60%;
-            border: 3px solid #007AFF;
-            border-radius: 10px;
-            pointer-events: none;
-        }
-        .scan-overlay::before {
-            content: 'Visitenkarte hier positionieren';
-            position: absolute;
-            top: -25px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,122,255,0.9);
-            color: white;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 12px;
-            white-space: nowrap;
-        }
-        
-        .btn-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
+        .scan-area { margin: 15px; padding: 20px; background: white; border-radius: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+        .scan-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; text-align: center; }
+        .video-container { position: relative; width: 100%; height: 300px; background: #000; border-radius: 15px; overflow: hidden; margin-bottom: 15px; }
+        #camera { width: 100%; height: 100%; object-fit: cover; }
+        #canvas { display: none; }
+        .btn-group { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
         .btn {
-            flex: 1;
-            padding: 15px;
-            background: #007AFF;
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-align: center;
+            flex: 1; min-width: 120px; padding: 15px; background: #007AFF; color: white;
+            border: none; border-radius: 12px; font-size: 16px; font-weight: 600;
+            cursor: pointer; transition: all 0.2s; text-align: center;
         }
         .btn:active { transform: scale(0.98); }
         .btn.secondary { background: #f0f0f0; color: #333; }
@@ -133,745 +45,560 @@
         .btn.warning { background: #FF9500; }
         
         .result-card {
-            margin: 15px;
-            padding: 20px;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-            display: none;
+            margin: 15px; padding: 20px; background: white; border-radius: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1); display: none;
         }
         .result-card.show { display: block; animation: slideUp 0.3s ease-out; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .field {
-            margin: 10px 0;
-            padding: 12px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .field-icon { font-size: 24px; }
-        .field input {
-            flex: 1;
-            border: none;
-            background: transparent;
-            font-size: 16px;
-            outline: none;
-        }
-        .field-label {
-            font-size: 11px;
-            color: #999;
-            margin-bottom: 2px;
-        }
+        .field { margin: 10px 0; padding: 12px; background: #f8f9fa; border-radius: 10px; display: flex; align-items: center; gap: 10px; }
+        .field-icon { font-size: 24px; min-width: 30px; }
+        .field input { flex: 1; border: none; background: transparent; font-size: 16px; outline: none; }
+        .field-label { font-size: 11px; color: #999; }
         
         .raw-text {
-            margin: 15px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 15px;
-            font-size: 13px;
-            white-space: pre-wrap;
-            max-height: 200px;
-            overflow-y: auto;
-            display: none;
+            margin: 15px; padding: 15px; background: #2d2d2d; color: #0f0; 
+            border-radius: 15px; font-size: 12px; white-space: pre-wrap;
+            max-height: 250px; overflow-y: auto; display: none; font-family: monospace;
         }
         .raw-text.show { display: block; }
         
-        .progress-bar {
-            width: 100%;
-            height: 5px;
-            background: #f0f0f0;
-            border-radius: 5px;
-            margin: 10px 0;
-            overflow: hidden;
-            display: none;
-        }
+        .progress-bar { width: 100%; height: 5px; background: #f0f0f0; border-radius: 5px; margin: 10px 0; overflow: hidden; display: none; }
         .progress-bar.show { display: block; }
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #007AFF, #34C759);
-            width: 0%;
-            transition: width 0.3s;
-            border-radius: 5px;
-        }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #007AFF, #34C759); width: 0%; transition: width 0.3s; border-radius: 5px; }
         
-        .leads-list {
-            margin: 15px;
-        }
+        .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 15px; }
+        .stat-card { background: white; padding: 15px; border-radius: 15px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .stat-value { font-size: 28px; font-weight: bold; color: #007AFF; }
+        .stat-label { font-size: 12px; color: #666; margin-top: 5px; }
+        
+        .leads-list { margin: 15px; }
         .lead-card {
-            background: white;
-            padding: 15px;
-            border-radius: 15px;
-            margin-bottom: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            background: white; padding: 15px; border-radius: 15px; margin-bottom: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center;
         }
         .lead-info { flex: 1; }
         .lead-name { font-weight: bold; font-size: 16px; }
         .lead-company { font-size: 14px; color: #666; }
         .lead-email { font-size: 13px; color: #007AFF; }
-        .lead-rating { font-size: 18px; }
         
         .tab-bar {
-            position: fixed;
-            bottom: 0;
-            width: 100%;
-            background: white;
-            display: flex;
-            justify-content: space-around;
-            padding: 10px 0 30px;
-            border-top: 1px solid #ddd;
+            position: fixed; bottom: 0; width: 100%; background: white; display: flex;
+            justify-content: space-around; padding: 10px 0 30px; border-top: 1px solid #ddd;
             box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
         }
-        .tab-item {
-            text-align: center;
-            font-size: 11px;
-            color: #8e8e93;
-            cursor: pointer;
-            transition: all 0.2s;
-            padding: 5px 10px;
-            border-radius: 10px;
-        }
-        .tab-item.active { color: #007AFF; }
+        .tab-item { text-align: center; font-size: 11px; color: #8e8e93; cursor: pointer; padding: 5px 10px; border-radius: 10px; }
+        .tab-item.active { color: #007AFF; font-weight: bold; }
         .tab-icon { font-size: 22px; margin-bottom: 2px; }
         
         .screen { display: none; }
         .screen.active { display: block; }
         
         .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #34C759;
-            color: white;
-            padding: 15px 20px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(52,199,89,0.3);
-            display: none;
-            z-index: 1000;
-            animation: slideIn 0.3s ease-out;
+            position: fixed; top: 20px; right: 20px; background: #34C759; color: white;
+            padding: 15px 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(52,199,89,0.3);
+            display: none; z-index: 1000; animation: slideIn 0.3s ease-out;
         }
         .notification.show { display: block; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        
-        .empty-state {
-            text-align: center;
-            padding: 50px 20px;
-            color: #666;
-        }
+        .empty-state { text-align: center; padding: 50px 20px; color: #666; }
         .empty-icon { font-size: 60px; margin-bottom: 20px; }
-        
         input[type="file"] { display: none; }
+        
+        .mode-selector {
+            display: flex; gap: 10px; margin-bottom: 15px;
+        }
+        .mode-btn {
+            flex: 1; padding: 10px; border: 2px solid #007AFF; background: white;
+            color: #007AFF; border-radius: 10px; cursor: pointer; font-weight: 600;
+        }
+        .mode-btn.active { background: #007AFF; color: white; }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>📱 LeadCapture OCR</h1>
-        <p>Visitenkarten & QR-Codes scannen</p>
+        <h1>📱 LeadCapture Pro</h1>
+        <p>OCR mit Tesseract + Smart Parser</p>
     </div>
     
-    <!-- Screen 1: Scan -->
     <div class="screen active" id="scanScreen">
         <div class="scan-area">
             <div class="scan-title">📸 Visitenkarte scannen</div>
             
+            <div class="mode-selector">
+                <button class="mode-btn active" onclick="setMode('accurate')">🎯 Genau (langsam)</button>
+                <button class="mode-btn" onclick="setMode('fast')">⚡ Schnell</button>
+            </div>
+            
             <div class="video-container">
                 <video id="camera" autoplay playsinline></video>
-                <div class="scan-overlay"></div>
             </div>
             <canvas id="canvas"></canvas>
             
             <div class="progress-bar" id="progressBar">
                 <div class="progress-fill" id="progressFill"></div>
             </div>
+            <div id="progressText" style="text-align:center;font-size:12px;color:#666;margin:5px 0;"></div>
             
             <div class="btn-group">
-                <button class="btn" onclick="captureAndOCR()">📷 Foto aufnehmen</button>
+                <button class="btn" onclick="captureAndOCR()">📷 Foto + OCR</button>
                 <button class="btn secondary" onclick="document.getElementById('fileInput').click()">📁 Bild wählen</button>
                 <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event)" capture="environment">
             </div>
             
             <div class="btn-group">
-                <button class="btn secondary" onclick="toggleCamera()">🔄 Kamera wechseln</button>
-                <button class="btn warning" onclick="testWithSample()">🧪 Test mit Beispieldaten</button>
-            </div>
-        </div>
-        
-        <div class="result-card" id="resultCard">
-            <h3 style="margin-bottom: 15px;">✅ Erkannter Kontakt</h3>
-            <div class="field">
-                <span class="field-icon">👤</span>
-                <div style="flex:1">
-                    <div class="field-label">Name</div>
-                    <input type="text" id="fullName" placeholder="Vollständiger Name">
-                </div>
-            </div>
-            <div class="field">
-                <span class="field-icon">🏢</span>
-                <div style="flex:1">
-                    <div class="field-label">Firma</div>
-                    <input type="text" id="company" placeholder="Firma">
-                </div>
-            </div>
-            <div class="field">
-                <span class="field-icon">💼</span>
-                <div style="flex:1">
-                    <div class="field-label">Position</div>
-                    <input type="text" id="position" placeholder="Position">
-                </div>
-            </div>
-            <div class="field">
-                <span class="field-icon">📧</span>
-                <div style="flex:1">
-                    <div class="field-label">E-Mail</div>
-                    <input type="email" id="email" placeholder="E-Mail">
-                </div>
-            </div>
-            <div class="field">
-                <span class="field-icon">📱</span>
-                <div style="flex:1">
-                    <div class="field-label">Telefon</div>
-                    <input type="tel" id="phone" placeholder="Telefon">
-                </div>
-            </div>
-            <div class="field">
-                <span class="field-icon">🌐</span>
-                <div style="flex:1">
-                    <div class="field-label">Website</div>
-                    <input type="url" id="website" placeholder="Website">
-                </div>
-            </div>
-            
-            <div class="btn-group">
-                <button class="btn success" onclick="saveLead()">💾 Lead speichern</button>
-                <button class="btn danger" onclick="clearResult()">❌ Verwerfen</button>
+                <button class="btn secondary" onclick="toggleCamera()">🔄 Kamera</button>
+                <button class="btn warning" onclick="testSample()">🧪 Testdaten</button>
             </div>
         </div>
         
         <div class="raw-text" id="rawText">
-            <strong>🔍 Erkannt von OCR:</strong><br>
+            <strong style="color:#fff;">🔍 OCR Rohtext:</strong><br>
             <span id="rawTextContent"></span>
         </div>
+        
+        <div class="result-card" id="resultCard">
+            <h3 style="margin-bottom:15px;">✅ Extrahiert</h3>
+            <div class="field"><span class="field-icon">👤</span><div style="flex:1"><div class="field-label">Name</div><input type="text" id="fullName"></div></div>
+            <div class="field"><span class="field-icon">🏢</span><div style="flex:1"><div class="field-label">Firma</div><input type="text" id="company"></div></div>
+            <div class="field"><span class="field-icon">💼</span><div style="flex:1"><div class="field-label">Position</div><input type="text" id="position"></div></div>
+            <div class="field"><span class="field-icon">📧</span><div style="flex:1"><div class="field-label">E-Mail</div><input type="email" id="email"></div></div>
+            <div class="field"><span class="field-icon">📱</span><div style="flex:1"><div class="field-label">Telefon</div><input type="tel" id="phone"></div></div>
+            <div class="field"><span class="field-icon">🌐</span><div style="flex:1"><div class="field-label">Website</div><input type="url" id="website"></div></div>
+            <div class="btn-group">
+                <button class="btn success" onclick="saveLead()">💾 Speichern</button>
+                <button class="btn danger" onclick="clearResult()">❌ Verwerfen</button>
+            </div>
+        </div>
     </div>
     
-    <!-- Screen 2: Leads -->
     <div class="screen" id="leadsScreen">
         <div class="stats">
-            <div class="stat-card">
-                <div class="stat-value" id="totalLeads">0</div>
-                <div class="stat-label">Gesamt Leads</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="todayLeads">0</div>
-                <div class="stat-label">Heute</div>
-            </div>
+            <div class="stat-card"><div class="stat-value" id="totalLeads">0</div><div class="stat-label">Gesamt</div></div>
+            <div class="stat-card"><div class="stat-value" id="todayLeads">0</div><div class="stat-label">Heute</div></div>
         </div>
-        
         <div class="leads-list" id="leadsList">
-            <div class="empty-state">
-                <div class="empty-icon">📭</div>
-                <h3>Keine Leads vorhanden</h3>
-                <p>Scanne deine erste Visitenkarte!</p>
-            </div>
+            <div class="empty-state"><div class="empty-icon">📭</div><h3>Keine Leads</h3></div>
         </div>
     </div>
     
-    <!-- Screen 3: Settings -->
     <div class="screen" id="settingsScreen">
         <div class="scan-area">
             <h3>⚙️ Einstellungen</h3>
-            <div class="field">
-                <span class="field-icon">📅</span>
-                <input type="text" id="eventName" placeholder="Event Name (z.B. Messe München)">
-            </div>
-            <button class="btn success" onclick="exportLeads()">📤 Leads exportieren (CSV)</button>
-            <button class="btn danger" onclick="clearAllLeads()">🗑️ Alle Leads löschen</button>
-            <button class="btn warning" onclick="testWithSample()">🧪 OCR-Test mit Beispieldaten</button>
+            <div class="field"><span class="field-icon">📅</span><input type="text" id="eventName" placeholder="Event Name"></div>
+            <button class="btn success" onclick="exportLeads()">📤 CSV Export</button>
+            <button class="btn danger" onclick="clearAllLeads()">🗑️ Alle löschen</button>
+            <button class="btn warning" onclick="testSample()">🧪 OCR-Test</button>
         </div>
     </div>
     
     <div class="tab-bar">
-        <div class="tab-item active" onclick="switchScreen('scan')">
-            <div class="tab-icon">📷</div>
-            Scannen
-        </div>
-        <div class="tab-item" onclick="switchScreen('leads')">
-            <div class="tab-icon">👥</div>
-            Leads
-        </div>
-        <div class="tab-item" onclick="switchScreen('settings')">
-            <div class="tab-icon">⚙️</div>
-            Settings
-        </div>
+        <div class="tab-item active" onclick="switchScreen('scan')"><div class="tab-icon">📷</div>Scannen</div>
+        <div class="tab-item" onclick="switchScreen('leads')"><div class="tab-icon">👥</div>Leads</div>
+        <div class="tab-item" onclick="switchScreen('settings')"><div class="tab-icon">⚙️</div>Settings</div>
     </div>
     
     <div class="notification" id="notification"></div>
+
+<script>
+let stream = null;
+let facingMode = 'environment';
+let ocrMode = 'accurate'; // accurate oder fast
+let leads = JSON.parse(localStorage.getItem('leads') || '[]');
+
+function setMode(mode) {
+    ocrMode = mode;
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+}
+
+async function startCamera() {
+    try {
+        if (stream) stream.getTracks().forEach(t => t.stop());
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } }
+        });
+        document.getElementById('camera').srcObject = stream;
+    } catch(e) {
+        showNotification('❌ Kamera-Zugriff benötigt');
+    }
+}
+
+function toggleCamera() {
+    facingMode = facingMode === 'environment' ? 'user' : 'environment';
+    startCamera();
+}
+
+function showNotification(msg) {
+    const n = document.getElementById('notification');
+    n.textContent = msg;
+    n.classList.add('show');
+    setTimeout(() => n.classList.remove('show'), 3000);
+}
+
+// ============ SMART OCR PARSER ============
+function parseBusinessCard(text) {
+    // Normalisiere Text
+    text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+    const allText = text;
     
-    <script>
-        // Globale Variablen
-        let stream = null;
-        let facingMode = 'environment';
-        let leads = JSON.parse(localStorage.getItem('leads') || '[]');
-        let currentScanResult = {};
-        
-        // Kamera starten
-        async function startCamera() {
-            try {
-                if (stream) {
-                    stream.getTracks().forEach(track => track.stop());
-                }
-                
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } }
-                });
-                
-                const video = document.getElementById('camera');
-                video.srcObject = stream;
-                video.play();
-            } catch (error) {
-                console.error('Kamera-Fehler:', error);
-                showNotification('❌ Kamera-Zugriff verweigert');
+    const result = {
+        fullName: '', company: '', position: '',
+        email: '', phone: '', website: ''
+    };
+    
+    // 1. E-MAIL - sehr zuverlässig
+    const emailMatch = allText.match(/([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/);
+    if (emailMatch) result.email = emailMatch[1].toLowerCase().replace(/[;,:]$/, '');
+    
+    // 2. WEBSITE
+    const webPatterns = [
+        /(https?:\/\/[^\s,;]+)/i,
+        /(www\.[^\s,;]+\.[a-zA-Z]{2,}[^\s,;]*)/i,
+        /([a-zA-Z0-9\-]+\.[a-zA-Z]{2,}[^\s,;]*\.[a-zA-Z]{2,})/i
+    ];
+    for (const pattern of webPatterns) {
+        const m = allText.match(pattern);
+        if (m && !m[1].includes('@')) {
+            result.website = m[1].replace(/[;,.]$/, '').toLowerCase();
+            if (!result.website.startsWith('http')) result.website = 'https://' + result.website;
+            break;
+        }
+    }
+    
+    // 3. TELEFON - deutsche & internationale Formate
+    const phonePatterns = [
+        /(?:\+49|0049|0)[\s\-]?[1-9]\d{1,4}[\s\-]?\d{3,}[\s\-]?\d{3,}/g,
+        /\+\d{1,3}[\s\-]?\d{2,}[\s\-]?\d{3,}[\s\-]?\d{3,}/g,
+        /(?:Tel|Fon|Mobil|Phone)[.:]?\s*([+\d][\d\s\-()\/]{7,})/gi,
+        /(\d{3,}[\s\-]\d{3,}[\s\-]\d{3,})/g
+    ];
+    
+    for (const pattern of phonePatterns) {
+        let match;
+        while ((match = pattern.exec(allText)) !== null) {
+            let phone = match[1] || match[0];
+            phone = phone.replace(/^(Tel|Fon|Mobil|Phone)[.:]?\s*/i, '').trim();
+            // Filtere falsche Erkennungen
+            if (phone.length >= 8 && phone.length <= 20 && /\d/.test(phone)) {
+                result.phone = phone;
+                break;
             }
         }
-        
-        // Kamera wechseln
-        function toggleCamera() {
-            facingMode = facingMode === 'environment' ? 'user' : 'environment';
-            startCamera();
-            showNotification('🔄 Kamera gewechselt');
+        if (result.phone) break;
+    }
+    
+    // 4. FIRMA - Schlüsselwörter
+    const companyKeywords = ['gmbh', 'ag', 'kg', 'ohg', 'ltd', 'inc', 'corp', 'llc', 'se', 'co.', 'group', 'holding', 'solutions', 'technologies', 'systems', 'consulting', 'enterprise', 'digital', 'software', 'it-', 'it '];
+    
+    for (const line of lines) {
+        const lower = line.toLowerCase();
+        if (companyKeywords.some(kw => lower.includes(kw))) {
+            result.company = line;
+            break;
         }
-        
-        // Test mit Beispieldaten
-        function testWithSample() {
-            const sampleText = `Max Mustermann
-CEO
-Tech Innovations GmbH
-Musterstraße 123
-10115 Berlin
-
-max.mustermann@tech-innovations.de
-Tel: +49 30 1234567
-Mobil: +49 171 9876543
-
-www.tech-innovations.de`;
-            
-            const parsed = parseBusinessCard(sampleText);
-            currentScanResult = parsed;
-            displayResult(parsed);
-            document.getElementById('rawTextContent').textContent = sampleText;
-            document.getElementById('rawText').classList.add('show');
-            showNotification('✅ Testdaten erkannt!');
+    }
+    
+    // Fallback: längste Zeile ohne @ und ohne www
+    if (!result.company) {
+        let candidates = lines.filter(l => 
+            !l.includes('@') && !l.match(/^www\./i) && !l.match(/^https?:\/\//i) &&
+            !l.match(/^[\+\d]/) && l.length > 10 && l.split(' ').length >= 2
+        );
+        if (candidates.length > 0) {
+            result.company = candidates.reduce((a,b) => a.length > b.length ? a : b);
         }
+    }
+    
+    // 5. POSITION
+    const posKeywords = ['ceo', 'cto', 'cfo', 'coo', 'chief', 'manager', 'director', 'leiter', 'head of', 'vp', 'president', 'geschäftsführer', 'vorstand', 'chef', 'berater', 'consultant', 'entwickler', 'developer', 'architekt', 'engineer', 'ingenieur', 'designer', 'analyst', 'marketing', 'vertrieb', 'sales', 'support', 'service'];
+    
+    for (const line of lines) {
+        const lower = line.toLowerCase();
+        if (posKeywords.some(kw => lower.includes(kw))) {
+            result.position = line;
+            break;
+        }
+    }
+    
+    // 6. NAME - Heuristik
+    let nameLine = '';
+    for (const line of lines) {
+        const lower = line.toLowerCase();
+        // Ausschlusskriterien
+        if (lower.includes('@')) continue;
+        if (lower.match(/^(www\.|https?:)/)) continue;
+        if (lower.match(/^[\+\d\s\-().]{8,}$/)) continue;
+        if (lower.match(/^(tel|fon|mobil|phone)[.:]/i)) continue;
+        if (companyKeywords.some(kw => lower.includes(kw))) continue;
+        if (posKeywords.some(kw => lower.includes(kw))) continue;
+        if (lower.includes('straße') || lower.includes('str.') || lower.includes('platz') || lower.includes('weg')) continue;
+        if (lower.match(/^\d{4,5}\s/)) continue; // PLZ
         
-        // Foto aufnehmen und OCR durchführen
-        async function captureAndOCR() {
-            const video = document.getElementById('camera');
+        // Name: 2-4 Wörter, keine Sonderzeichen außer Bindestrich
+        const words = line.split(/[\s,]+/).filter(w => w.length > 0);
+        if (words.length >= 2 && words.length <= 4 && line.length > 5) {
+            nameLine = line;
+            break;
+        }
+    }
+    result.fullName = nameLine;
+    
+    return result;
+}
+
+// ============ OCR MIT VERBESSERTEN EINSTELLUNGEN ============
+async function performOCR(imageData) {
+    const progressBar = document.getElementById('progressBar');
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+    
+    progressBar.classList.add('show');
+    progressFill.style.width = '0%';
+    progressText.textContent = 'Lade Tesseract...';
+    
+    // OCR-Einstellungen je nach Modus
+    const config = ocrMode === 'accurate' ? {
+        tessedit_pageseg_mode: '3', // Automatische Seitenerkennung
+        preserve_interword_spaces: '1',
+        user_defined_dpi: '300',
+    } : {
+        tessedit_pageseg_mode: '6', // Einheitlicher Textblock
+    };
+    
+    try {
+        const result = await Tesseract.recognize(imageData, 'deu+eng', {
+            ...config,
+            logger: m => {
+                if (m.status === 'loading tesseract core') {
+                    progressText.textContent = 'Lade OCR-Engine...';
+                } else if (m.status === 'initializing tesseract') {
+                    progressText.textContent = 'Initialisiere...';
+                } else if (m.status === 'loading language traineddata') {
+                    progressText.textContent = 'Lade Sprachdaten (Deutsch)...';
+                } else if (m.status === 'recognizing text') {
+                    progressFill.style.width = Math.round(m.progress * 100) + '%';
+                    progressText.textContent = `Erkenne Text... ${Math.round(m.progress * 100)}%`;
+                }
+            }
+        });
+        
+        progressFill.style.width = '100%';
+        progressText.textContent = '✅ Fertig!';
+        
+        setTimeout(() => {
+            progressBar.classList.remove('show');
+            progressText.textContent = '';
+        }, 1500);
+        
+        return result.data.text;
+    } catch(e) {
+        progressBar.classList.remove('show');
+        throw e;
+    }
+}
+
+async function captureAndOCR() {
+    const video = document.getElementById('camera');
+    const canvas = document.getElementById('canvas');
+    
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    
+    await processOCR(canvas);
+}
+
+function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const img = new Image();
+        img.src = e.target.result;
+        img.onload = async function() {
             const canvas = document.getElementById('canvas');
-            const progressBar = document.getElementById('progressBar');
-            const progressFill = document.getElementById('progressFill');
-            
-            // Foto aufnehmen
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0);
-            
-            // Progress anzeigen
-            progressBar.classList.add('show');
-            progressFill.style.width = '0%';
-            
-            showNotification('🔍 OCR wird durchgeführt...');
-            
-            try {
-                // Tesseract.js OCR mit DEUTSCH und ENGLISCH
-                const { data: { text } } = await Tesseract.recognize(
-                    canvas,
-                    'deu+eng',
-                    {
-                        logger: m => {
-                            if (m.status === 'recognizing text') {
-                                const progress = Math.round(m.progress * 100);
-                                progressFill.style.width = progress + '%';
-                            }
-                        }
-                    }
-                );
-                
-                progressFill.style.width = '100%';
-                
-                // Erkannten Text anzeigen
-                document.getElementById('rawTextContent').textContent = text;
-                document.getElementById('rawText').classList.add('show');
-                
-                // Text parsen
-                const parsed = parseBusinessCard(text);
-                currentScanResult = parsed;
-                
-                // Ergebnis anzeigen
-                displayResult(parsed);
-                
-                setTimeout(() => {
-                    progressBar.classList.remove('show');
-                }, 1000);
-                
-                showNotification('✅ OCR erfolgreich!');
-                
-            } catch (error) {
-                console.error('OCR-Fehler:', error);
-                showNotification('❌ OCR fehlgeschlagen');
-                progressBar.classList.remove('show');
-            }
-        }
+            canvas.width = img.width;
+            canvas.height = img.height;
+            canvas.getContext('2d').drawImage(img, 0, 0);
+            await processOCR(canvas);
+        };
+    };
+    reader.readAsDataURL(file);
+}
+
+async function processOCR(imageSource) {
+    showNotification('🔍 OCR läuft...');
+    
+    try {
+        const text = await performOCR(imageSource);
         
-        // Datei auswählen und OCR
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                const img = new Image();
-                img.src = e.target.result;
-                
-                img.onload = async function() {
-                    const canvas = document.getElementById('canvas');
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0);
-                    
-                    const progressBar = document.getElementById('progressBar');
-                    const progressFill = document.getElementById('progressFill');
-                    progressBar.classList.add('show');
-                    progressFill.style.width = '0%';
-                    
-                    showNotification('🔍 OCR wird durchgeführt...');
-                    
-                    try {
-                        const { data: { text } } = await Tesseract.recognize(
-                            canvas,
-                            'deu+eng',
-                            {
-                                logger: m => {
-                                    if (m.status === 'recognizing text') {
-                                        progressFill.style.width = Math.round(m.progress * 100) + '%';
-                                    }
-                                }
-                            }
-                        );
-                        
-                        document.getElementById('rawTextContent').textContent = text;
-                        document.getElementById('rawText').classList.add('show');
-                        
-                        const parsed = parseBusinessCard(text);
-                        currentScanResult = parsed;
-                        displayResult(parsed);
-                        
-                        setTimeout(() => progressBar.classList.remove('show'), 1000);
-                        showNotification('✅ OCR erfolgreich!');
-                    } catch (error) {
-                        showNotification('❌ OCR fehlgeschlagen');
-                        progressBar.classList.remove('show');
-                    }
-                };
-            };
-            reader.readAsDataURL(file);
-        }
+        // Zeige Rohtext
+        document.getElementById('rawTextContent').textContent = text;
+        document.getElementById('rawText').classList.add('show');
         
-        // VERBESSERTE Visitenkarten-Erkennung
-        function parseBusinessCard(text) {
-            const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-            const result = {
-                fullName: '',
-                company: '',
-                position: '',
-                email: '',
-                phone: '',
-                website: '',
-                address: ''
-            };
-            
-            // E-Mail - verbesserte Erkennung
-            const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/;
-            const emailMatch = text.match(emailRegex);
-            if (emailMatch) {
-                result.email = emailMatch[0].replace(/^mailto:/i, '').trim();
-            }
-            
-            // Website - verbesserte Erkennung
-            const urlRegex = /(?:(?:https?:\/\/|www\.)[^\s,;]+)|(?:[^\s,;]+\.[a-zA-Z]{2,}(?:\/[^\s,;]*)?)/;
-            const urlMatches = text.match(new RegExp(urlRegex, 'gi'));
-            if (urlMatches) {
-                for (const url of urlMatches) {
-                    const clean = url.replace(/^https?:\/\//, '').trim();
-                    if (clean.includes('.') && !clean.includes('@') && clean.length > 4) {
-                        result.website = clean.startsWith('www.') ? clean : 'www.' + clean;
-                        break;
-                    }
-                }
-            }
-            
-            // Telefon - deutsche & internationale Formate
-            const phoneRegexes = [
-                /(?:(?:\+|00)49[-\s.]?|0)[1-9][0-9]{1,4}[-\s.]?[0-9]{1,}[-\s.]?[0-9]{1,}/g,
-                /Tel\.?:?\s*([+\d][\d\s\-./]{6,})/gi,
-                /Mobil\.?:?\s*([+\d][\d\s\-./]{6,})/gi,
-                /Fon\.?:?\s*([+\d][\d\s\-./]{6,})/gi,
-                /Phone\.?:?\s*([+\d][\d\s\-./]{6,})/gi
-            ];
-            
-            for (const regex of phoneRegexes) {
-                const match = text.match(regex);
-                if (match) {
-                    let phone = match[0];
-                    phone = phone.replace(/^(Tel\.?:?|Mobil\.?:?|Fon\.?:?|Phone\.?:?)\s*/i, '');
-                    phone = phone.trim();
-                    if (phone.length >= 6) {
-                        result.phone = phone;
-                        break;
-                    }
-                }
-            }
-            
-            // Firma - nach GmbH, AG, etc. suchen
-            const companyIndicators = ['gmbh', 'ag', 'kg', 'ohg', 'ltd', 'inc', 'corp', 'llc', 'se', 'co.', 'kg'];
-            for (const line of lines) {
-                const lower = line.toLowerCase();
-                if (companyIndicators.some(ind => lower.includes(ind))) {
-                    result.company = line;
-                    break;
-                }
-            }
-            
-            // Wenn keine Firma gefunden, suche nach typischen Firmen-Keywords
-            if (!result.company) {
-                const firmKeywords = ['group', 'holding', 'solutions', 'technologies', 'systems', 'consulting'];
-                for (const line of lines) {
-                    const lower = line.toLowerCase();
-                    if (firmKeywords.some(kw => lower.includes(kw))) {
-                        result.company = line;
-                        break;
-                    }
-                }
-            }
-            
-            // Position - typische Titel
-            const positionKeywords = [
-                'ceo', 'cto', 'cfo', 'coo', 'chief', 'manager', 'director', 'leiter',
-                'head of', 'vp', 'president', 'geschäftsführer', 'vorstand', 'chef',
-                'berater', 'consultant', 'entwickler', 'developer', 'architekt',
-                'engineer', 'ingenieur', 'designer', 'analyst'
-            ];
-            
-            for (const line of lines) {
-                const lower = line.toLowerCase();
-                if (positionKeywords.some(kw => lower.includes(kw))) {
-                    result.position = line;
-                    break;
-                }
-            }
-            
-            // Name - erste Zeile(n) die kein anderes Feld sind
-            for (const line of lines) {
-                const lower = line.toLowerCase();
-                const isNotOther = !lower.includes('@') && 
-                                   !lower.match(/^www\./) &&
-                                   !lower.match(/^https?:/) &&
-                                   !lower.match(/^[\+]?[\d\s\-().]{6,}$/) &&
-                                   !lower.match(/^tel\.?:/i) &&
-                                   !lower.match(/^mobil\.?:/i) &&
-                                   !lower.match(/^fon\.?:/i) &&
-                                   !companyIndicators.some(ind => lower.includes(ind)) &&
-                                   !positionKeywords.some(kw => lower.includes(kw));
-                
-                if (isNotOther && line.split(' ').length >= 2 && line.length > 5) {
-                    result.fullName = line;
-                    break;
-                }
-            }
-            
-            // Adresse - PLZ + Ort
-            const addressRegex = /\b\d{4,5}\s+[A-Za-zäöüßÄÖÜ\s]+\b/;
-            const addressMatch = text.match(addressRegex);
-            if (addressMatch) {
-                result.address = addressMatch[0];
-            }
-            
-            return result;
-        }
+        // Parse
+        const parsed = parseBusinessCard(text);
         
-        // Ergebnis anzeigen
-        function displayResult(data) {
-            document.getElementById('fullName').value = data.fullName || '';
-            document.getElementById('company').value = data.company || '';
-            document.getElementById('position').value = data.position || '';
-            document.getElementById('email').value = data.email || '';
-            document.getElementById('phone').value = data.phone || '';
-            document.getElementById('website').value = data.website || '';
-            
-            document.getElementById('resultCard').classList.add('show');
-        }
+        // Zeige Ergebnis
+        document.getElementById('fullName').value = parsed.fullName;
+        document.getElementById('company').value = parsed.company;
+        document.getElementById('position').value = parsed.position;
+        document.getElementById('email').value = parsed.email;
+        document.getElementById('phone').value = parsed.phone;
+        document.getElementById('website').value = parsed.website;
+        document.getElementById('resultCard').classList.add('show');
         
-        // Lead speichern
-        function saveLead() {
-            const lead = {
-                id: Date.now(),
-                fullName: document.getElementById('fullName').value,
-                company: document.getElementById('company').value,
-                position: document.getElementById('position').value,
-                email: document.getElementById('email').value,
-                phone: document.getElementById('phone').value,
-                website: document.getElementById('website').value,
-                eventName: document.getElementById('eventName').value || 'Messe',
-                rating: 3,
-                date: new Date().toISOString(),
-                contacted: false
-            };
-            
-            leads.unshift(lead);
-            localStorage.setItem('leads', JSON.stringify(leads));
-            
-            clearResult();
-            updateLeadsList();
-            showNotification('✅ Lead gespeichert!');
-        }
+        // Prüfe ob Felder leer sind
+        const filled = Object.values(parsed).filter(v => v).length;
+        showNotification(`✅ ${filled}/6 Felder erkannt`);
         
-        // Ergebnis zurücksetzen
-        function clearResult() {
-            document.getElementById('resultCard').classList.remove('show');
-            document.getElementById('rawText').classList.remove('show');
-            currentScanResult = {};
-        }
-        
-        // Leads-Liste aktualisieren
-        function updateLeadsList() {
-            const container = document.getElementById('leadsList');
-            document.getElementById('totalLeads').textContent = leads.length;
-            
-            const today = new Date().toDateString();
-            const todayLeads = leads.filter(l => new Date(l.date).toDateString() === today).length;
-            document.getElementById('todayLeads').textContent = todayLeads;
-            
-            if (leads.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">📭</div>
-                        <h3>Keine Leads vorhanden</h3>
-                        <p>Scanne deine erste Visitenkarte!</p>
-                    </div>`;
-                return;
-            }
-            
-            container.innerHTML = leads.map(lead => `
-                <div class="lead-card" onclick="deleteLead(${lead.id})">
-                    <div class="lead-info">
-                        <div class="lead-name">${lead.fullName || 'Unbekannt'}</div>
-                        <div class="lead-company">${lead.company || ''}</div>
-                        <div class="lead-email">${lead.email || ''}</div>
-                        <small>${new Date(lead.date).toLocaleDateString('de-DE')}</small>
-                    </div>
-                    <div class="lead-rating">${'⭐'.repeat(lead.rating)}</div>
-                </div>
-            `).join('');
-        }
-        
-        function deleteLead(id) {
-            if (confirm('Lead löschen?')) {
-                leads = leads.filter(l => l.id !== id);
-                localStorage.setItem('leads', JSON.stringify(leads));
-                updateLeadsList();
-                showNotification('🗑️ Lead gelöscht');
-            }
-        }
-        
-        // Bildschirm wechseln
-        function switchScreen(screen) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-            
-            if (screen === 'scan') {
-                document.getElementById('scanScreen').classList.add('active');
-                document.querySelectorAll('.tab-item')[0].classList.add('active');
-                startCamera();
-            } else if (screen === 'leads') {
-                document.getElementById('leadsScreen').classList.add('active');
-                document.querySelectorAll('.tab-item')[1].classList.add('active');
-                updateLeadsList();
-                if (stream) stream.getTracks().forEach(t => t.stop());
-            } else if (screen === 'settings') {
-                document.getElementById('settingsScreen').classList.add('active');
-                document.querySelectorAll('.tab-item')[2].classList.add('active');
-                if (stream) stream.getTracks().forEach(t => t.stop());
-            }
-        }
-        
-        // Leads exportieren
-        function exportLeads() {
-            if (leads.length === 0) {
-                showNotification('❌ Keine Leads zum Exportieren');
-                return;
-            }
-            
-            let csv = 'Name,Firma,Position,E-Mail,Telefon,Website,Event,Datum,Bewertung\n';
-            leads.forEach(lead => {
-                csv += `"${lead.fullName}","${lead.company}","${lead.position}","${lead.email}","${lead.phone}","${lead.website}","${lead.eventName}","${new Date(lead.date).toLocaleDateString('de-DE')}","${lead.rating}"\n`;
-            });
-            
-            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `leads_${new Date().toISOString().split('T')[0]}.csv`;
-            link.click();
-            
-            showNotification('📤 Leads exportiert!');
-        }
-        
-        // Alle Leads löschen
-        function clearAllLeads() {
-            if (confirm('⚠️ Wirklich ALLE Leads löschen?')) {
-                leads = [];
-                localStorage.setItem('leads', JSON.stringify(leads));
-                updateLeadsList();
-                showNotification('🗑️ Alle Leads gelöscht');
-            }
-        }
-        
-        // Benachrichtigung
-        function showNotification(message) {
-            const notification = document.getElementById('notification');
-            notification.textContent = message;
-            notification.classList.add('show');
-            setTimeout(() => notification.classList.remove('show'), 3000);
-        }
-        
-        // PWA Installation
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            window.deferredPrompt = e;
-        });
-        
-        // Initialisierung
-        document.addEventListener('DOMContentLoaded', () => {
-            startCamera();
-            updateLeadsList();
-            document.getElementById('eventName').value = localStorage.getItem('eventName') || '';
-        });
-        
-        document.getElementById('eventName').addEventListener('change', function() {
-            localStorage.setItem('eventName', this.value);
-        });
-    </script>
+    } catch(e) {
+        showNotification('❌ OCR-Fehler: ' + e.message);
+    }
+}
+
+// Test mit Beispieldaten
+function testSample() {
+    const samples = [
+        `Max Mustermann
+Geschäftsführer
+Tech Innovations GmbH
+Musterstraße 123, 10115 Berlin
+max.mustermann@tech-innovations.de
+Tel: +49 30 12345678
+www.tech-innovations.de`,
+
+        `Dr. Anna Schmidt
+CTO
+Digital Solutions AG
+anna.schmidt@digitalsolutions.de
++49 89 9876543
+Mobil: 0171 1234567`,
+
+        `Thomas Weber
+Senior Consultant
+Weber IT-Beratung GmbH
+info@weber-it.de
+www.weber-it.de
+Fon: 0221 555666`
+    ];
+    
+    const text = samples[Math.floor(Math.random() * samples.length)];
+    document.getElementById('rawTextContent').textContent = text;
+    document.getElementById('rawText').classList.add('show');
+    
+    const parsed = parseBusinessCard(text);
+    document.getElementById('fullName').value = parsed.fullName;
+    document.getElementById('company').value = parsed.company;
+    document.getElementById('position').value = parsed.position;
+    document.getElementById('email').value = parsed.email;
+    document.getElementById('phone').value = parsed.phone;
+    document.getElementById('website').value = parsed.website;
+    document.getElementById('resultCard').classList.add('show');
+    
+    const filled = Object.values(parsed).filter(v => v).length;
+    showNotification(`🧪 Test: ${filled}/6 Felder erkannt`);
+}
+
+// Lead speichern
+function saveLead() {
+    const lead = {
+        id: Date.now(),
+        fullName: document.getElementById('fullName').value,
+        company: document.getElementById('company').value,
+        position: document.getElementById('position').value,
+        email: document.getElementById('email').value,
+        phone: document.getElementById('phone').value,
+        website: document.getElementById('website').value,
+        eventName: document.getElementById('eventName').value || 'Messe',
+        rating: 3,
+        date: new Date().toISOString(),
+    };
+    leads.unshift(lead);
+    localStorage.setItem('leads', JSON.stringify(leads));
+    clearResult();
+    updateLeadsList();
+    showNotification('✅ Lead gespeichert!');
+}
+
+function clearResult() {
+    document.getElementById('resultCard').classList.remove('show');
+    document.getElementById('rawText').classList.remove('show');
+}
+
+function updateLeadsList() {
+    document.getElementById('totalLeads').textContent = leads.length;
+    const today = new Date().toDateString();
+    document.getElementById('todayLeads').textContent = leads.filter(l => new Date(l.date).toDateString() === today).length;
+    
+    const container = document.getElementById('leadsList');
+    if (leads.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><h3>Keine Leads</h3></div>';
+        return;
+    }
+    container.innerHTML = leads.map(l => `
+        <div class="lead-card" onclick="if(confirm('Löschen?')){leads=leads.filter(x=>x.id!==${l.id});localStorage.setItem('leads',JSON.stringify(leads));updateLeadsList();}">
+            <div class="lead-info">
+                <div class="lead-name">${l.fullName||'?'}</div>
+                <div class="lead-company">${l.company||''}</div>
+                <div class="lead-email">${l.email||''}</div>
+                <small>${new Date(l.date).toLocaleDateString('de-DE')}</small>
+            </div>
+            <div>${'⭐'.repeat(l.rating)}</div>
+        </div>
+    `).join('');
+}
+
+function switchScreen(screen) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+    if (screen === 'scan') {
+        document.getElementById('scanScreen').classList.add('active');
+        document.querySelectorAll('.tab-item')[0].classList.add('active');
+        startCamera();
+    } else if (screen === 'leads') {
+        document.getElementById('leadsScreen').classList.add('active');
+        document.querySelectorAll('.tab-item')[1].classList.add('active');
+        updateLeadsList();
+        if (stream) stream.getTracks().forEach(t => t.stop());
+    } else {
+        document.getElementById('settingsScreen').classList.add('active');
+        document.querySelectorAll('.tab-item')[2].classList.add('active');
+        if (stream) stream.getTracks().forEach(t => t.stop());
+    }
+}
+
+function exportLeads() {
+    if (!leads.length) { showNotification('❌ Keine Leads'); return; }
+    let csv = 'Name,Firma,Position,E-Mail,Telefon,Website,Event,Datum\n';
+    leads.forEach(l => csv += `"${l.fullName}","${l.company}","${l.position}","${l.email}","${l.phone}","${l.website}","${l.eventName}","${new Date(l.date).toLocaleDateString('de-DE')}"\n`);
+    const blob = new Blob(['\ufeff'+csv],{type:'text/csv'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `leads_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    showNotification('📤 CSV exportiert!');
+}
+
+function clearAllLeads() {
+    if (confirm('⚠️ ALLE Leads löschen?')) {
+        leads = [];
+        localStorage.setItem('leads', JSON.stringify(leads));
+        updateLeadsList();
+        showNotification('🗑️ Gelöscht');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    startCamera();
+    updateLeadsList();
+    document.getElementById('eventName').value = localStorage.getItem('eventName')||'';
+});
+document.getElementById('eventName').addEventListener('change', function(){localStorage.setItem('eventName',this.value)});
+</script>
 </body>
 </html>
