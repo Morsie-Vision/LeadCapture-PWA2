@@ -10,21 +10,20 @@
     <link rel="manifest" href="manifest.json">
     <title>LeadCapture</title>
     
-    <!-- Business Card Parser -->
-    <script src="https://cdn.jsdelivr.net/npm/business-card-parser@1.1.0/dist/business-card-parser.min.js"></script>
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, sans-serif; background: #f2f2f7; min-height: 100vh; padding-bottom: 90px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f2f2f7; min-height: 100vh; padding-bottom: 90px; }
         .header { background: #007AFF; color: white; padding: 50px 20px 15px; text-align: center; position: sticky; top: 0; z-index: 100; }
         .header h1 { font-size: 22px; }
+        .header p { font-size: 13px; opacity: 0.9; margin-top: 3px; }
         .scan-area { margin: 12px; padding: 16px; background: white; border-radius: 16px; }
         .scan-title { font-size: 17px; font-weight: 600; margin-bottom: 12px; text-align: center; }
-        .video-container { width: 100%; height: 280px; background: #000; border-radius: 12px; overflow: hidden; margin-bottom: 12px; }
+        .video-container { width: 100%; height: 280px; background: #000; border-radius: 12px; overflow: hidden; margin-bottom: 12px; position: relative; }
         #camera { width: 100%; height: 100%; object-fit: cover; }
         #canvas { display: none; }
         .btn-group { display: flex; gap: 8px; margin-top: 10px; }
-        .btn { flex: 1; padding: 14px 10px; background: #007AFF; color: white; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; }
+        .btn { flex: 1; padding: 14px 10px; background: #007AFF; color: white; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.15s; }
         .btn:active { opacity: 0.8; transform: scale(0.97); }
         .btn.gray { background: #e5e5ea; color: #000; }
         .btn.green { background: #34C759; }
@@ -33,25 +32,25 @@
         .result-card.show { display: block; animation: fadeIn 0.25s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .field { margin: 8px 0; padding: 12px; background: #f2f2f7; border-radius: 10px; display: flex; align-items: center; gap: 10px; }
-        .field-icon { font-size: 22px; width: 28px; }
+        .field-icon { font-size: 22px; width: 28px; text-align: center; }
         .field-input-wrap { flex: 1; }
-        .field-label { font-size: 10px; color: #8e8e93; text-transform: uppercase; }
-        .field input { width: 100%; border: none; background: transparent; font-size: 16px; outline: none; }
+        .field-label { font-size: 10px; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.5px; }
+        .field input { width: 100%; border: none; background: transparent; font-size: 16px; outline: none; padding: 2px 0; }
         .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px; }
         .stat-card { background: white; padding: 14px; border-radius: 14px; text-align: center; }
         .stat-value { font-size: 26px; font-weight: bold; color: #007AFF; }
-        .stat-label { font-size: 11px; color: #8e8e93; }
+        .stat-label { font-size: 11px; color: #8e8e93; margin-top: 2px; }
         .leads-list { margin: 12px; }
-        .lead-card { background: white; padding: 14px; border-radius: 14px; margin-bottom: 8px; display: flex; justify-content: space-between; cursor: pointer; }
+        .lead-card { background: white; padding: 14px; border-radius: 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
         .lead-name { font-weight: 600; font-size: 15px; }
         .lead-detail { font-size: 13px; color: #666; margin-top: 2px; }
         .tab-bar { position: fixed; bottom: 0; width: 100%; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); display: flex; justify-content: space-around; padding: 8px 0 28px; border-top: 0.5px solid #ccc; }
-        .tab-item { text-align: center; font-size: 10px; color: #8e8e93; cursor: pointer; }
-        .tab-item.active { color: #007AFF; font-weight: 600; }
+        .tab-item { text-align: center; font-size: 10px; color: #8e8e93; cursor: pointer; padding: 4px 8px; }
+        .tab-item.active { color: #007AFF; }
         .tab-icon { font-size: 22px; display: block; margin-bottom: 2px; }
         .screen { display: none; }
         .screen.active { display: block; }
-        .toast { position: fixed; top: 15px; left: 50%; transform: translateX(-50%); background: #34C759; color: white; padding: 12px 24px; border-radius: 25px; font-weight: 600; z-index: 999; display: none; }
+        .toast { position: fixed; top: 15px; left: 50%; transform: translateX(-50%); background: #34C759; color: white; padding: 12px 24px; border-radius: 25px; font-weight: 600; z-index: 999; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
         .toast.show { display: block; animation: toastIn 0.3s; }
         @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(-20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
         .empty-state { text-align: center; padding: 60px 20px; color: #8e8e93; }
@@ -61,16 +60,18 @@
         .loading.show { display: block; }
         .spinner { width: 36px; height: 36px; border: 3px solid #e0e0e0; border-top-color: #007AFF; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 8px; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        .raw-text-box { margin: 12px; padding: 12px; background: #1a1a1a; color: #0f0; border-radius: 12px; font-size: 11px; font-family: monospace; white-space: pre-wrap; max-height: 150px; overflow-y: auto; display: none; }
+        .raw-text-box.show { display: block; }
     </style>
 </head>
 <body>
 
 <div class="header">
     <h1>📱 LeadCapture</h1>
-    <p style="font-size:12px;opacity:0.9;">OCR.space + Profi-Parser</p>
+    <p>OCR.space + Profi-Parser</p>
 </div>
 
-<!-- SCAN -->
+<!-- SCAN SCREEN -->
 <div class="screen active" id="scanScreen">
     <div class="scan-area">
         <div class="scan-title">📸 Visitenkarte scannen</div>
@@ -79,7 +80,7 @@
         
         <div class="loading" id="loading">
             <div class="spinner"></div>
-            <p style="color:#666;">Analysiere Visitenkarte...</p>
+            <p style="color:#666;font-size:14px;">OCR.space analysiert...</p>
         </div>
         
         <div class="btn-group">
@@ -88,27 +89,34 @@
             <input type="file" id="fileInput" accept="image/*" onchange="handleFile(event)" capture="environment">
         </div>
         <div class="btn-group">
-            <button class="btn gray" onclick="toggleCam()">🔄 Kamera wechseln</button>
+            <button class="btn gray" onclick="toggleCam()">🔄 Kamera</button>
+            <button class="btn gray" onclick="toggleRaw()">📝 Rohtext</button>
         </div>
     </div>
     
+    <!-- Rohtext-Anzeige -->
+    <div class="raw-text-box" id="rawTextBox">
+        <strong style="color:#fff;">OCR Rohtext:</strong><br>
+        <span id="rawTextContent"></span>
+    </div>
+    
     <div class="result-card" id="resultCard">
-        <h3 style="margin-bottom:12px;">✅ Visitenkarte erkannt</h3>
-        <div class="field"><span class="field-icon">👤</span><div class="field-input-wrap"><div class="field-label">Vorname</div><input type="text" id="fFirstName"></div></div>
-        <div class="field"><span class="field-icon">👤</span><div class="field-input-wrap"><div class="field-label">Nachname</div><input type="text" id="fLastName"></div></div>
-        <div class="field"><span class="field-icon">🏢</span><div class="field-input-wrap"><div class="field-label">Firma</div><input type="text" id="fCompany"></div></div>
-        <div class="field"><span class="field-icon">💼</span><div class="field-input-wrap"><div class="field-label">Position / Titel</div><input type="text" id="fPosition"></div></div>
-        <div class="field"><span class="field-icon">📧</span><div class="field-input-wrap"><div class="field-label">E-Mail</div><input type="email" id="fEmail"></div></div>
-        <div class="field"><span class="field-icon">📱</span><div class="field-input-wrap"><div class="field-label">Telefon</div><input type="tel" id="fPhone"></div></div>
-        <div class="field"><span class="field-icon">🌐</span><div class="field-input-wrap"><div class="field-label">Website</div><input type="url" id="fWeb"></div></div>
+        <h3 style="margin-bottom:12px;font-size:17px;">✅ Erkannt</h3>
+        <div class="field"><span class="field-icon">👤</span><div class="field-input-wrap"><div class="field-label">Vorname</div><input type="text" id="fFirstName" placeholder="Max"></div></div>
+        <div class="field"><span class="field-icon">👤</span><div class="field-input-wrap"><div class="field-label">Nachname</div><input type="text" id="fLastName" placeholder="Mustermann"></div></div>
+        <div class="field"><span class="field-icon">🏢</span><div class="field-input-wrap"><div class="field-label">Firma</div><input type="text" id="fCompany" placeholder="Firma GmbH"></div></div>
+        <div class="field"><span class="field-icon">💼</span><div class="field-input-wrap"><div class="field-label">Position</div><input type="text" id="fPosition" placeholder="CEO"></div></div>
+        <div class="field"><span class="field-icon">📧</span><div class="field-input-wrap"><div class="field-label">E-Mail</div><input type="email" id="fEmail" placeholder="max@firma.de"></div></div>
+        <div class="field"><span class="field-icon">📱</span><div class="field-input-wrap"><div class="field-label">Telefon</div><input type="tel" id="fPhone" placeholder="+49 123 456789"></div></div>
+        <div class="field"><span class="field-icon">🌐</span><div class="field-input-wrap"><div class="field-label">Website</div><input type="url" id="fWeb" placeholder="www.firma.de"></div></div>
         <div class="btn-group" style="margin-top:12px;">
             <button class="btn green" onclick="saveLead()">💾 Speichern</button>
-            <button class="btn red" onclick="clearResult()">❌ Verwerfen</button>
+            <button class="btn red" onclick="clearResult()">❌</button>
         </div>
     </div>
 </div>
 
-<!-- LEADS -->
+<!-- LEADS SCREEN -->
 <div class="screen" id="leadsScreen">
     <div class="stats">
         <div class="stat-card"><div class="stat-value" id="totalLeads">0</div><div class="stat-label">Gesamt</div></div>
@@ -117,12 +125,12 @@
     <div class="leads-list" id="leadsList"><div class="empty-state"><div class="empty-icon">📭</div><p>Keine Leads</p></div></div>
 </div>
 
-<!-- SETTINGS -->
+<!-- SETTINGS SCREEN -->
 <div class="screen" id="settingsScreen">
     <div class="scan-area">
-        <h3>⚙️ Einstellungen</h3>
-        <div class="field"><span class="field-icon">📅</span><div class="field-input-wrap"><div class="field-label">Event Name</div><input type="text" id="eventName" placeholder="Messe München 2025"></div></div>
-        <div class="field"><span class="field-icon">🔑</span><div class="field-input-wrap"><div class="field-label">OCR.space API Key</div><input type="text" id="apiKeyInput" placeholder="K123456789..."></div></div>
+        <h3 style="margin-bottom:12px;">⚙️ Einstellungen</h3>
+        <div class="field"><span class="field-icon">📅</span><div class="field-input-wrap"><div class="field-label">Event</div><input type="text" id="eventName" placeholder="z.B. Messe München 2025"></div></div>
+        <div class="field"><span class="field-icon">🔑</span><div class="field-input-wrap"><div class="field-label">OCR.space API Key</div><input type="text" id="apiKeyInput" placeholder="K1234567..."></div></div>
         <p style="font-size:11px;color:#8e8e93;margin:6px 0;">Kostenlos: <a href="https://ocr.space/ocrapi" target="_blank" style="color:#007AFF;">ocr.space/ocrapi</a> • 500/Tag</p>
         <button class="btn green" onclick="saveApiKey()" style="margin-top:8px;">💾 Key speichern</button>
         <button class="btn" onclick="exportCSV()" style="margin-top:8px;">📤 CSV Export</button>
@@ -130,6 +138,7 @@
     </div>
 </div>
 
+<!-- TAB BAR -->
 <div class="tab-bar">
     <div class="tab-item active" onclick="switchTab('scan')"><span class="tab-icon">📷</span>Scannen</div>
     <div class="tab-item" onclick="switchTab('leads')"><span class="tab-icon">👥</span>Leads</div>
@@ -140,12 +149,13 @@
 
 <script>
 // ============ CONFIG ============
-const OCR_API_KEY = 'K89798848288957'; // <-- DEIN OCR.SPACE KEY
+const OCR_API_KEY = 'K89798848288957'; // <-- DEIN KEY
 const OCR_URL = 'https://api.ocr.space/parse/image';
 
 let stream = null, facing = 'environment';
 let leads = JSON.parse(localStorage.getItem('leads') || '[]');
 let apiKey = localStorage.getItem('ocrspace_key') || OCR_API_KEY;
+let lastRawText = '';
 
 // ============ KAMERA ============
 async function startCam() {
@@ -156,6 +166,11 @@ async function startCam() {
     } catch(e) { toast('❌ Kamera-Zugriff benötigt'); }
 }
 function toggleCam() { facing = facing === 'environment' ? 'user' : 'environment'; startCam(); }
+function toggleRaw() {
+    const box = document.getElementById('rawTextBox');
+    if (box.classList.contains('show')) { box.classList.remove('show'); }
+    else if (lastRawText) { box.classList.add('show'); }
+}
 
 // ============ OCR MIT OCR.SPACE ============
 async function ocrSpace(base64Image) {
@@ -175,9 +190,13 @@ async function ocrSpace(base64Image) {
             headers: { 'apikey': apiKey },
             body: formData
         });
+        
         document.getElementById('loading').classList.remove('show');
+        
         if (!resp.ok) throw new Error('API-Fehler: ' + resp.status);
+        
         const data = await resp.json();
+        
         if (data.OCRExitCode === 1) {
             return data.ParsedResults[0].ParsedText;
         } else {
@@ -189,81 +208,177 @@ async function ocrSpace(base64Image) {
     }
 }
 
-// ============ BUSINESS CARD PARSER (orangepips) ============
-function parseWithLibrary(text) {
-    try {
-        // Nutze den business-card-parser
-        const parsed = BusinessCardParser.parse(text);
-        
-        return {
-            firstName: parsed.firstName || '',
-            lastName: parsed.lastName || '',
-            company: parsed.organization || '',
-            position: parsed.title || '',
-            email: parsed.email || '',
-            phone: parsed.phone || '',
-            web: parsed.website || ''
-        };
-    } catch(e) {
-        console.log('Parser-Fehler:', e);
-        // Fallback: eigener Parser
-        return fallbackParser(text);
-    }
+// ============ PROFESSIONELLER VISITENKARTEN-PARSER v2 ============
+// Hilfsfunktion: Wort mit "echten" Wortgrenzen suchen (auch für Wörter mit
+// Punkten wie "e.k." oder Umlauten), damit z.B. "ag" nicht in "Tag" matcht.
+function containsWord(lowerLine, word) {
+    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp('(^|[^a-zäöüß])' + escaped + '([^a-zäöüß]|$)', 'i').test(lowerLine);
 }
 
-function fallbackParser(text) {
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l);
-    const all = text;
-    const r = { firstName: '', lastName: '', company: '', position: '', email: '', phone: '', web: '' };
-    
-    // E-Mail
-    const em = all.match(/([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/);
-    if (em) r.email = em[1].toLowerCase();
-    
-    // Website
-    const wm = all.match(/((?:https?:\/\/)?(?:www\.)?[a-zA-Z0-9\-]+\.(?:de|com|net|org|io|at|ch|eu)[^\s,;]*)/i);
-    if (wm && !wm[1].includes('@')) {
-        let w = wm[1];
-        if (!w.match(/^https?:\/\//)) w = 'https://' + w;
-        r.web = w;
+function normalizeUrl(u) {
+    u = u.replace(/[.,;)]+$/, '').trim();
+    if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+    return u;
+}
+
+function cleanPhone(p) {
+    return p.replace(/\s+/g, ' ').replace(/[.,;]+$/, '').trim();
+}
+
+function parseBusinessCard(text) {
+    lastRawText = text;
+    document.getElementById('rawTextContent').textContent = text;
+
+    const result = {
+        firstName: '', lastName: '', fullName: '',
+        company: '', position: '', email: '', phone: '', web: ''
+    };
+
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const fullText = lines.join('\n');
+
+    // ---------- 1. E-MAIL (sehr zuverlässig) ----------
+    const emailMatches = fullText.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g) || [];
+    if (emailMatches.length) {
+        result.email = emailMatches[0].toLowerCase().replace(/[.,;]+$/, '');
     }
-    
-    // Telefon
-    const phonePatterns = [
-        /(\+\d{1,3}\s*(?:\(\d+\))?\s*\d[\d\s\-.]{5,})/,
-        /(0\d{2,4}[\s\-.]\d{3,}[\s\-.]?\d{0,})/,
-        /(?:Tel|Fon|Mobil|Phone|Telefon|Handy)[.:]?\s*([+\d][\d\s\-()\/]{7,})/i,
-    ];
-    for (const p of phonePatterns) {
-        const m = all.match(p);
-        if (m) { r.phone = (m[1]||m[0]).replace(/^(Tel|Fon|Mobil|Phone|Telefon|Handy)[.:]?\s*/i,'').trim(); break; }
-    }
-    
-    // Firma
-    const coKw = ['gmbh', 'ag', 'kg', 'ohg', 'ltd', 'inc', 'corp', 'llc', 'se', 'gbr', 'ug'];
+
+    // ---------- 2. WEBSITE ----------
+    // Priorität: explizites Label > www./http-Zeile > generische Domain.
+    // E-Mail-Zeilen werden dabei ausgeschlossen, damit nicht versehentlich
+    // die Domain aus der E-Mail-Adresse als "Website" gezogen wird.
+    const webLabelRegex = /(?:web|website|internet|homepage)[.:]?\s*(\S+)/i;
+    const wwwRegex = /((?:https?:\/\/)?www\.[a-zA-Z0-9\-]+\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?[^\s,;]*)/i;
+    const httpRegex = /(https?:\/\/[^\s,;]+)/i;
+    const genericDomainRegex = /\b([a-zA-Z0-9\-]+\.(?:de|com|net|org|io|at|ch|eu|info|biz|shop|online))\b/i;
+
     for (const line of lines) {
-        if (coKw.some(k => line.toLowerCase().includes(k))) { r.company = line; break; }
+        if (line.includes('@')) continue;
+        const m = line.match(webLabelRegex);
+        if (m) { result.web = normalizeUrl(m[1]); break; }
     }
-    
-    // Position
-    const posKw = ['ceo', 'cto', 'cfo', 'chief', 'manager', 'director', 'leiter', 'head', 'vp', 'president', 'geschäftsführer', 'vorstand', 'berater', 'consultant'];
-    for (const line of lines) {
-        if (posKw.some(k => line.toLowerCase().includes(k))) { r.position = line; break; }
-    }
-    
-    // Name
-    for (const line of lines) {
-        const lo = line.toLowerCase();
-        if (lo.includes('@') || lo.match(/^(www|https?:|\+|\d{3})/) || coKw.some(k => lo.includes(k)) || posKw.some(k => lo.includes(k))) continue;
-        const words = line.split(/[\s,]+/).filter(w => w.length > 1);
-        if (words.length >= 2 && words.length <= 4) {
-            r.firstName = words[0];
-            r.lastName = words[words.length - 1];
-            break;
+    if (!result.web) {
+        for (const line of lines) {
+            if (line.includes('@')) continue;
+            const m = line.match(wwwRegex) || line.match(httpRegex);
+            if (m) { result.web = normalizeUrl(m[1]); break; }
         }
     }
-    
-    return r;
+    if (!result.web) {
+        for (const line of lines) {
+            if (line.includes('@')) continue;
+            const m = line.match(genericDomainRegex);
+            if (m) { result.web = normalizeUrl(m[1]); break; }
+        }
+    }
+
+    // ---------- 3. TELEFON ----------
+    // Mobil-/Handy-Nummern haben Priorität vor Festnetz, Fax wird ignoriert.
+    const mobileLabelRegex = /(mobil|handy|mobile|cell)[.:]?\s*([+\d][\d\s\-()\/]{5,})/i;
+    const telLabelRegex = /(tel|fon|phone|telefon)[.:]?\s*([+\d][\d\s\-()\/]{5,})/i;
+    const genericPhoneRegex = /(\+\d{1,3}\s*(?:\(\d+\))?[\d\s\-.\/]{6,}|0\d{2,5}[\s\-.\/]\d{3,}[\s\-.\/]?\d{0,})/;
+
+    let mobilePhone = '', telPhone = '', genericPhone = '';
+    for (const line of lines) {
+        if (/^fax/i.test(line)) continue; // Faxnummern nie als Telefon werten
+
+        if (!mobilePhone) {
+            const m = line.match(mobileLabelRegex);
+            if (m) mobilePhone = cleanPhone(m[2]);
+        }
+        if (!telPhone) {
+            const m = line.match(telLabelRegex);
+            if (m) telPhone = cleanPhone(m[2]);
+        }
+        if (!genericPhone) {
+            const m = line.match(genericPhoneRegex);
+            if (m && /\d{3}/.test(m[1])) genericPhone = cleanPhone(m[1]);
+        }
+    }
+    result.phone = mobilePhone || telPhone || genericPhone;
+
+    // ---------- 4. FIRMA, POSITION, NAME ----------
+    const titles = ['prof. dr.', 'dr. med.', 'dr.-ing.', 'dipl.-ing.', 'dipl.-kfm.', 'dipl.-inf.',
+        'dr.', 'prof.', 'mag.', 'ing.', 'b.sc.', 'm.sc.', 'b.a.', 'm.a.', 'herr', 'frau'];
+    const companyEndings = ['gmbh & co. kg', 'gmbh', 'ag', 'kg', 'ohg', 'mbh', 'ltd', 'inc', 'corp',
+        'llc', 'se', 'gbr', 'ug', 'e.k.', 'e.v.', '& co'];
+    const positionKeywords = ['ceo', 'cto', 'cfo', 'coo', 'chief', 'manager', 'director', 'leiter',
+        'head of', 'head', 'vp', 'president', 'geschäftsführer', 'geschäftsführung', 'inhaber',
+        'vorstand', 'chef', 'berater', 'consultant', 'entwickler', 'developer', 'architekt',
+        'engineer', 'ingenieur', 'sales', 'vertrieb', 'marketing', 'projektleiter', 'teamleiter',
+        'abteilungsleiter', 'assistenz', 'sachbearbeiter', 'key account', 'account manager'];
+
+    let companyLine = '', positionLine = '';
+    const nameCandidates = [];
+
+    lines.forEach((line, idx) => {
+        const lower = line.toLowerCase();
+
+        // Offensichtliche Nicht-Namen/Nicht-Firmen-Zeilen aussortieren
+        if (lower.includes('@')) return;
+        if (/^(www\.|https?:)/i.test(lower)) return;
+        if (/^\d{4,5}\s/.test(lower)) return; // PLZ + Ort
+        if (/(straße|strasse|str\.|platz|weg\s|allee)/i.test(lower)) return;
+        if (/^(tel|fon|mobil|phone|telefon|handy|fax)[.:]/i.test(lower)) return;
+
+        // Firma: erste passende Zeile gewinnt (nicht die letzte)
+        if (companyEndings.some(e => containsWord(lower, e))) {
+            if (!companyLine) companyLine = line;
+            return;
+        }
+
+        // Position: ebenfalls erste passende Zeile
+        if (positionKeywords.some(k => containsWord(lower, k))) {
+            if (!positionLine) positionLine = line;
+            return;
+        }
+
+        // Name-Kandidat sammeln und bewerten statt blind die erste Zeile zu nehmen
+        if (/\d/.test(line)) return; // Namen enthalten normalerweise keine Ziffern
+        const words = line.split(/[\s,]+/).filter(w => w.length > 1);
+        if (words.length < 2 || words.length > 5) return;
+
+        let score = 0;
+        if (titles.some(t => containsWord(lower, t))) score += 3; // Titel = starkes Namens-Signal
+        const capitalizedWords = words.filter(w => /^[A-ZÄÖÜ]/.test(w)).length;
+        if (capitalizedWords === words.length) score += 2; // "Max Mustermann" statt Fließtext
+        if (idx < 4) score += 2; // Name steht meist oben auf der Karte
+        if (words.length <= 3) score += 1; // Vor-/Nachname eher kurz
+
+        nameCandidates.push({ line, score });
+    });
+
+    let nameLine = '';
+    if (nameCandidates.length) {
+        nameCandidates.sort((a, b) => b.score - a.score);
+        nameLine = nameCandidates[0].line;
+    }
+
+    // Name aufteilen
+    if (nameLine) {
+        let cleanName = nameLine;
+        for (const title of titles) {
+            const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            cleanName = cleanName.replace(new RegExp('(^|\\s)' + escaped + '(\\s|$)', 'gi'), ' ').trim();
+        }
+        cleanName = cleanName.replace(/\s{2,}/g, ' ').trim();
+
+        const nameParts = cleanName.split(/[\s,]+/).filter(w => w.length > 1);
+        if (nameParts.length >= 2) {
+            result.firstName = nameParts[0];
+            result.lastName = nameParts[nameParts.length - 1];
+            result.fullName = cleanName;
+        } else {
+            result.fullName = cleanName;
+            result.firstName = cleanName;
+        }
+    }
+
+    result.company = companyLine;
+    result.position = positionLine;
+
+    return result;
 }
 
 // ============ OCR FLOW ============
@@ -289,13 +404,14 @@ function handleFile(event) {
 }
 
 async function doOCR(b64) {
-    if (!apiKey || apiKey === 'DEIN_OCRSPACE_KEY') { toast('❌ OCR.space Key in Settings eingeben'); return; }
-    toast('🔍 Scanne & analysiere...');
+    if (!apiKey || apiKey === 'DEIN_API_KEY_HIER') { toast('❌ Bitte API-Key in Settings eingeben'); return; }
+    toast('🔍 OCR.space scannt...');
     try {
         const text = await ocrSpace(b64);
-        const parsed = parseWithLibrary(text);
+        const parsed = parseBusinessCard(text);
         showResult(parsed);
-        toast('✅ Visitenkarte erkannt!');
+        document.getElementById('rawTextBox').classList.add('show');
+        toast('✅ Erkannt!');
     } catch(e) {
         toast('❌ ' + e.message);
     }
@@ -312,7 +428,10 @@ function showResult(p) {
     document.getElementById('resultCard').classList.add('show');
 }
 
-function clearResult() { document.getElementById('resultCard').classList.remove('show'); }
+function clearResult() { 
+    document.getElementById('resultCard').classList.remove('show'); 
+    document.getElementById('rawTextBox').classList.remove('show');
+}
 
 // ============ LEADS ============
 function saveLead() {
@@ -341,7 +460,7 @@ function updateList() {
     document.getElementById('todayLeads').textContent = leads.filter(l => new Date(l.date).toDateString() === today).length;
     const c = document.getElementById('leadsList');
     if (!leads.length) { c.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>Keine Leads</p></div>'; return; }
-    c.innerHTML = leads.map(l => `<div class="lead-card" onclick="if(confirm('Löschen?')){leads=leads.filter(x=>x.id!==${l.id});localStorage.setItem('leads',JSON.stringify(leads));updateList();}"><div><div class="lead-name">${l.firstName} ${l.lastName}</div><div class="lead-detail">${l.company} • ${l.position}</div><div class="lead-detail" style="color:#007AFF;">${l.email} • ${l.phone}</div></div></div>`).join('');
+    c.innerHTML = leads.map(l => `<div class="lead-card" onclick="if(confirm('Löschen?')){leads=leads.filter(x=>x.id!==${l.id});localStorage.setItem('leads',JSON.stringify(leads));updateList();}"><div><div class="lead-name">${l.firstName||''} ${l.lastName||''}</div><div class="lead-detail">${l.company||''} • ${l.position||''}</div><div class="lead-detail" style="color:#007AFF;">${l.email||''} • ${l.phone||''}</div></div><div>🗑️</div></div>`).join('');
 }
 
 function switchTab(t) {
@@ -356,16 +475,18 @@ function exportCSV() {
     if (!leads.length) { toast('❌ Keine Leads'); return; }
     let csv = 'Vorname,Nachname,Firma,Position,E-Mail,Telefon,Website,Event,Datum\n';
     leads.forEach(l => csv += `"${l.firstName}","${l.lastName}","${l.company}","${l.position}","${l.email}","${l.phone}","${l.web}","${l.event}","${new Date(l.date).toLocaleDateString('de-DE')}"\n`);
-    const b = new Blob(['\ufeff'+csv],{type:'text/csv'}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'leads.csv'; a.click();
+    const b = new Blob(['\ufeff'+csv],{type:'text/csv'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'leads.csv'; a.click();
     toast('📤 Exportiert!');
 }
 
-function clearAll() { if (confirm('Alle löschen?')) { leads = []; localStorage.setItem('leads', JSON.stringify(leads)); updateList(); toast('🗑️ Gelöscht'); } }
+function clearAll() { if (confirm('Alle Leads löschen?')) { leads = []; localStorage.setItem('leads', JSON.stringify(leads)); updateList(); toast('🗑️ Gelöscht'); } }
 function saveApiKey() { apiKey = document.getElementById('apiKeyInput').value; localStorage.setItem('ocrspace_key', apiKey); toast('✅ Key gespeichert'); }
 function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2500); }
 
 document.addEventListener('DOMContentLoaded', () => {
-    startCam(); updateList();
+    startCam();
+    updateList();
     document.getElementById('eventName').value = localStorage.getItem('eventName')||'';
     document.getElementById('apiKeyInput').value = apiKey;
 });
