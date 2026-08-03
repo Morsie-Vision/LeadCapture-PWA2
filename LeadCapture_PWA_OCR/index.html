@@ -1,763 +1,454 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="LeadCapture">
     <meta name="theme-color" content="#007AFF">
-    <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="manifest" href="manifest.json">
-    <title>LeadCapture OCR</title>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <title>LeadCapture</title>
+    
+    <!-- Professioneller Visitenkarten-Parser -->
+    <script src="https://cdn.jsdelivr.net/npm/parse-business-card@1.0.2/dist/parse-business-card.min.js"></script>
+    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: -apple-system, sans-serif; 
-            background: #f0f0f0;
-            min-height: 100vh;
-            padding-bottom: 100px;
-        }
-        .header {
-            background: linear-gradient(135deg, #007AFF, #5856D6);
-            color: white;
-            padding: 50px 20px 20px;
-            text-align: center;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-        .header h1 { font-size: 24px; margin-bottom: 5px; }
-        .header p { font-size: 14px; opacity: 0.9; }
-        
-        .stats {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            padding: 15px;
-        }
-        .stat-card {
-            background: white;
-            padding: 15px;
-            border-radius: 15px;
-            text-align: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .stat-value {
-            font-size: 28px;
-            font-weight: bold;
-            color: #007AFF;
-        }
-        .stat-label { font-size: 12px; color: #666; margin-top: 5px; }
-        
-        .scan-area {
-            margin: 15px;
-            padding: 20px;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-        }
-        .scan-title {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-        
-        .video-container {
-            position: relative;
-            width: 100%;
-            height: 300px;
-            background: #000;
-            border-radius: 15px;
-            overflow: hidden;
-            margin-bottom: 15px;
-        }
-        #camera {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        #canvas {
-            display: none;
-        }
-        
-        .scan-overlay {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 80%;
-            height: 60%;
-            border: 3px solid #007AFF;
-            border-radius: 10px;
-            pointer-events: none;
-        }
-        .scan-overlay::before {
-            content: 'Visitenkarte hier positionieren';
-            position: absolute;
-            top: -25px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,122,255,0.9);
-            color: white;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 12px;
-            white-space: nowrap;
-        }
-        
-        .btn-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
-        .btn {
-            flex: 1;
-            padding: 15px;
-            background: #007AFF;
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-align: center;
-        }
-        .btn:active { transform: scale(0.98); }
-        .btn.secondary { background: #f0f0f0; color: #333; }
-        .btn.success { background: #34C759; }
-        .btn.danger { background: #FF3B30; }
-        
-        .result-card {
-            margin: 15px;
-            padding: 20px;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-            display: none;
-        }
-        .result-card.show { display: block; animation: slideUp 0.3s ease-out; }
-        
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .field {
-            margin: 10px 0;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .field-icon { font-size: 24px; }
-        .field input {
-            flex: 1;
-            border: none;
-            background: transparent;
-            font-size: 16px;
-            outline: none;
-        }
-        
-        .progress-bar {
-            width: 100%;
-            height: 5px;
-            background: #f0f0f0;
-            border-radius: 5px;
-            margin: 10px 0;
-            overflow: hidden;
-            display: none;
-        }
-        .progress-bar.show { display: block; }
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #007AFF, #34C759);
-            width: 0%;
-            transition: width 0.3s;
-            border-radius: 5px;
-        }
-        
-        .leads-list {
-            margin: 15px;
-        }
-        .lead-card {
-            background: white;
-            padding: 15px;
-            border-radius: 15px;
-            margin-bottom: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .lead-info { flex: 1; }
-        .lead-name { font-weight: bold; font-size: 16px; }
-        .lead-company { font-size: 14px; color: #666; }
-        .lead-email { font-size: 13px; color: #007AFF; }
-        .lead-rating { font-size: 18px; }
-        
-        .tab-bar {
-            position: fixed;
-            bottom: 0;
-            width: 100%;
-            background: white;
-            display: flex;
-            justify-content: space-around;
-            padding: 10px 0 30px;
-            border-top: 1px solid #ddd;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-        }
-        .tab-item {
-            text-align: center;
-            font-size: 11px;
-            color: #8e8e93;
-            cursor: pointer;
-            transition: all 0.2s;
-            padding: 5px 10px;
-            border-radius: 10px;
-        }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f2f2f7; min-height: 100vh; padding-bottom: 90px; }
+        .header { background: #007AFF; color: white; padding: 50px 20px 15px; text-align: center; position: sticky; top: 0; z-index: 100; }
+        .header h1 { font-size: 22px; }
+        .header p { font-size: 13px; opacity: 0.9; margin-top: 3px; }
+        .scan-area { margin: 12px; padding: 16px; background: white; border-radius: 16px; }
+        .scan-title { font-size: 17px; font-weight: 600; margin-bottom: 12px; text-align: center; }
+        .video-container { width: 100%; height: 280px; background: #000; border-radius: 12px; overflow: hidden; margin-bottom: 12px; position: relative; }
+        #camera { width: 100%; height: 100%; object-fit: cover; }
+        #canvas { display: none; }
+        .btn-group { display: flex; gap: 8px; margin-top: 10px; }
+        .btn { flex: 1; padding: 14px 10px; background: #007AFF; color: white; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.15s; }
+        .btn:active { opacity: 0.8; transform: scale(0.97); }
+        .btn.gray { background: #e5e5ea; color: #000; }
+        .btn.green { background: #34C759; }
+        .btn.red { background: #FF3B30; }
+        .result-card { margin: 12px; padding: 16px; background: white; border-radius: 16px; display: none; }
+        .result-card.show { display: block; animation: fadeIn 0.25s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .field { margin: 8px 0; padding: 12px; background: #f2f2f7; border-radius: 10px; display: flex; align-items: center; gap: 10px; }
+        .field-icon { font-size: 22px; width: 28px; text-align: center; }
+        .field-input-wrap { flex: 1; }
+        .field-label { font-size: 10px; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.5px; }
+        .field input { width: 100%; border: none; background: transparent; font-size: 16px; outline: none; padding: 2px 0; }
+        .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px; }
+        .stat-card { background: white; padding: 14px; border-radius: 14px; text-align: center; }
+        .stat-value { font-size: 26px; font-weight: bold; color: #007AFF; }
+        .stat-label { font-size: 11px; color: #8e8e93; margin-top: 2px; }
+        .leads-list { margin: 12px; }
+        .lead-card { background: white; padding: 14px; border-radius: 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+        .lead-name { font-weight: 600; font-size: 15px; }
+        .lead-detail { font-size: 13px; color: #666; margin-top: 2px; }
+        .tab-bar { position: fixed; bottom: 0; width: 100%; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); display: flex; justify-content: space-around; padding: 8px 0 28px; border-top: 0.5px solid #ccc; }
+        .tab-item { text-align: center; font-size: 10px; color: #8e8e93; cursor: pointer; padding: 4px 8px; }
         .tab-item.active { color: #007AFF; }
-        .tab-icon { font-size: 22px; margin-bottom: 2px; }
-        
+        .tab-icon { font-size: 22px; display: block; margin-bottom: 2px; }
         .screen { display: none; }
         .screen.active { display: block; }
-        
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #34C759;
-            color: white;
-            padding: 15px 20px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(52,199,89,0.3);
-            display: none;
-            z-index: 1000;
-            animation: slideIn 0.3s ease-out;
-        }
-        .notification.show { display: block; }
-        
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        
-        .empty-state {
-            text-align: center;
-            padding: 50px 20px;
-            color: #666;
-        }
-        .empty-icon { font-size: 60px; margin-bottom: 20px; }
-        
+        .toast { position: fixed; top: 15px; left: 50%; transform: translateX(-50%); background: #34C759; color: white; padding: 12px 24px; border-radius: 25px; font-weight: 600; z-index: 999; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .toast.show { display: block; animation: toastIn 0.3s; }
+        @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(-20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+        .empty-state { text-align: center; padding: 60px 20px; color: #8e8e93; }
+        .empty-icon { font-size: 50px; margin-bottom: 12px; }
         input[type="file"] { display: none; }
+        .loading { text-align: center; padding: 20px; display: none; }
+        .loading.show { display: block; }
+        .spinner { width: 36px; height: 36px; border: 3px solid #e0e0e0; border-top-color: #007AFF; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 8px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .raw-text-box { margin: 12px; padding: 12px; background: #1a1a1a; color: #0f0; border-radius: 12px; font-size: 11px; font-family: monospace; white-space: pre-wrap; max-height: 150px; overflow-y: auto; display: none; }
+        .raw-text-box.show { display: block; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>📱 LeadCapture OCR</h1>
-        <p>Visitenkarten & QR-Codes scannen</p>
-    </div>
-    
-    <!-- Screen 1: Scan -->
-    <div class="screen active" id="scanScreen">
-        <div class="scan-area">
-            <div class="scan-title">📸 Visitenkarte scannen</div>
-            
-            <div class="video-container">
-                <video id="camera" autoplay playsinline></video>
-                <div class="scan-overlay"></div>
-            </div>
-            <canvas id="canvas"></canvas>
-            
-            <div class="progress-bar" id="progressBar">
-                <div class="progress-fill" id="progressFill"></div>
-            </div>
-            
-            <div class="btn-group">
-                <button class="btn" onclick="captureAndOCR()">📷 Foto aufnehmen</button>
-                <button class="btn secondary" onclick="document.getElementById('fileInput').click()">📁 Bild wählen</button>
-                <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event)" capture="environment">
-            </div>
-            
-            <div class="btn-group">
-                <button class="btn secondary" onclick="toggleCamera()">🔄 Kamera wechseln</button>
-                <button class="btn success" onclick="scanQRCode()">📱 QR Code</button>
-            </div>
+
+<div class="header">
+    <h1>📱 LeadCapture</h1>
+    <p>OCR.space + Profi-Parser</p>
+</div>
+
+<!-- SCAN SCREEN -->
+<div class="screen active" id="scanScreen">
+    <div class="scan-area">
+        <div class="scan-title">📸 Visitenkarte scannen</div>
+        <div class="video-container"><video id="camera" autoplay playsinline></video></div>
+        <canvas id="canvas"></canvas>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="color:#666;font-size:14px;">OCR.space analysiert...</p>
         </div>
         
-        <div class="result-card" id="resultCard">
-            <h3 style="margin-bottom: 15px;">✅ Erkannter Kontakt</h3>
-            <div class="field">
-                <span class="field-icon">👤</span>
-                <input type="text" id="fullName" placeholder="Vollständiger Name">
-            </div>
-            <div class="field">
-                <span class="field-icon">🏢</span>
-                <input type="text" id="company" placeholder="Firma">
-            </div>
-            <div class="field">
-                <span class="field-icon">💼</span>
-                <input type="text" id="position" placeholder="Position">
-            </div>
-            <div class="field">
-                <span class="field-icon">📧</span>
-                <input type="email" id="email" placeholder="E-Mail">
-            </div>
-            <div class="field">
-                <span class="field-icon">📱</span>
-                <input type="tel" id="phone" placeholder="Telefon">
-            </div>
-            <div class="field">
-                <span class="field-icon">🌐</span>
-                <input type="url" id="website" placeholder="Website">
-            </div>
-            
-            <div class="btn-group">
-                <button class="btn success" onclick="saveLead()">💾 Lead speichern</button>
-                <button class="btn danger" onclick="clearResult()">❌ Verwerfen</button>
-            </div>
+        <div class="btn-group">
+            <button class="btn" onclick="capture()">📷 Foto</button>
+            <button class="btn gray" onclick="document.getElementById('fileInput').click()">📁 Galerie</button>
+            <input type="file" id="fileInput" accept="image/*" onchange="handleFile(event)" capture="environment">
+        </div>
+        <div class="btn-group">
+            <button class="btn gray" onclick="toggleCam()">🔄 Kamera</button>
+            <button class="btn gray" onclick="toggleRaw()">📝 Rohtext</button>
         </div>
     </div>
     
-    <!-- Screen 2: Leads -->
-    <div class="screen" id="leadsScreen">
-        <div class="stats">
-            <div class="stat-card">
-                <div class="stat-value" id="totalLeads">0</div>
-                <div class="stat-label">Gesamt Leads</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="todayLeads">0</div>
-                <div class="stat-label">Heute</div>
-            </div>
-        </div>
-        
-        <div class="leads-list" id="leadsList">
-            <div class="empty-state">
-                <div class="empty-icon">📭</div>
-                <h3>Keine Leads vorhanden</h3>
-                <p>Scanne deine erste Visitenkarte!</p>
-            </div>
-        </div>
+    <!-- Rohtext-Anzeige -->
+    <div class="raw-text-box" id="rawTextBox">
+        <strong style="color:#fff;">OCR Rohtext:</strong><br>
+        <span id="rawTextContent"></span>
     </div>
     
-    <!-- Screen 3: Settings -->
-    <div class="screen" id="settingsScreen">
-        <div class="scan-area">
-            <h3>⚙️ Einstellungen</h3>
-            <div class="field">
-                <span class="field-icon">📅</span>
-                <input type="text" id="eventName" placeholder="Event Name (z.B. Messe München)">
-            </div>
-            <button class="btn success" onclick="exportLeads()">📤 Leads exportieren (CSV)</button>
-            <button class="btn danger" onclick="clearAllLeads()">🗑️ Alle Leads löschen</button>
-            <button class="btn secondary" onclick="installApp()">📲 App installieren</button>
+    <div class="result-card" id="resultCard">
+        <h3 style="margin-bottom:12px;font-size:17px;">✅ Erkannt</h3>
+        <div class="field"><span class="field-icon">👤</span><div class="field-input-wrap"><div class="field-label">Vorname</div><input type="text" id="fFirstName" placeholder="Max"></div></div>
+        <div class="field"><span class="field-icon">👤</span><div class="field-input-wrap"><div class="field-label">Nachname</div><input type="text" id="fLastName" placeholder="Mustermann"></div></div>
+        <div class="field"><span class="field-icon">🏢</span><div class="field-input-wrap"><div class="field-label">Firma</div><input type="text" id="fCompany" placeholder="Firma GmbH"></div></div>
+        <div class="field"><span class="field-icon">💼</span><div class="field-input-wrap"><div class="field-label">Position</div><input type="text" id="fPosition" placeholder="CEO"></div></div>
+        <div class="field"><span class="field-icon">📧</span><div class="field-input-wrap"><div class="field-label">E-Mail</div><input type="email" id="fEmail" placeholder="max@firma.de"></div></div>
+        <div class="field"><span class="field-icon">📱</span><div class="field-input-wrap"><div class="field-label">Telefon</div><input type="tel" id="fPhone" placeholder="+49 123 456789"></div></div>
+        <div class="field"><span class="field-icon">🌐</span><div class="field-input-wrap"><div class="field-label">Website</div><input type="url" id="fWeb" placeholder="www.firma.de"></div></div>
+        <div class="btn-group" style="margin-top:12px;">
+            <button class="btn green" onclick="saveLead()">💾 Speichern</button>
+            <button class="btn red" onclick="clearResult()">❌</button>
         </div>
     </div>
-    
-    <div class="tab-bar">
-        <div class="tab-item active" onclick="switchScreen('scan')">
-            <div class="tab-icon">📷</div>
-            Scannen
-        </div>
-        <div class="tab-item" onclick="switchScreen('leads')">
-            <div class="tab-icon">👥</div>
-            Leads
-        </div>
-        <div class="tab-item" onclick="switchScreen('settings')">
-            <div class="tab-icon">⚙️</div>
-            Settings
-        </div>
+</div>
+
+<!-- LEADS SCREEN -->
+<div class="screen" id="leadsScreen">
+    <div class="stats">
+        <div class="stat-card"><div class="stat-value" id="totalLeads">0</div><div class="stat-label">Gesamt</div></div>
+        <div class="stat-card"><div class="stat-value" id="todayLeads">0</div><div class="stat-label">Heute</div></div>
     </div>
+    <div class="leads-list" id="leadsList"><div class="empty-state"><div class="empty-icon">📭</div><p>Keine Leads</p></div></div>
+</div>
+
+<!-- SETTINGS SCREEN -->
+<div class="screen" id="settingsScreen">
+    <div class="scan-area">
+        <h3 style="margin-bottom:12px;">⚙️ Einstellungen</h3>
+        <div class="field"><span class="field-icon">📅</span><div class="field-input-wrap"><div class="field-label">Event</div><input type="text" id="eventName" placeholder="z.B. Messe München 2025"></div></div>
+        <div class="field"><span class="field-icon">🔑</span><div class="field-input-wrap"><div class="field-label">OCR.space API Key</div><input type="text" id="apiKeyInput" placeholder="K1234567..."></div></div>
+        <p style="font-size:11px;color:#8e8e93;margin:6px 0;">Kostenlos: <a href="https://ocr.space/ocrapi" target="_blank" style="color:#007AFF;">ocr.space/ocrapi</a> • 500/Tag</p>
+        <button class="btn green" onclick="saveApiKey()" style="margin-top:8px;">💾 Key speichern</button>
+        <button class="btn" onclick="exportCSV()" style="margin-top:8px;">📤 CSV Export</button>
+        <button class="btn red" onclick="clearAll()" style="margin-top:8px;">🗑️ Alle löschen</button>
+    </div>
+</div>
+
+<!-- TAB BAR -->
+<div class="tab-bar">
+    <div class="tab-item active" onclick="switchTab('scan')"><span class="tab-icon">📷</span>Scannen</div>
+    <div class="tab-item" onclick="switchTab('leads')"><span class="tab-icon">👥</span>Leads</div>
+    <div class="tab-item" onclick="switchTab('settings')"><span class="tab-icon">⚙️</span>Settings</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============ CONFIG ============
+const OCR_API_KEY = 'K89798848288957'; // <-- DEIN KEY
+const OCR_URL = 'https://api.ocr.space/parse/image';
+
+let stream = null, facing = 'environment';
+let leads = JSON.parse(localStorage.getItem('leads') || '[]');
+let apiKey = localStorage.getItem('ocrspace_key') || OCR_API_KEY;
+let lastRawText = '';
+
+// ============ KAMERA ============
+async function startCam() {
+    try {
+        if (stream) stream.getTracks().forEach(t => t.stop());
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 1920 }, height: { ideal: 1080 } } });
+        document.getElementById('camera').srcObject = stream;
+    } catch(e) { toast('❌ Kamera-Zugriff benötigt'); }
+}
+function toggleCam() { facing = facing === 'environment' ? 'user' : 'environment'; startCam(); }
+function toggleRaw() {
+    const box = document.getElementById('rawTextBox');
+    if (box.classList.contains('show')) { box.classList.remove('show'); }
+    else if (lastRawText) { box.classList.add('show'); }
+}
+
+// ============ OCR MIT OCR.SPACE ============
+async function ocrSpace(base64Image) {
+    document.getElementById('loading').classList.add('show');
     
-    <div class="notification" id="notification"></div>
+    const formData = new FormData();
+    formData.append('base64Image', 'data:image/jpeg;base64,' + base64Image);
+    formData.append('language', 'ger');
+    formData.append('isOverlayRequired', 'false');
+    formData.append('detectOrientation', 'true');
+    formData.append('scale', 'true');
+    formData.append('OCREngine', '2');
     
-    <script>
-        // Globale Variablen
-        let stream = null;
-        let facingMode = 'environment';
-        let leads = JSON.parse(localStorage.getItem('leads') || '[]');
-        let currentScanResult = {};
-        
-        // Kamera starten
-        async function startCamera() {
-            try {
-                if (stream) {
-                    stream.getTracks().forEach(track => track.stop());
-                }
-                
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } }
-                });
-                
-                const video = document.getElementById('camera');
-                video.srcObject = stream;
-                video.play();
-            } catch (error) {
-                console.error('Kamera-Fehler:', error);
-                showNotification('❌ Kamera-Zugriff verweigert');
-            }
-        }
-        
-        // Kamera wechseln
-        function toggleCamera() {
-            facingMode = facingMode === 'environment' ? 'user' : 'environment';
-            startCamera();
-            showNotification('🔄 Kamera gewechselt');
-        }
-        
-        // Foto aufnehmen und OCR durchführen
-        async function captureAndOCR() {
-            const video = document.getElementById('camera');
-            const canvas = document.getElementById('canvas');
-            const progressBar = document.getElementById('progressBar');
-            const progressFill = document.getElementById('progressFill');
-            
-            // Foto aufnehmen
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0);
-            
-            // Progress anzeigen
-            progressBar.classList.add('show');
-            progressFill.style.width = '0%';
-            
-            showNotification('🔍 OCR wird durchgeführt...');
-            
-            try {
-                // Tesseract.js OCR
-                const { data: { text } } = await Tesseract.recognize(
-                    canvas,
-                    'deu+eng',
-                    {
-                        logger: m => {
-                            if (m.status === 'recognizing text') {
-                                const progress = Math.round(m.progress * 100);
-                                progressFill.style.width = progress + '%';
-                            }
-                        }
-                    }
-                );
-                
-                progressFill.style.width = '100%';
-                
-                // Text parsen
-                const parsed = parseBusinessCard(text);
-                currentScanResult = parsed;
-                
-                // Ergebnis anzeigen
-                displayResult(parsed);
-                
-                setTimeout(() => {
-                    progressBar.classList.remove('show');
-                }, 1000);
-                
-                showNotification('✅ OCR erfolgreich!');
-                
-            } catch (error) {
-                console.error('OCR-Fehler:', error);
-                showNotification('❌ OCR fehlgeschlagen');
-                progressBar.classList.remove('show');
-            }
-        }
-        
-        // Datei auswählen und OCR
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                const img = new Image();
-                img.src = e.target.result;
-                
-                img.onload = async function() {
-                    const canvas = document.getElementById('canvas');
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0);
-                    
-                    const progressBar = document.getElementById('progressBar');
-                    const progressFill = document.getElementById('progressFill');
-                    progressBar.classList.add('show');
-                    progressFill.style.width = '0%';
-                    
-                    showNotification('🔍 OCR wird durchgeführt...');
-                    
-                    try {
-                        const { data: { text } } = await Tesseract.recognize(
-                            canvas,
-                            'deu+eng',
-                            {
-                                logger: m => {
-                                    if (m.status === 'recognizing text') {
-                                        progressFill.style.width = Math.round(m.progress * 100) + '%';
-                                    }
-                                }
-                            }
-                        );
-                        
-                        const parsed = parseBusinessCard(text);
-                        currentScanResult = parsed;
-                        displayResult(parsed);
-                        
-                        setTimeout(() => progressBar.classList.remove('show'), 1000);
-                        showNotification('✅ OCR erfolgreich!');
-                    } catch (error) {
-                        showNotification('❌ OCR fehlgeschlagen');
-                        progressBar.classList.remove('show');
-                    }
-                };
-            };
-            reader.readAsDataURL(file);
-        }
-        
-        // Visitenkarten-Text parsen
-        function parseBusinessCard(text) {
-            const lines = text.split('\n').filter(line => line.trim());
-            const result = {
-                fullName: '',
-                company: '',
-                position: '',
-                email: '',
-                phone: '',
-                website: '',
-                address: ''
-            };
-            
-            // E-Mail finden
-            const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-            if (emailMatch) result.email = emailMatch[0];
-            
-            // Telefon finden (deutsche/internationale Formate)
-            const phoneMatch = text.match(/[\+]?[0-9]{1,4}?[-\s\.]?[0-9]{2,}[-\s\.]?[0-9]{2,}[-\s\.]?[0-9]{2,}/);
-            if (phoneMatch) result.phone = phoneMatch[0];
-            
-            // Website finden
-            const webMatch = text.match(/(?:www\.|https?:\/\/)[^\s]+/);
-            if (webMatch) result.website = webMatch[0];
-            
-            // Firma finden
-            for (const line of lines) {
-                const lower = line.toLowerCase();
-                if (lower.includes('gmbh') || lower.includes('ag') || 
-                    lower.includes('kg') || lower.includes('ohg') ||
-                    lower.includes('ltd') || lower.includes('inc') ||
-                    lower.includes('corp') || lower.includes('llc')) {
-                    result.company = line.trim();
-                    break;
-                }
-            }
-            
-            // Position finden
-            const positions = ['ceo', 'cto', 'cfo', 'manager', 'director', 'leiter', 'chef', 'head'];
-            for (const line of lines) {
-                const lower = line.toLowerCase();
-                if (positions.some(p => lower.includes(p))) {
-                    result.position = line.trim();
-                    break;
-                }
-            }
-            
-            // Name finden (erste Zeile ohne Sonderzeichen)
-            for (const line of lines) {
-                const cleaned = line.trim();
-                if (cleaned && !cleaned.includes('@') && !cleaned.includes('www') && 
-                    !cleaned.match(/^[\+]?[0-9]/) && cleaned.split(' ').length >= 2) {
-                    result.fullName = cleaned;
-                    break;
-                }
-            }
-            
-            return result;
-        }
-        
-        // Ergebnis anzeigen
-        function displayResult(data) {
-            document.getElementById('fullName').value = data.fullName || '';
-            document.getElementById('company').value = data.company || '';
-            document.getElementById('position').value = data.position || '';
-            document.getElementById('email').value = data.email || '';
-            document.getElementById('phone').value = data.phone || '';
-            document.getElementById('website').value = data.website || '';
-            
-            document.getElementById('resultCard').classList.add('show');
-        }
-        
-        // Lead speichern
-        function saveLead() {
-            const lead = {
-                id: Date.now(),
-                fullName: document.getElementById('fullName').value,
-                company: document.getElementById('company').value,
-                position: document.getElementById('position').value,
-                email: document.getElementById('email').value,
-                phone: document.getElementById('phone').value,
-                website: document.getElementById('website').value,
-                eventName: document.getElementById('eventName').value || 'Messe',
-                rating: 3,
-                date: new Date().toISOString(),
-                contacted: false
-            };
-            
-            leads.unshift(lead);
-            localStorage.setItem('leads', JSON.stringify(leads));
-            
-            clearResult();
-            updateLeadsList();
-            showNotification('✅ Lead gespeichert!');
-        }
-        
-        // Ergebnis zurücksetzen
-        function clearResult() {
-            document.getElementById('resultCard').classList.remove('show');
-            currentScanResult = {};
-        }
-        
-        // Leads-Liste aktualisieren
-        function updateLeadsList() {
-            const container = document.getElementById('leadsList');
-            document.getElementById('totalLeads').textContent = leads.length;
-            
-            const today = new Date().toDateString();
-            const todayLeads = leads.filter(l => new Date(l.date).toDateString() === today).length;
-            document.getElementById('todayLeads').textContent = todayLeads;
-            
-            if (leads.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">📭</div>
-                        <h3>Keine Leads vorhanden</h3>
-                        <p>Scanne deine erste Visitenkarte!</p>
-                    </div>`;
-                return;
-            }
-            
-            container.innerHTML = leads.map(lead => `
-                <div class="lead-card">
-                    <div class="lead-info">
-                        <div class="lead-name">${lead.fullName || 'Unbekannt'}</div>
-                        <div class="lead-company">${lead.company || ''}</div>
-                        <div class="lead-email">${lead.email || ''}</div>
-                    </div>
-                    <div class="lead-rating">
-                        ${'⭐'.repeat(lead.rating)}
-                        <br>
-                        <small>${new Date(lead.date).toLocaleDateString('de-DE')}</small>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        // QR-Code scannen
-        async function scanQRCode() {
-            showNotification('📱 QR-Scanner wird vorbereitet...');
-            // QR-Scanner könnte mit jsQR library implementiert werden
-            alert('QR-Code Scanner:\n\nFür vollständige QR-Funktionalität bitte die native App verwenden.\n\nIn der PWA-Version ist OCR für Visitenkarten optimiert.');
-        }
-        
-        // Bildschirm wechseln
-        function switchScreen(screen) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-            
-            if (screen === 'scan') {
-                document.getElementById('scanScreen').classList.add('active');
-                document.querySelectorAll('.tab-item')[0].classList.add('active');
-                startCamera();
-            } else if (screen === 'leads') {
-                document.getElementById('leadsScreen').classList.add('active');
-                document.querySelectorAll('.tab-item')[1].classList.add('active');
-                updateLeadsList();
-                if (stream) {
-                    stream.getTracks().forEach(track => track.stop());
-                }
-            } else if (screen === 'settings') {
-                document.getElementById('settingsScreen').classList.add('active');
-                document.querySelectorAll('.tab-item')[2].classList.add('active');
-                if (stream) {
-                    stream.getTracks().forEach(track => track.stop());
-                }
-            }
-        }
-        
-        // Leads exportieren
-        function exportLeads() {
-            if (leads.length === 0) {
-                showNotification('❌ Keine Leads zum Exportieren');
-                return;
-            }
-            
-            let csv = 'Name,Firma,Position,E-Mail,Telefon,Website,Event,Datum,Bewertung\n';
-            leads.forEach(lead => {
-                csv += `"${lead.fullName}","${lead.company}","${lead.position}","${lead.email}","${lead.phone}","${lead.website}","${lead.eventName}","${new Date(lead.date).toLocaleDateString('de-DE')}","${lead.rating}"\n`;
-            });
-            
-            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `leads_${new Date().toISOString().split('T')[0]}.csv`;
-            link.click();
-            
-            showNotification('📤 Leads exportiert!');
-        }
-        
-        // Alle Leads löschen
-        function clearAllLeads() {
-            if (confirm('⚠️ Wirklich ALLE Leads löschen?')) {
-                leads = [];
-                localStorage.setItem('leads', JSON.stringify(leads));
-                updateLeadsList();
-                showNotification('🗑️ Alle Leads gelöscht');
-            }
-        }
-        
-        // App installieren
-        function installApp() {
-            if (window.deferredPrompt) {
-                window.deferredPrompt.prompt();
-                window.deferredPrompt.userChoice.then(result => {
-                    if (result.outcome === 'accepted') {
-                        showNotification('📲 App wird installiert...');
-                    }
-                });
-            } else {
-                alert('📲 App installieren:\n\n1. Tippe auf Teilen (📤)\n2. "Zum Home-Bildschirm"\n3. "Hinzufügen"');
-            }
-        }
-        
-        // Benachrichtigung anzeigen
-        function showNotification(message) {
-            const notification = document.getElementById('notification');
-            notification.textContent = message;
-            notification.classList.add('show');
-            setTimeout(() => notification.classList.remove('show'), 3000);
-        }
-        
-        // PWA Installation
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            window.deferredPrompt = e;
+    try {
+        const resp = await fetch(OCR_URL, {
+            method: 'POST',
+            headers: { 'apikey': apiKey },
+            body: formData
         });
         
-        // Initialisierung
-        document.addEventListener('DOMContentLoaded', () => {
-            startCamera();
-            updateLeadsList();
-            document.getElementById('eventName').value = localStorage.getItem('eventName') || '';
-        });
+        document.getElementById('loading').classList.remove('show');
         
-        // Event-Name speichern
-        document.getElementById('eventName').addEventListener('change', function() {
-            localStorage.setItem('eventName', this.value);
-        });
-    </script>
+        if (!resp.ok) throw new Error('API-Fehler: ' + resp.status);
+        
+        const data = await resp.json();
+        
+        if (data.OCRExitCode === 1) {
+            return data.ParsedResults[0].ParsedText;
+        } else {
+            throw new Error(data.ErrorMessage || 'OCR fehlgeschlagen');
+        }
+    } catch(e) {
+        document.getElementById('loading').classList.remove('show');
+        throw e;
+    }
+}
+
+// ============ PROFESSIONELLER VISITENKARTEN-PARSER ============
+function parseBusinessCard(text) {
+    lastRawText = text;
+    document.getElementById('rawTextContent').textContent = text;
+    
+    const result = {
+        firstName: '',
+        lastName: '',
+        fullName: '',
+        company: '',
+        position: '',
+        email: '',
+        phone: '',
+        web: ''
+    };
+    
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const all = text;
+    
+    // 1. E-MAIL (sehr zuverlässig)
+    const emailRegex = /([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/;
+    const emailMatch = all.match(emailRegex);
+    if (emailMatch) {
+        result.email = emailMatch[1].toLowerCase().replace(/[,;.]$/, '');
+    }
+    
+    // 2. WEBSITE
+    const urlRegex = /((?:https?:\/\/)?(?:www\.)?[a-zA-Z0-9\-]+\.(?:de|com|net|org|io|at|ch|eu|info|biz)[^\s,;]*)/i;
+    const urlMatch = all.match(urlRegex);
+    if (urlMatch && !urlMatch[1].includes('@')) {
+        let url = urlMatch[1].replace(/[,;.]$/, '');
+        if (!url.match(/^https?:\/\//)) url = 'https://' + url;
+        result.web = url;
+    }
+    
+    // 3. TELEFON - alle gängigen Formate
+    const phonePatterns = [
+        // +49 123 456789 oder +49 (0) 123 456789
+        /(\+\d{1,3}\s*(?:\(\d+\))?\s*\d[\d\s\-.]{5,})/,
+        // 0171 1234567 oder 030 1234567
+        /(0\d{2,4}[\s\-.]\d{3,}[\s\-.]?\d{0,})/,
+        // Tel: 0123 456789
+        /(?:Tel|Fon|Mobil|Phone|Telefon|Handy)[.:]?\s*([+\d][\d\s\-()\/]{7,})/i,
+    ];
+    
+    for (const pattern of phonePatterns) {
+        const match = all.match(pattern);
+        if (match) {
+            let phone = match[1] || match[0];
+            // Bereinigen
+            phone = phone.replace(/^(Tel|Fon|Mobil|Phone|Telefon|Handy)[.:]?\s*/i, '');
+            phone = phone.replace(/\s+/g, ' ').trim();
+            if (phone.length >= 7 && /\d{3}/.test(phone)) {
+                result.phone = phone;
+                break;
+            }
+        }
+    }
+    
+    // 4. FIRMA & POSITION & NAME - mit Heuristik
+    
+    // Deutsche Titel/Anreden
+    const titles = ['herr', 'frau', 'dr.', 'prof.', 'dr. med.', 'dipl.', 'mag.'];
+    const companyEndings = ['gmbh', 'ag', 'kg', 'ohg', 'ltd', 'inc', 'corp', 'llc', 'se', 'gbr', 'ug', 'e.k.'];
+    const positionKeywords = ['ceo', 'cto', 'cfo', 'chief', 'manager', 'director', 'leiter', 'head', 'vp', 'president', 'geschäftsführer', 'vorstand', 'chef', 'berater', 'consultant', 'entwickler', 'developer', 'architekt', 'engineer', 'ingenieur', 'sales', 'vertrieb', 'marketing', 'projektleiter', 'teamleiter', 'abteilungsleiter'];
+    
+    let nameLine = '';
+    let companyLine = '';
+    let positionLine = '';
+    
+    for (const line of lines) {
+        const lower = line.toLowerCase();
+        
+        // Skip offensichtliche Nicht-Namen
+        if (lower.includes('@')) continue;
+        if (lower.match(/^(www\.|https?:)/)) continue;
+        if (lower.match(/^\d{4,5}\s/)) continue; // PLZ
+        if (lower.includes('straße') || lower.includes('str.') || lower.includes('platz')) continue;
+        if (lower.match(/^(tel|fon|mobil|phone|telefon|handy)[.:]/i)) continue;
+        
+        // Firma
+        if (companyEndings.some(e => lower.includes(e))) {
+            companyLine = line;
+            continue;
+        }
+        
+        // Position
+        if (positionKeywords.some(k => lower.includes(k))) {
+            positionLine = line;
+            continue;
+        }
+        
+        // Name (erste passende Zeile)
+        if (!nameLine) {
+            const words = line.split(/[\s,]+/).filter(w => w.length > 1);
+            if (words.length >= 2 && words.length <= 5 && !lower.match(/^[\+\d]/)) {
+                // Prüfe ob es kein Firmenname ist
+                if (!companyEndings.some(e => lower.includes(e)) && !positionKeywords.some(k => lower.includes(k))) {
+                    nameLine = line;
+                }
+            }
+        }
+    }
+    
+    // Name aufteilen
+    if (nameLine) {
+        // Entferne Titel
+        let cleanName = nameLine;
+        for (const title of titles) {
+            cleanName = cleanName.replace(new RegExp(title, 'i'), '').trim();
+        }
+        
+        const nameParts = cleanName.split(/[\s,]+/).filter(w => w.length > 1);
+        if (nameParts.length >= 2) {
+            result.firstName = nameParts[0];
+            result.lastName = nameParts[nameParts.length - 1];
+            result.fullName = cleanName;
+        } else {
+            result.fullName = cleanName;
+            result.firstName = cleanName;
+        }
+    }
+    
+    result.company = companyLine;
+    result.position = positionLine;
+    
+    return result;
+}
+
+// ============ OCR FLOW ============
+async function capture() {
+    const video = document.getElementById('camera');
+    const canvas = document.getElementById('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    const b64 = canvas.toDataURL('image/jpeg', 0.9).split(',')[1];
+    await doOCR(b64);
+}
+
+function handleFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const b64 = e.target.result.split(',')[1];
+        await doOCR(b64);
+    };
+    reader.readAsDataURL(file);
+}
+
+async function doOCR(b64) {
+    if (!apiKey || apiKey === 'DEIN_API_KEY_HIER') { toast('❌ Bitte API-Key in Settings eingeben'); return; }
+    toast('🔍 OCR.space scannt...');
+    try {
+        const text = await ocrSpace(b64);
+        const parsed = parseBusinessCard(text);
+        showResult(parsed);
+        document.getElementById('rawTextBox').classList.add('show');
+        toast('✅ Erkannt!');
+    } catch(e) {
+        toast('❌ ' + e.message);
+    }
+}
+
+function showResult(p) {
+    document.getElementById('fFirstName').value = p.firstName || '';
+    document.getElementById('fLastName').value = p.lastName || '';
+    document.getElementById('fCompany').value = p.company || '';
+    document.getElementById('fPosition').value = p.position || '';
+    document.getElementById('fEmail').value = p.email || '';
+    document.getElementById('fPhone').value = p.phone || '';
+    document.getElementById('fWeb').value = p.web || '';
+    document.getElementById('resultCard').classList.add('show');
+}
+
+function clearResult() { 
+    document.getElementById('resultCard').classList.remove('show'); 
+    document.getElementById('rawTextBox').classList.remove('show');
+}
+
+// ============ LEADS ============
+function saveLead() {
+    const lead = {
+        id: Date.now(),
+        firstName: document.getElementById('fFirstName').value,
+        lastName: document.getElementById('fLastName').value,
+        company: document.getElementById('fCompany').value,
+        position: document.getElementById('fPosition').value,
+        email: document.getElementById('fEmail').value,
+        phone: document.getElementById('fPhone').value,
+        web: document.getElementById('fWeb').value,
+        event: document.getElementById('eventName').value || 'Messe',
+        date: new Date().toISOString()
+    };
+    leads.unshift(lead);
+    localStorage.setItem('leads', JSON.stringify(leads));
+    clearResult();
+    updateList();
+    toast('💾 Gespeichert!');
+}
+
+function updateList() {
+    document.getElementById('totalLeads').textContent = leads.length;
+    const today = new Date().toDateString();
+    document.getElementById('todayLeads').textContent = leads.filter(l => new Date(l.date).toDateString() === today).length;
+    const c = document.getElementById('leadsList');
+    if (!leads.length) { c.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>Keine Leads</p></div>'; return; }
+    c.innerHTML = leads.map(l => `<div class="lead-card" onclick="if(confirm('Löschen?')){leads=leads.filter(x=>x.id!==${l.id});localStorage.setItem('leads',JSON.stringify(leads));updateList();}"><div><div class="lead-name">${l.firstName||''} ${l.lastName||''}</div><div class="lead-detail">${l.company||''} • ${l.position||''}</div><div class="lead-detail" style="color:#007AFF;">${l.email||''} • ${l.phone||''}</div></div><div>🗑️</div></div>`).join('');
+}
+
+function switchTab(t) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.tab-item').forEach(i => i.classList.remove('active'));
+    if (t === 'scan') { document.getElementById('scanScreen').classList.add('active'); document.querySelectorAll('.tab-item')[0].classList.add('active'); startCam(); }
+    else if (t === 'leads') { document.getElementById('leadsScreen').classList.add('active'); document.querySelectorAll('.tab-item')[1].classList.add('active'); updateList(); if(stream) stream.getTracks().forEach(tr => tr.stop()); }
+    else { document.getElementById('settingsScreen').classList.add('active'); document.querySelectorAll('.tab-item')[2].classList.add('active'); if(stream) stream.getTracks().forEach(tr => tr.stop()); document.getElementById('apiKeyInput').value = apiKey; }
+}
+
+function exportCSV() {
+    if (!leads.length) { toast('❌ Keine Leads'); return; }
+    let csv = 'Vorname,Nachname,Firma,Position,E-Mail,Telefon,Website,Event,Datum\n';
+    leads.forEach(l => csv += `"${l.firstName}","${l.lastName}","${l.company}","${l.position}","${l.email}","${l.phone}","${l.web}","${l.event}","${new Date(l.date).toLocaleDateString('de-DE')}"\n`);
+    const b = new Blob(['\ufeff'+csv],{type:'text/csv'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'leads.csv'; a.click();
+    toast('📤 Exportiert!');
+}
+
+function clearAll() { if (confirm('Alle Leads löschen?')) { leads = []; localStorage.setItem('leads', JSON.stringify(leads)); updateList(); toast('🗑️ Gelöscht'); } }
+function saveApiKey() { apiKey = document.getElementById('apiKeyInput').value; localStorage.setItem('ocrspace_key', apiKey); toast('✅ Key gespeichert'); }
+function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2500); }
+
+document.addEventListener('DOMContentLoaded', () => {
+    startCam();
+    updateList();
+    document.getElementById('eventName').value = localStorage.getItem('eventName')||'';
+    document.getElementById('apiKeyInput').value = apiKey;
+});
+document.getElementById('eventName').addEventListener('change', function(){localStorage.setItem('eventName',this.value)});
+</script>
 </body>
 </html>
