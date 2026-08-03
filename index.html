@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
@@ -130,6 +130,7 @@
         .btn.secondary { background: #f0f0f0; color: #333; }
         .btn.success { background: #34C759; }
         .btn.danger { background: #FF3B30; }
+        .btn.warning { background: #FF9500; }
         
         .result-card {
             margin: 15px;
@@ -148,7 +149,7 @@
         
         .field {
             margin: 10px 0;
-            padding: 10px;
+            padding: 12px;
             background: #f8f9fa;
             border-radius: 10px;
             display: flex;
@@ -163,6 +164,24 @@
             font-size: 16px;
             outline: none;
         }
+        .field-label {
+            font-size: 11px;
+            color: #999;
+            margin-bottom: 2px;
+        }
+        
+        .raw-text {
+            margin: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            font-size: 13px;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+        .raw-text.show { display: block; }
         
         .progress-bar {
             width: 100%;
@@ -286,7 +305,7 @@
             
             <div class="btn-group">
                 <button class="btn secondary" onclick="toggleCamera()">🔄 Kamera wechseln</button>
-                <button class="btn success" onclick="scanQRCode()">📱 QR Code</button>
+                <button class="btn warning" onclick="testWithSample()">🧪 Test mit Beispieldaten</button>
             </div>
         </div>
         
@@ -294,33 +313,56 @@
             <h3 style="margin-bottom: 15px;">✅ Erkannter Kontakt</h3>
             <div class="field">
                 <span class="field-icon">👤</span>
-                <input type="text" id="fullName" placeholder="Vollständiger Name">
+                <div style="flex:1">
+                    <div class="field-label">Name</div>
+                    <input type="text" id="fullName" placeholder="Vollständiger Name">
+                </div>
             </div>
             <div class="field">
                 <span class="field-icon">🏢</span>
-                <input type="text" id="company" placeholder="Firma">
+                <div style="flex:1">
+                    <div class="field-label">Firma</div>
+                    <input type="text" id="company" placeholder="Firma">
+                </div>
             </div>
             <div class="field">
                 <span class="field-icon">💼</span>
-                <input type="text" id="position" placeholder="Position">
+                <div style="flex:1">
+                    <div class="field-label">Position</div>
+                    <input type="text" id="position" placeholder="Position">
+                </div>
             </div>
             <div class="field">
                 <span class="field-icon">📧</span>
-                <input type="email" id="email" placeholder="E-Mail">
+                <div style="flex:1">
+                    <div class="field-label">E-Mail</div>
+                    <input type="email" id="email" placeholder="E-Mail">
+                </div>
             </div>
             <div class="field">
                 <span class="field-icon">📱</span>
-                <input type="tel" id="phone" placeholder="Telefon">
+                <div style="flex:1">
+                    <div class="field-label">Telefon</div>
+                    <input type="tel" id="phone" placeholder="Telefon">
+                </div>
             </div>
             <div class="field">
                 <span class="field-icon">🌐</span>
-                <input type="url" id="website" placeholder="Website">
+                <div style="flex:1">
+                    <div class="field-label">Website</div>
+                    <input type="url" id="website" placeholder="Website">
+                </div>
             </div>
             
             <div class="btn-group">
                 <button class="btn success" onclick="saveLead()">💾 Lead speichern</button>
                 <button class="btn danger" onclick="clearResult()">❌ Verwerfen</button>
             </div>
+        </div>
+        
+        <div class="raw-text" id="rawText">
+            <strong>🔍 Erkannt von OCR:</strong><br>
+            <span id="rawTextContent"></span>
         </div>
     </div>
     
@@ -356,7 +398,7 @@
             </div>
             <button class="btn success" onclick="exportLeads()">📤 Leads exportieren (CSV)</button>
             <button class="btn danger" onclick="clearAllLeads()">🗑️ Alle Leads löschen</button>
-            <button class="btn secondary" onclick="installApp()">📲 App installieren</button>
+            <button class="btn warning" onclick="testWithSample()">🧪 OCR-Test mit Beispieldaten</button>
         </div>
     </div>
     
@@ -411,6 +453,28 @@
             showNotification('🔄 Kamera gewechselt');
         }
         
+        // Test mit Beispieldaten
+        function testWithSample() {
+            const sampleText = `Max Mustermann
+CEO
+Tech Innovations GmbH
+Musterstraße 123
+10115 Berlin
+
+max.mustermann@tech-innovations.de
+Tel: +49 30 1234567
+Mobil: +49 171 9876543
+
+www.tech-innovations.de`;
+            
+            const parsed = parseBusinessCard(sampleText);
+            currentScanResult = parsed;
+            displayResult(parsed);
+            document.getElementById('rawTextContent').textContent = sampleText;
+            document.getElementById('rawText').classList.add('show');
+            showNotification('✅ Testdaten erkannt!');
+        }
+        
         // Foto aufnehmen und OCR durchführen
         async function captureAndOCR() {
             const video = document.getElementById('camera');
@@ -431,7 +495,7 @@
             showNotification('🔍 OCR wird durchgeführt...');
             
             try {
-                // Tesseract.js OCR
+                // Tesseract.js OCR mit DEUTSCH und ENGLISCH
                 const { data: { text } } = await Tesseract.recognize(
                     canvas,
                     'deu+eng',
@@ -446,6 +510,10 @@
                 );
                 
                 progressFill.style.width = '100%';
+                
+                // Erkannten Text anzeigen
+                document.getElementById('rawTextContent').textContent = text;
+                document.getElementById('rawText').classList.add('show');
                 
                 // Text parsen
                 const parsed = parseBusinessCard(text);
@@ -504,6 +572,9 @@
                             }
                         );
                         
+                        document.getElementById('rawTextContent').textContent = text;
+                        document.getElementById('rawText').classList.add('show');
+                        
                         const parsed = parseBusinessCard(text);
                         currentScanResult = parsed;
                         displayResult(parsed);
@@ -519,9 +590,9 @@
             reader.readAsDataURL(file);
         }
         
-        // Visitenkarten-Text parsen
+        // VERBESSERTE Visitenkarten-Erkennung
         function parseBusinessCard(text) {
-            const lines = text.split('\n').filter(line => line.trim());
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
             const result = {
                 fullName: '',
                 company: '',
@@ -532,48 +603,110 @@
                 address: ''
             };
             
-            // E-Mail finden
-            const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-            if (emailMatch) result.email = emailMatch[0];
+            // E-Mail - verbesserte Erkennung
+            const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/;
+            const emailMatch = text.match(emailRegex);
+            if (emailMatch) {
+                result.email = emailMatch[0].replace(/^mailto:/i, '').trim();
+            }
             
-            // Telefon finden (deutsche/internationale Formate)
-            const phoneMatch = text.match(/[\+]?[0-9]{1,4}?[-\s\.]?[0-9]{2,}[-\s\.]?[0-9]{2,}[-\s\.]?[0-9]{2,}/);
-            if (phoneMatch) result.phone = phoneMatch[0];
+            // Website - verbesserte Erkennung
+            const urlRegex = /(?:(?:https?:\/\/|www\.)[^\s,;]+)|(?:[^\s,;]+\.[a-zA-Z]{2,}(?:\/[^\s,;]*)?)/;
+            const urlMatches = text.match(new RegExp(urlRegex, 'gi'));
+            if (urlMatches) {
+                for (const url of urlMatches) {
+                    const clean = url.replace(/^https?:\/\//, '').trim();
+                    if (clean.includes('.') && !clean.includes('@') && clean.length > 4) {
+                        result.website = clean.startsWith('www.') ? clean : 'www.' + clean;
+                        break;
+                    }
+                }
+            }
             
-            // Website finden
-            const webMatch = text.match(/(?:www\.|https?:\/\/)[^\s]+/);
-            if (webMatch) result.website = webMatch[0];
+            // Telefon - deutsche & internationale Formate
+            const phoneRegexes = [
+                /(?:(?:\+|00)49[-\s.]?|0)[1-9][0-9]{1,4}[-\s.]?[0-9]{1,}[-\s.]?[0-9]{1,}/g,
+                /Tel\.?:?\s*([+\d][\d\s\-./]{6,})/gi,
+                /Mobil\.?:?\s*([+\d][\d\s\-./]{6,})/gi,
+                /Fon\.?:?\s*([+\d][\d\s\-./]{6,})/gi,
+                /Phone\.?:?\s*([+\d][\d\s\-./]{6,})/gi
+            ];
             
-            // Firma finden
+            for (const regex of phoneRegexes) {
+                const match = text.match(regex);
+                if (match) {
+                    let phone = match[0];
+                    phone = phone.replace(/^(Tel\.?:?|Mobil\.?:?|Fon\.?:?|Phone\.?:?)\s*/i, '');
+                    phone = phone.trim();
+                    if (phone.length >= 6) {
+                        result.phone = phone;
+                        break;
+                    }
+                }
+            }
+            
+            // Firma - nach GmbH, AG, etc. suchen
+            const companyIndicators = ['gmbh', 'ag', 'kg', 'ohg', 'ltd', 'inc', 'corp', 'llc', 'se', 'co.', 'kg'];
             for (const line of lines) {
                 const lower = line.toLowerCase();
-                if (lower.includes('gmbh') || lower.includes('ag') || 
-                    lower.includes('kg') || lower.includes('ohg') ||
-                    lower.includes('ltd') || lower.includes('inc') ||
-                    lower.includes('corp') || lower.includes('llc')) {
-                    result.company = line.trim();
+                if (companyIndicators.some(ind => lower.includes(ind))) {
+                    result.company = line;
                     break;
                 }
             }
             
-            // Position finden
-            const positions = ['ceo', 'cto', 'cfo', 'manager', 'director', 'leiter', 'chef', 'head'];
+            // Wenn keine Firma gefunden, suche nach typischen Firmen-Keywords
+            if (!result.company) {
+                const firmKeywords = ['group', 'holding', 'solutions', 'technologies', 'systems', 'consulting'];
+                for (const line of lines) {
+                    const lower = line.toLowerCase();
+                    if (firmKeywords.some(kw => lower.includes(kw))) {
+                        result.company = line;
+                        break;
+                    }
+                }
+            }
+            
+            // Position - typische Titel
+            const positionKeywords = [
+                'ceo', 'cto', 'cfo', 'coo', 'chief', 'manager', 'director', 'leiter',
+                'head of', 'vp', 'president', 'geschäftsführer', 'vorstand', 'chef',
+                'berater', 'consultant', 'entwickler', 'developer', 'architekt',
+                'engineer', 'ingenieur', 'designer', 'analyst'
+            ];
+            
             for (const line of lines) {
                 const lower = line.toLowerCase();
-                if (positions.some(p => lower.includes(p))) {
-                    result.position = line.trim();
+                if (positionKeywords.some(kw => lower.includes(kw))) {
+                    result.position = line;
                     break;
                 }
             }
             
-            // Name finden (erste Zeile ohne Sonderzeichen)
+            // Name - erste Zeile(n) die kein anderes Feld sind
             for (const line of lines) {
-                const cleaned = line.trim();
-                if (cleaned && !cleaned.includes('@') && !cleaned.includes('www') && 
-                    !cleaned.match(/^[\+]?[0-9]/) && cleaned.split(' ').length >= 2) {
-                    result.fullName = cleaned;
+                const lower = line.toLowerCase();
+                const isNotOther = !lower.includes('@') && 
+                                   !lower.match(/^www\./) &&
+                                   !lower.match(/^https?:/) &&
+                                   !lower.match(/^[\+]?[\d\s\-().]{6,}$/) &&
+                                   !lower.match(/^tel\.?:/i) &&
+                                   !lower.match(/^mobil\.?:/i) &&
+                                   !lower.match(/^fon\.?:/i) &&
+                                   !companyIndicators.some(ind => lower.includes(ind)) &&
+                                   !positionKeywords.some(kw => lower.includes(kw));
+                
+                if (isNotOther && line.split(' ').length >= 2 && line.length > 5) {
+                    result.fullName = line;
                     break;
                 }
+            }
+            
+            // Adresse - PLZ + Ort
+            const addressRegex = /\b\d{4,5}\s+[A-Za-zäöüßÄÖÜ\s]+\b/;
+            const addressMatch = text.match(addressRegex);
+            if (addressMatch) {
+                result.address = addressMatch[0];
             }
             
             return result;
@@ -618,6 +751,7 @@
         // Ergebnis zurücksetzen
         function clearResult() {
             document.getElementById('resultCard').classList.remove('show');
+            document.getElementById('rawText').classList.remove('show');
             currentScanResult = {};
         }
         
@@ -641,26 +775,25 @@
             }
             
             container.innerHTML = leads.map(lead => `
-                <div class="lead-card">
+                <div class="lead-card" onclick="deleteLead(${lead.id})">
                     <div class="lead-info">
                         <div class="lead-name">${lead.fullName || 'Unbekannt'}</div>
                         <div class="lead-company">${lead.company || ''}</div>
                         <div class="lead-email">${lead.email || ''}</div>
-                    </div>
-                    <div class="lead-rating">
-                        ${'⭐'.repeat(lead.rating)}
-                        <br>
                         <small>${new Date(lead.date).toLocaleDateString('de-DE')}</small>
                     </div>
+                    <div class="lead-rating">${'⭐'.repeat(lead.rating)}</div>
                 </div>
             `).join('');
         }
         
-        // QR-Code scannen
-        async function scanQRCode() {
-            showNotification('📱 QR-Scanner wird vorbereitet...');
-            // QR-Scanner könnte mit jsQR library implementiert werden
-            alert('QR-Code Scanner:\n\nFür vollständige QR-Funktionalität bitte die native App verwenden.\n\nIn der PWA-Version ist OCR für Visitenkarten optimiert.');
+        function deleteLead(id) {
+            if (confirm('Lead löschen?')) {
+                leads = leads.filter(l => l.id !== id);
+                localStorage.setItem('leads', JSON.stringify(leads));
+                updateLeadsList();
+                showNotification('🗑️ Lead gelöscht');
+            }
         }
         
         // Bildschirm wechseln
@@ -676,15 +809,11 @@
                 document.getElementById('leadsScreen').classList.add('active');
                 document.querySelectorAll('.tab-item')[1].classList.add('active');
                 updateLeadsList();
-                if (stream) {
-                    stream.getTracks().forEach(track => track.stop());
-                }
+                if (stream) stream.getTracks().forEach(t => t.stop());
             } else if (screen === 'settings') {
                 document.getElementById('settingsScreen').classList.add('active');
                 document.querySelectorAll('.tab-item')[2].classList.add('active');
-                if (stream) {
-                    stream.getTracks().forEach(track => track.stop());
-                }
+                if (stream) stream.getTracks().forEach(t => t.stop());
             }
         }
         
@@ -719,21 +848,7 @@
             }
         }
         
-        // App installieren
-        function installApp() {
-            if (window.deferredPrompt) {
-                window.deferredPrompt.prompt();
-                window.deferredPrompt.userChoice.then(result => {
-                    if (result.outcome === 'accepted') {
-                        showNotification('📲 App wird installiert...');
-                    }
-                });
-            } else {
-                alert('📲 App installieren:\n\n1. Tippe auf Teilen (📤)\n2. "Zum Home-Bildschirm"\n3. "Hinzufügen"');
-            }
-        }
-        
-        // Benachrichtigung anzeigen
+        // Benachrichtigung
         function showNotification(message) {
             const notification = document.getElementById('notification');
             notification.textContent = message;
@@ -754,7 +869,6 @@
             document.getElementById('eventName').value = localStorage.getItem('eventName') || '';
         });
         
-        // Event-Name speichern
         document.getElementById('eventName').addEventListener('change', function() {
             localStorage.setItem('eventName', this.value);
         });
