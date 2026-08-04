@@ -141,7 +141,13 @@
             <button type="button" class="btn btn-danger" id="resetTokenBtn">🔄 Token</button>
         </div>
     </form>
-
+    <!-- Import-Bereich -->
+        <div class="export-actions">
+            <button type="button" class="btn btn-purple" id="exportCsvBtn">📊 CSV exportieren</button>
+            <button type="button" class="btn btn-success" id="importCsvBtn">📥 CSV importieren</button>
+            <input type="file" id="csvFileInput" accept=".csv" style="display:none;">
+            <button type="button" class="btn btn-secondary" id="refreshLeadsBtn">🔄 Aktualisieren</button>
+</div>
     <!-- EXPORT + HISTOGRAMM TOGGLE -->
     <div class="export-actions">
         <button type="button" class="btn btn-purple" id="exportCsvBtn">📊 CSV exportieren</button>
@@ -552,7 +558,135 @@ async function exportCSV() {
         window.URL.revokeObjectURL(url);
     } catch (error) { alert('❌ Fehler beim Export: ' + error.message); }
 }
+// ============================================================
+// CSV-IMPORT
+// ============================================================
+const importCsvBtn = document.getElementById('importCsvBtn');
+const csvFileInput = document.getElementById('csvFileInput');
 
+importCsvBtn.addEventListener('click', () => {
+    csvFileInput.click();
+});
+
+csvFileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Prüfe Dateityp
+    if (!file.name.endsWith('.csv')) {
+        alert('❌ Bitte wähle eine CSV-Datei aus.');
+        csvFileInput.value = '';
+        return;
+    }
+    
+    // Prüfe Dateigröße
+    if (file.size > 10 * 1024 * 1024) {
+        alert('❌ Datei zu groß (max 10 MB).');
+        csvFileInput.value = '';
+        return;
+    }
+    
+    // Bestätigung
+    if (!confirm(`📥 Möchtest du die Datei "${file.name}" wirklich importieren?\n\nBestehende Leads mit gleicher ID werden überschrieben.`)) {
+        csvFileInput.value = '';
+        return;
+    }
+    
+    try {
+        const token = getAuthToken();
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        setStatus('📥 Importiere CSV...', true);
+        importCsvBtn.disabled = true;
+        
+        const response = await fetch('https://leadcapture-backend.onrender.com/api/import/csv', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+                // Kein Content-Type! FormData setzt es automatisch
+            },
+            body: formData
+        });
+        
+        if (response.status === 401 || response.status === 403) {
+            localStorage.removeItem(TOKEN_STORAGE_KEY);
+            throw new Error('❌ Authentifizierung fehlgeschlagen. Token zurücksetzen.');
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(`✅ Import erfolgreich!\n\n📥 ${result.imported} neue Leads\n🔄 ${result.updated} aktualisiert\n📊 ${result.total} insgesamt`);
+            loadLeads();
+            clearForm();
+        } else {
+            throw new Error(result.error || 'Unbekannter Fehler');
+        }
+        
+    } catch (error) {
+        alert('❌ Fehler beim Import: ' + error.message);
+        console.error('Import-Fehler:', error);
+    } finally {
+        setStatus('', false);
+        importCsvBtn.disabled = false;
+        csvFileInput.value = '';
+    }
+});
+// ============================================================
+// DROPBOX-IMPORT
+// ============================================================
+app.post('/api/import/dropbox', authenticate, async (req, res) => {
+    try {
+        if (!DROPBOX_ACCESS_TOKEN) {
+            return res.status(400).json({ success: false, error: 'Dropbox nicht konfiguriert' });
+        }
+        
+        const dbx = new Dropbox({ accessToken: DROPBOX_ACCESS_TOKEN });
+        
+        // Lade die neueste CSV aus Dropbox
+        // Hier müsstest du den Pfad zur CSV angeben, z.B. /LeadCapture/leads_2026-08-04.csv
+        // Oder du listest alle CSVs und nimmst die neueste
+        
+        const response = await dbx.filesListFolder({
+            path: '/LeadCapture',
+            recursive: false
+        });
+        
+        // Filtere nach CSV-Dateien
+        const csvFiles = response.result.entries
+            .filter(entry => entry.name.endsWith('.csv') && entry['.tag'] === 'file')
+            .sort((a, b) => b.server_modified - a.server_modified);
+        
+        if (csvFiles.length === 0) {
+            return res.status(404).json({ success: false, error: 'Keine CSV-Datei in Dropbox gefunden' });
+        }
+        
+        const latestCsv = csvFiles[0];
+        console.log(`📄 Lade neueste CSV: ${latestCsv.name}`);
+        
+        // Datei herunterladen
+        const downloadResponse = await dbx.filesDownload({
+            path: latestCsv.path_lower
+        });
+        
+        const csvContent = downloadResponse.result.fileBinary.toString('utf8');
+        
+        // Verarbeite CSV wie oben (gleiche Logik wie beim File-Upload)
+        // ... (CSV-Parsing-Code aus dem anderen Endpunkt)
+        
+        res.json({
+            success: true,
+            file: latestCsv.name,
+            imported: importedCount,
+            updated: skippedCount
+        });
+        
+    } catch (error) {
+        console.error('❌ Dropbox-Import-Fehler:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
 // ============================================================
 // HISTOGRAMM
 // ============================================================
