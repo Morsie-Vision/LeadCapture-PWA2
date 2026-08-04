@@ -49,6 +49,8 @@
         .btn-outline:hover { background: #ebf4ff; }
         .btn-purple { background: #9F7AEA; color: white; }
         .btn-purple:hover { background: #805AD5; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(159,122,234,0.25); }
+        .btn-dropbox { background: #0061FF; color: white; }
+        .btn-dropbox:hover { background: #0050D0; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,97,255,0.25); }
         .error { background: #fed7d7; color: #c53030; padding: 12px 16px; border-radius: 10px; margin: 12px 0; display: none; font-weight: 500; border-left: 4px solid #fc8181; }
         .lead-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 8px; background: #f7fafc; }
         .lead-card .header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
@@ -75,11 +77,12 @@
         .export-actions { display: flex; gap: 12px; margin: 16px 0; flex-wrap: wrap; }
         #histogramWrapper { background: #f7fafc; border-radius: 12px; padding: 20px; overflow-x: auto; min-height: 200px; }
         #histogram { display: flex; align-items: flex-end; height: 200px; gap: 4px; min-width: 100%; }
-        #histogram div { flex: 1; min-width: 18px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; cursor: pointer; transition: all 0.2s ease; }
-        #histogram div:hover { transform: scaleY(1.02); transform-origin: bottom; }
+        #histogram .bar-wrapper { flex: 1; min-width: 18px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; cursor: pointer; transition: all 0.2s ease; }
+        #histogram .bar-wrapper:hover { transform: scaleY(1.02); transform-origin: bottom; }
         #histogram .bar-fill { width: 100%; border-radius: 2px 2px 0 0; min-height: 4px; background: linear-gradient(180deg, #4A90E2 0%, #357ABD 100%); transition: height 0.3s ease; }
         #histogram .bar-value { font-size: 9px; color: #2d3748; margin-bottom: 2px; font-weight: 600; opacity: 0.7; }
         #histogramEmpty { display: none; text-align: center; padding: 40px; color: #a0aec0; }
+        .import-progress { background: #edf2f7; padding: 8px 12px; border-radius: 8px; margin: 8px 0; display: none; }
         @media (max-width: 480px) { .form-grid { grid-template-columns: 1fr; } .form-group.full { grid-column: span 1; } .container { padding: 16px; } }
     </style>
 </head>
@@ -89,7 +92,7 @@
     <!-- HEADER -->
     <h1>📇 LeadCapture <small>v4</small> <span class="status-badge" id="connectionStatus">🔗 Verbunden</span></h1>
     <div class="subtitle">
-        KI-gestützte Lead-Erfassung + Fragebogen + Histogramm
+        KI-gestützte Lead-Erfassung + Fragebogen + Histogramm + Dropbox
         <span class="server-url" id="serverUrlDisplay">🔗 Server: wird geladen...</span>
     </div>
 
@@ -141,16 +144,15 @@
             <button type="button" class="btn btn-danger" id="resetTokenBtn">🔄 Token</button>
         </div>
     </form>
-    <!-- Import-Bereich -->
-        <div class="export-actions">
-            <button type="button" class="btn btn-purple" id="exportCsvBtn">📊 CSV exportieren</button>
-            <button type="button" class="btn btn-success" id="importCsvBtn">📥 CSV importieren</button>
-            <input type="file" id="csvFileInput" accept=".csv" style="display:none;">
-            <button type="button" class="btn btn-secondary" id="refreshLeadsBtn">🔄 Aktualisieren</button>
-</div>
-    <!-- EXPORT + HISTOGRAMM TOGGLE -->
+
+    <!-- EXPORT + IMPORT + HISTOGRAMM TOGGLE -->
     <div class="export-actions">
         <button type="button" class="btn btn-purple" id="exportCsvBtn">📊 CSV exportieren</button>
+        <button type="button" class="btn btn-success" id="importCsvBtn">📥 CSV importieren</button>
+        <button type="button" class="btn btn-dropbox" id="importDropboxBtn">☁️ Dropbox import</button>
+        <input type="file" id="csvFileInput" accept=".csv" style="display:none;">
+    </div>
+    <div class="export-actions">
         <button type="button" class="btn btn-secondary" id="refreshLeadsBtn">🔄 Aktualisieren</button>
         <button type="button" class="btn btn-outline" id="toggleHistogramBtn" style="flex:1;">📊 Histogramm anzeigen</button>
     </div>
@@ -202,6 +204,8 @@ const LEADS_URL = 'https://leadcapture-backend.onrender.com/api/leads';
 const QUESTIONNAIRE_URL = 'https://leadcapture-backend.onrender.com/api/questionnaire';
 const EXPORT_URL = 'https://leadcapture-backend.onrender.com/api/export/csv';
 const STATS_URL = 'https://leadcapture-backend.onrender.com/api/stats/daily';
+const IMPORT_URL = 'https://leadcapture-backend.onrender.com/api/import/csv';
+const DROPBOX_IMPORT_URL = 'https://leadcapture-backend.onrender.com/api/import/dropbox';
 const TOKEN_STORAGE_KEY = 'leadcapture_auth_token';
 
 // ============================================================
@@ -251,6 +255,10 @@ const saveBtn = document.getElementById('saveBtn');
 const resetTokenBtn = document.getElementById('resetTokenBtn');
 const refreshLeadsBtn = document.getElementById('refreshLeadsBtn');
 const exportCsvBtn = document.getElementById('exportCsvBtn');
+const importCsvBtn = document.getElementById('importCsvBtn');
+const importDropboxBtn = document.getElementById('importDropboxBtn');
+const csvFileInput = document.getElementById('csvFileInput');
+
 const leadsContainer = document.getElementById('leadsContainer');
 const leadsList = document.getElementById('leadsList');
 const leadsCount = document.getElementById('leadsCount');
@@ -259,6 +267,7 @@ const questionnaireForm = document.getElementById('questionnaireForm');
 const questionnaireLeadName = document.getElementById('questionnaireLeadName');
 const closeQuestionnaireBtn = document.getElementById('closeQuestionnaireBtn');
 const saveQuestionnaireBtn = document.getElementById('saveQuestionnaireBtn');
+
 const histogramContainer = document.getElementById('histogramContainer');
 const histogram = document.getElementById('histogram');
 const histogramEmpty = document.getElementById('histogramEmpty');
@@ -531,7 +540,7 @@ function closeQuestionnaire() {
 }
 
 // ============================================================
-// CSV-EXPORT
+// CSV-EXPORT & IMPORT
 // ============================================================
 async function exportCSV() {
     try {
@@ -558,35 +567,25 @@ async function exportCSV() {
         window.URL.revokeObjectURL(url);
     } catch (error) { alert('❌ Fehler beim Export: ' + error.message); }
 }
-// ============================================================
-// CSV-IMPORT
-// ============================================================
-const importCsvBtn = document.getElementById('importCsvBtn');
-const csvFileInput = document.getElementById('csvFileInput');
 
-importCsvBtn.addEventListener('click', () => {
-    csvFileInput.click();
-});
+// CSV-Import (lokale Datei)
+importCsvBtn.addEventListener('click', () => { csvFileInput.click(); });
 
 csvFileInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     
-    // Prüfe Dateityp
     if (!file.name.endsWith('.csv')) {
         alert('❌ Bitte wähle eine CSV-Datei aus.');
         csvFileInput.value = '';
         return;
     }
-    
-    // Prüfe Dateigröße
     if (file.size > 10 * 1024 * 1024) {
         alert('❌ Datei zu groß (max 10 MB).');
         csvFileInput.value = '';
         return;
     }
     
-    // Bestätigung
     if (!confirm(`📥 Möchtest du die Datei "${file.name}" wirklich importieren?\n\nBestehende Leads mit gleicher ID werden überschrieben.`)) {
         csvFileInput.value = '';
         return;
@@ -600,18 +599,15 @@ csvFileInput.addEventListener('change', async (e) => {
         setStatus('📥 Importiere CSV...', true);
         importCsvBtn.disabled = true;
         
-        const response = await fetch('https://leadcapture-backend.onrender.com/api/import/csv', {
+        const response = await fetch(IMPORT_URL, {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`
-                // Kein Content-Type! FormData setzt es automatisch
-            },
+            headers: { 'Authorization': `Bearer ${token}` },
             body: formData
         });
         
         if (response.status === 401 || response.status === 403) {
             localStorage.removeItem(TOKEN_STORAGE_KEY);
-            throw new Error('❌ Authentifizierung fehlgeschlagen. Token zurücksetzen.');
+            throw new Error('❌ Authentifizierung fehlgeschlagen.');
         }
         
         const result = await response.json();
@@ -633,60 +629,45 @@ csvFileInput.addEventListener('change', async (e) => {
         csvFileInput.value = '';
     }
 });
-// ============================================================
-// DROPBOX-IMPORT
-// ============================================================
-app.post('/api/import/dropbox', authenticate, async (req, res) => {
+
+// Dropbox-Import
+importDropboxBtn.addEventListener('click', async () => {
+    if (!confirm('☁️ Möchtest du die neueste CSV aus Dropbox importieren?')) return;
+    
     try {
-        if (!DROPBOX_ACCESS_TOKEN) {
-            return res.status(400).json({ success: false, error: 'Dropbox nicht konfiguriert' });
+        const token = getAuthToken();
+        setStatus('☁️ Lade aus Dropbox...', true);
+        importDropboxBtn.disabled = true;
+        
+        const response = await fetch(DROPBOX_IMPORT_URL, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.status === 401 || response.status === 403) {
+            localStorage.removeItem(TOKEN_STORAGE_KEY);
+            throw new Error('❌ Authentifizierung fehlgeschlagen.');
         }
         
-        const dbx = new Dropbox({ accessToken: DROPBOX_ACCESS_TOKEN });
+        const result = await response.json();
         
-        // Lade die neueste CSV aus Dropbox
-        // Hier müsstest du den Pfad zur CSV angeben, z.B. /LeadCapture/leads_2026-08-04.csv
-        // Oder du listest alle CSVs und nimmst die neueste
-        
-        const response = await dbx.filesListFolder({
-            path: '/LeadCapture',
-            recursive: false
-        });
-        
-        // Filtere nach CSV-Dateien
-        const csvFiles = response.result.entries
-            .filter(entry => entry.name.endsWith('.csv') && entry['.tag'] === 'file')
-            .sort((a, b) => b.server_modified - a.server_modified);
-        
-        if (csvFiles.length === 0) {
-            return res.status(404).json({ success: false, error: 'Keine CSV-Datei in Dropbox gefunden' });
+        if (result.success) {
+            alert(`☁️ Dropbox-Import erfolgreich!\n\n📥 ${result.imported} neue Leads\n🔄 ${result.updated} aktualisiert\n📁 Datei: ${result.file || 'Unbekannt'}`);
+            loadLeads();
+            clearForm();
+        } else {
+            throw new Error(result.error || 'Unbekannter Fehler');
         }
-        
-        const latestCsv = csvFiles[0];
-        console.log(`📄 Lade neueste CSV: ${latestCsv.name}`);
-        
-        // Datei herunterladen
-        const downloadResponse = await dbx.filesDownload({
-            path: latestCsv.path_lower
-        });
-        
-        const csvContent = downloadResponse.result.fileBinary.toString('utf8');
-        
-        // Verarbeite CSV wie oben (gleiche Logik wie beim File-Upload)
-        // ... (CSV-Parsing-Code aus dem anderen Endpunkt)
-        
-        res.json({
-            success: true,
-            file: latestCsv.name,
-            imported: importedCount,
-            updated: skippedCount
-        });
         
     } catch (error) {
-        console.error('❌ Dropbox-Import-Fehler:', error);
-        res.status(500).json({ success: false, error: error.message });
+        alert('❌ Fehler beim Dropbox-Import: ' + error.message);
+        console.error('Dropbox-Import-Fehler:', error);
+    } finally {
+        setStatus('', false);
+        importDropboxBtn.disabled = false;
     }
 });
+
 // ============================================================
 // HISTOGRAMM
 // ============================================================
@@ -749,27 +730,29 @@ function renderHistogram(data, totalLeads) {
     const maxHeight = 180;
     data.forEach(item => {
         const height = (item.count / maxCount) * maxHeight;
-        const bar = document.createElement('div');
-        bar.style.cssText = `flex:1; min-width:18px; height:${Math.max(height + 14, 18)}px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; cursor:pointer; transition:all 0.2s ease;`;
+        const wrapper = document.createElement('div');
+        wrapper.className = 'bar-wrapper';
+        wrapper.style.height = `${Math.max(height + 14, 18)}px`;
+        
         const valueLabel = document.createElement('div');
+        valueLabel.className = 'bar-value';
         valueLabel.textContent = item.count;
-        valueLabel.style.cssText = `font-size:9px; color:#2d3748; margin-bottom:2px; font-weight:600; opacity:0.7;`;
-        bar.appendChild(valueLabel);
+        wrapper.appendChild(valueLabel);
+        
         const fill = document.createElement('div');
-        fill.style.cssText = `width:100%; height:${height}px; border-radius:2px 2px 0 0; min-height:4px; background:linear-gradient(180deg, #4A90E2 0%, #357ABD 100%); transition:height 0.3s ease;`;
-        bar.appendChild(fill);
-        bar.title = `${item.date}: ${item.count} Lead(s)`;
-        bar.addEventListener('click', () => alert(`Am ${item.date} wurden ${item.count} Leads erfasst.`));
-        bar.addEventListener('mouseenter', () => {
+        fill.className = 'bar-fill';
+        fill.style.height = `${height}px`;
+        wrapper.appendChild(fill);
+        
+        wrapper.title = `${item.date}: ${item.count} Lead(s)`;
+        wrapper.addEventListener('click', () => alert(`Am ${item.date} wurden ${item.count} Leads erfasst.`));
+        wrapper.addEventListener('mouseenter', () => {
             fill.style.background = 'linear-gradient(180deg, #63B3ED 0%, #3182CE 100%)';
-            bar.style.transform = 'scaleY(1.02)';
-            bar.style.transformOrigin = 'bottom';
         });
-        bar.addEventListener('mouseleave', () => {
+        wrapper.addEventListener('mouseleave', () => {
             fill.style.background = 'linear-gradient(180deg, #4A90E2 0%, #357ABD 100%)';
-            bar.style.transform = 'scaleY(1)';
         });
-        histogram.appendChild(bar);
+        histogram.appendChild(wrapper);
     });
 }
 
@@ -854,7 +837,7 @@ if ('serviceWorker' in navigator) {
 document.addEventListener('DOMContentLoaded', () => {
     checkConnection();
     loadLeads();
-    console.log('🚀 LeadCapture PWA mit Histogramm geladen');
+    console.log('🚀 LeadCapture PWA mit Histogramm & Dropbox geladen');
 });
 </script>
 </body>
