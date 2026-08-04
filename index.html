@@ -447,14 +447,14 @@ function parseBusinessCard(text) {
 // ============ FRAGEBOGEN ============
 let questionnaire = loadFromStorage('questionnaire', []);
 let currentAnswers = {};
- 
+
 function saveQuestionnaire() { localStorage.setItem('questionnaire', JSON.stringify(questionnaire)); }
- 
+
 function toggleOptionsInput() {
     const type = document.getElementById('newQType').value;
     document.getElementById('newQOptionsWrap').style.display = (type === 'choice' || type === 'multichoice') ? 'flex' : 'none';
 }
- 
+
 function addQuestion() {
     const text = document.getElementById('newQText').value.trim();
     const type = document.getElementById('newQType').value;
@@ -473,26 +473,26 @@ function addQuestion() {
     renderQuestionList();
     toast('✅ Frage hinzugefügt');
 }
- 
+
 function deleteQuestion(id) {
     if (!confirm('Frage löschen?')) return;
     questionnaire = questionnaire.filter(q => q.id !== id);
     saveQuestionnaire();
     renderQuestionList();
 }
- 
+
 function renderQuestionList() {
     const c = document.getElementById('questionList');
     if (!questionnaire.length) { c.innerHTML = '<p style="font-size:12px;color:#8e8e93;">Noch keine Fragen angelegt.</p>'; return; }
     const typeLabels = { text: 'Freitext', yesno: 'Ja/Nein', choice: 'Einfachauswahl', multichoice: 'Mehrfachauswahl', rating: 'Bewertung 1–5' };
     c.innerHTML = questionnaire.map(q => `<div class="q-item"><div><div class="q-item-text">${q.text}</div><div class="q-item-type">${typeLabels[q.type] || q.type}${q.options && q.options.length ? ': ' + q.options.join(', ') : ''}</div></div><div onclick="deleteQuestion('${q.id}')" style="cursor:pointer;">🗑️</div></div>`).join('');
 }
- 
+
 function renderQuestionnaireFields() {
     currentAnswers = {};
     const c = document.getElementById('questionnaireFields');
     if (!questionnaire.length) { c.innerHTML = ''; return; }
- 
+
     c.innerHTML = '<h3 style="margin:16px 0 8px;font-size:15px;">📋 Fragebogen</h3>' + questionnaire.map(q => {
         if (q.type === 'text') {
             return `<div class="q-block"><div class="q-label">${q.text}</div><input type="text" style="width:100%;padding:8px;border-radius:8px;border:1px solid #d1d1d6;font-size:14px;" oninput="currentAnswers['${q.id}']=this.value"></div>`;
@@ -515,25 +515,25 @@ function renderQuestionnaireFields() {
         return '';
     }).join('');
 }
- 
+
 function selectSingleAnswer(qid, value, btn) {
     currentAnswers[qid] = value;
     btn.parentElement.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
 }
- 
+
 function toggleMultiAnswer(qid, value, btn) {
     if (!Array.isArray(currentAnswers[qid])) currentAnswers[qid] = [];
     const idx = currentAnswers[qid].indexOf(value);
     if (idx > -1) { currentAnswers[qid].splice(idx, 1); btn.classList.remove('selected'); }
     else { currentAnswers[qid].push(value); btn.classList.add('selected'); }
 }
- 
+
 function selectRating(qid, n) {
     currentAnswers[qid] = n;
     document.getElementById('rating-' + qid).querySelectorAll('.rating-star').forEach((s, i) => s.classList.toggle('selected', i < n));
 }
- 
+
 function collectAnswers() {
     // Wandelt die internen Antworten in eine {Fragetext: Antwort}-Struktur um,
     // damit Anzeige & CSV-Export unabhängig von der Fragen-ID lesbar bleiben.
@@ -545,7 +545,7 @@ function collectAnswers() {
     });
     return out;
 }
- 
+
 // ============ OCR FLOW ============
 let ocrInProgress = false;
 let currentOcrController = null;
@@ -851,4 +851,3 @@ document.getElementById('eventName').addEventListener('change', function(){local
 </script>
 </body>
 </html>
- 
