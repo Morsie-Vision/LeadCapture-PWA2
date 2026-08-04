@@ -125,6 +125,8 @@
         <div class="field"><span class="field-icon">📧</span><div class="field-input-wrap"><div class="field-label">E-Mail</div><input type="email" id="fEmail" placeholder="max@firma.de"></div></div>
         <div class="field"><span class="field-icon">📱</span><div class="field-input-wrap"><div class="field-label">Telefon</div><input type="tel" id="fPhone" placeholder="+49 123 456789"></div></div>
         <div class="field"><span class="field-icon">🌐</span><div class="field-input-wrap"><div class="field-label">Website</div><input type="url" id="fWeb" placeholder="www.firma.de"></div></div>
+        <div class="field"><span class="field-icon">📍</span><div class="field-input-wrap"><div class="field-label">Ort</div><input type="text" id="fCity" placeholder="82178 Puchheim"></div></div>
+        <div class="field"><span class="field-icon">🗺️</span><div class="field-input-wrap"><div class="field-label">Bundesland</div><input type="text" id="fState" placeholder="wird aus PLZ abgeleitet"></div></div>
         <div id="questionnaireFields"></div>
         <div class="btn-group" style="margin-top:12px;">
             <button class="btn green" onclick="saveLead()">💾 Speichern</button>
@@ -240,8 +242,56 @@ function normalizeUrl(u) {
     return u;
 }
 
+// OCR liest in URLs manchmal Buchstaben mit Störpunkten als Umlaute (z.B. "com" -> "cöm")
+// oder fügt Rauschpunkte ein (z.B. "c•öm"). Wird ausschließlich auf Website-Kandidaten
+// angewendet, damit echte Umlaute in Städtenamen o.ä. unangetastet bleiben.
+function fixDomainOcrGlitches(str) {
+    return str
+        .replace(/[•·°¨]/g, '')
+        .replace(/ö/g, 'o').replace(/Ö/g, 'O')
+        .replace(/ü/g, 'u').replace(/Ü/g, 'U')
+        .replace(/ä/g, 'a').replace(/Ä/g, 'A');
+}
+
 function cleanPhone(p) {
     return p.replace(/\s+/g, ' ').replace(/[.,;]+$/, '').trim();
+}
+
+// Grobe Zuordnung PLZ-Präfix (erste 2 Ziffern) -> Bundesland. Basiert auf den
+// überwiegenden Postleitzahlbereichen; an einzelnen Landesgrenzen (z.B. 21,
+// 67-69, 88-89) ist die Zuordnung eine Näherung, da sich echte PLZ-Bereiche
+// dort minimal überschneiden.
+const PLZ_BUNDESLAND = {
+    '01': 'Sachsen', '02': 'Sachsen', '03': 'Brandenburg', '04': 'Sachsen',
+    '06': 'Sachsen-Anhalt', '07': 'Thüringen', '08': 'Sachsen', '09': 'Sachsen',
+    '10': 'Berlin', '11': 'Berlin', '12': 'Berlin', '13': 'Berlin',
+    '14': 'Brandenburg', '15': 'Brandenburg', '16': 'Brandenburg',
+    '17': 'Mecklenburg-Vorpommern', '18': 'Mecklenburg-Vorpommern', '19': 'Mecklenburg-Vorpommern',
+    '20': 'Hamburg', '21': 'Niedersachsen', '22': 'Hamburg',
+    '23': 'Schleswig-Holstein', '24': 'Schleswig-Holstein', '25': 'Schleswig-Holstein',
+    '26': 'Niedersachsen', '27': 'Niedersachsen', '28': 'Bremen', '29': 'Niedersachsen',
+    '30': 'Niedersachsen', '31': 'Niedersachsen', '32': 'Nordrhein-Westfalen', '33': 'Nordrhein-Westfalen',
+    '34': 'Hessen', '35': 'Hessen', '36': 'Hessen', '37': 'Niedersachsen', '38': 'Niedersachsen', '39': 'Sachsen-Anhalt',
+    '40': 'Nordrhein-Westfalen', '41': 'Nordrhein-Westfalen', '42': 'Nordrhein-Westfalen', '43': 'Nordrhein-Westfalen',
+    '44': 'Nordrhein-Westfalen', '45': 'Nordrhein-Westfalen', '46': 'Nordrhein-Westfalen', '47': 'Nordrhein-Westfalen',
+    '48': 'Nordrhein-Westfalen', '49': 'Niedersachsen',
+    '50': 'Nordrhein-Westfalen', '51': 'Nordrhein-Westfalen', '52': 'Nordrhein-Westfalen', '53': 'Nordrhein-Westfalen',
+    '54': 'Rheinland-Pfalz', '55': 'Rheinland-Pfalz', '56': 'Rheinland-Pfalz',
+    '57': 'Nordrhein-Westfalen', '58': 'Nordrhein-Westfalen', '59': 'Nordrhein-Westfalen',
+    '60': 'Hessen', '61': 'Hessen', '62': 'Hessen', '63': 'Hessen', '64': 'Hessen', '65': 'Hessen',
+    '66': 'Saarland', '67': 'Rheinland-Pfalz', '68': 'Baden-Württemberg', '69': 'Baden-Württemberg',
+    '70': 'Baden-Württemberg', '71': 'Baden-Württemberg', '72': 'Baden-Württemberg', '73': 'Baden-Württemberg',
+    '74': 'Baden-Württemberg', '75': 'Baden-Württemberg', '76': 'Baden-Württemberg', '77': 'Baden-Württemberg',
+    '78': 'Baden-Württemberg', '79': 'Baden-Württemberg',
+    '80': 'Bayern', '81': 'Bayern', '82': 'Bayern', '83': 'Bayern', '84': 'Bayern', '85': 'Bayern', '86': 'Bayern', '87': 'Bayern',
+    '88': 'Baden-Württemberg', '89': 'Baden-Württemberg',
+    '90': 'Bayern', '91': 'Bayern', '92': 'Bayern', '93': 'Bayern', '94': 'Bayern', '95': 'Bayern', '96': 'Bayern', '97': 'Bayern',
+    '98': 'Thüringen', '99': 'Thüringen'
+};
+
+function plzToBundesland(plz) {
+    if (!plz || plz.length < 2) return '';
+    return PLZ_BUNDESLAND[plz.slice(0, 2)] || '';
 }
 
 function parseBusinessCard(text) {
@@ -250,14 +300,18 @@ function parseBusinessCard(text) {
 
     const result = {
         firstName: '', lastName: '', fullName: '',
-        company: '', position: '', email: '', phone: '', web: ''
+        company: '', position: '', email: '', phone: '', web: '',
+        city: '', state: ''
     };
 
     const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     const fullText = lines.join('\n');
 
     // ---------- 1. E-MAIL (sehr zuverlässig) ----------
-    const emailMatches = fullText.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g) || [];
+    // OCR bricht E-Mails manchmal über zwei Zeilen um (z.B. "rstenger" / "@firma.de").
+    // Zeilenumbrüche direkt vor einem "@" werden deshalb vor der Suche entfernt.
+    const emailSearchText = fullText.replace(/\r?\n\s*@/g, '@');
+    const emailMatches = emailSearchText.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g) || [];
     if (emailMatches.length) {
         result.email = emailMatches[0].toLowerCase().replace(/[.,;]+$/, '');
     }
@@ -273,20 +327,21 @@ function parseBusinessCard(text) {
 
     for (const line of lines) {
         if (line.includes('@')) continue;
-        const m = line.match(webLabelRegex);
+        const m = fixDomainOcrGlitches(line).match(webLabelRegex);
         if (m) { result.web = normalizeUrl(m[1]); break; }
     }
     if (!result.web) {
         for (const line of lines) {
             if (line.includes('@')) continue;
-            const m = line.match(wwwRegex) || line.match(httpRegex);
+            const cleanLine = fixDomainOcrGlitches(line);
+            const m = cleanLine.match(wwwRegex) || cleanLine.match(httpRegex);
             if (m) { result.web = normalizeUrl(m[1]); break; }
         }
     }
     if (!result.web) {
         for (const line of lines) {
             if (line.includes('@')) continue;
-            const m = line.match(genericDomainRegex);
+            const m = fixDomainOcrGlitches(line).match(genericDomainRegex);
             if (m) { result.web = normalizeUrl(m[1]); break; }
         }
     }
@@ -317,7 +372,18 @@ function parseBusinessCard(text) {
     }
     result.phone = mobilePhone || telPhone || genericPhone;
 
-    // ---------- 4. FIRMA, POSITION, NAME ----------
+    // ---------- 4. PLZ, ORT, BUNDESLAND ----------
+    // Typische deutsche Adresszeile "PLZ Ort", z.B. "82178 Puchheim".
+    // Das Bundesland wird rein aus der PLZ abgeleitet, da es auf Visitenkarten nie steht.
+    let zip = '', city = '';
+    for (const line of lines) {
+        const m = /^(\d{5})\s+(.+)/.exec(line.trim());
+        if (m) { zip = m[1]; city = m[2].trim(); break; }
+    }
+    result.city = zip && city ? `${zip} ${city}` : (city || zip);
+    result.state = plzToBundesland(zip);
+
+    // ---------- 5. FIRMA, POSITION, NAME ----------
     const titles = ['prof. dr.', 'dr. med.', 'dr.-ing.', 'dipl.-ing.', 'dipl.-kfm.', 'dipl.-inf.',
         'dr.', 'prof.', 'mag.', 'ing.', 'b.sc.', 'm.sc.', 'b.a.', 'm.a.', 'herr', 'frau'];
     const companyEndings = ['gmbh & co. kg', 'gmbh', 'ag', 'kg', 'ohg', 'mbh', 'ltd', 'inc', 'corp',
@@ -757,6 +823,8 @@ function showResult(p) {
     document.getElementById('fEmail').value = p.email || '';
     document.getElementById('fPhone').value = p.phone || '';
     document.getElementById('fWeb').value = p.web || '';
+    document.getElementById('fCity').value = p.city || '';
+    document.getElementById('fState').value = p.state || '';
     renderQuestionnaireFields();
     document.getElementById('resultCard').classList.add('show');
 }
@@ -777,6 +845,8 @@ function saveLead() {
         email: document.getElementById('fEmail').value,
         phone: document.getElementById('fPhone').value,
         web: document.getElementById('fWeb').value,
+        city: document.getElementById('fCity').value,
+        state: document.getElementById('fState').value,
         answers: collectAnswers(),
         event: document.getElementById('eventName').value || 'Messe',
         date: new Date().toISOString()
@@ -796,7 +866,8 @@ function updateList() {
     if (!leads.length) { c.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>Keine Leads</p></div>'; return; }
     c.innerHTML = leads.map(l => {
         const answeredCount = l.answers ? Object.values(l.answers).filter(v => v).length : 0;
-        return `<div class="lead-card" onclick="if(confirm('Löschen?')){leads=leads.filter(x=>x.id!==${l.id});localStorage.setItem('leads',JSON.stringify(leads));updateList();}"><div><div class="lead-name">${l.firstName || ''} ${l.lastName || ''}</div><div class="lead-detail">${l.company || ''} • ${l.position || ''}</div><div class="lead-detail" style="color:#007AFF;">${l.email || ''} • ${l.phone || ''}</div>${answeredCount ? `<div class="lead-detail">📋 ${answeredCount} Antwort${answeredCount > 1 ? 'en' : ''}</div>` : ''}</div><div>🗑️</div></div>`;
+        const locationLine = (l.city || l.state) ? `<div class="lead-detail">📍 ${[l.city, l.state].filter(Boolean).join(' • ')}</div>` : '';
+        return `<div class="lead-card" onclick="if(confirm('Löschen?')){leads=leads.filter(x=>x.id!==${l.id});localStorage.setItem('leads',JSON.stringify(leads));updateList();}"><div><div class="lead-name">${l.firstName || ''} ${l.lastName || ''}</div><div class="lead-detail">${l.company || ''} • ${l.position || ''}</div><div class="lead-detail" style="color:#007AFF;">${l.email || ''} • ${l.phone || ''}</div>${locationLine}${answeredCount ? `<div class="lead-detail">📋 ${answeredCount} Antwort${answeredCount > 1 ? 'en' : ''}</div>` : ''}</div><div>🗑️</div></div>`;
     }).join('');
 }
 
@@ -812,9 +883,9 @@ function exportCSV() {
     if (!leads.length) { toast('❌ Keine Leads'); return; }
     const qHeaders = questionnaire.map(q => q.text);
     const esc = s => `"${(s || '').toString().replace(/"/g, '""')}"`;
-    let csv = 'Vorname,Nachname,Firma,Position,E-Mail,Telefon,Website,Event,Datum' + (qHeaders.length ? ',' + qHeaders.map(esc).join(',') : '') + '\n';
+    let csv = 'Vorname,Nachname,Firma,Position,E-Mail,Telefon,Website,Ort,Bundesland,Event,Datum' + (qHeaders.length ? ',' + qHeaders.map(esc).join(',') : '') + '\n';
     leads.forEach(l => {
-        let row = `${esc(l.firstName)},${esc(l.lastName)},${esc(l.company)},${esc(l.position)},${esc(l.email)},${esc(l.phone)},${esc(l.web)},${esc(l.event)},${esc(new Date(l.date).toLocaleDateString('de-DE'))}`;
+        let row = `${esc(l.firstName)},${esc(l.lastName)},${esc(l.company)},${esc(l.position)},${esc(l.email)},${esc(l.phone)},${esc(l.web)},${esc(l.city)},${esc(l.state)},${esc(l.event)},${esc(new Date(l.date).toLocaleDateString('de-DE'))}`;
         if (qHeaders.length) row += ',' + qHeaders.map(h => esc(l.answers && l.answers[h])).join(',');
         csv += row + '\n';
     });
