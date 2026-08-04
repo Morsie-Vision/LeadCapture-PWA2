@@ -1,301 +1,508 @@
-// ============================================================
-// api-proxy.js - Sicheres Backend für DeepSeek API
-// ============================================================
-const express = require('express');
-const cors = require('cors');
-const axios = require('axios');
-const app = express();
-const port = process.env.PORT || 3000;
-
-// ============================================================
-// 1. SICHERE KONFIGURATION
-// ============================================================
-// Diese Umgebungsvariablen werden auf Render gesetzt!
-const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
-const PROXY_AUTH_TOKEN = process.env.PROXY_AUTH_TOKEN;
-
-// Prüfe, ob alle Keys gesetzt sind
-if (!DEEPSEEK_API_KEY) {
-    console.error('❌ DEEPSEEK_API_KEY nicht gesetzt!');
-    console.error('   Bitte setze die Umgebungsvariable DEEPSEEK_API_KEY');
-    process.exit(1);
-}
-if (!PROXY_AUTH_TOKEN) {
-    console.error('❌ PROXY_AUTH_TOKEN nicht gesetzt!');
-    console.error('   Bitte setze die Umgebungsvariable PROXY_AUTH_TOKEN');
-    process.exit(1);
-}
-
-const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
-
-console.log('✅ Konfiguration geladen:');
-console.log(`   DeepSeek Key: ${DEEPSEEK_API_KEY.substring(0, 10)}...`);
-console.log(`   Auth Token: ${PROXY_AUTH_TOKEN.substring(0, 10)}...`);
-
-// ============================================================
-// 2. MIDDLEWARE
-// ============================================================
-// Erweiterte CORS-Einstellungen für Sicherheit
-const allowedOrigins = [
-    'https://morsie-vision.github.io', // Deine GitHub Pages URL
-    'http://localhost:3000',            // Lokale Entwicklung
-    'http://localhost:5500',            // Live Server
-    /\.github\.io$/                     // Alle GitHub Pages Subdomains (Regex)
-];
-
-app.use(cors({
-    origin: function (origin, callback) {
-        // Erlaube Anfragen ohne Origin (z.B. von mobilen Apps)
-        if (!origin) return callback(null, true);
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LeadCapture PWA</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <meta name="theme-color" content="#4A90E2">
+    <style>
+        /* === RESET & GRUNDSTIL === */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+        body { background: #f0f4f8; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 16px; }
+        .container { background: white; max-width: 600px; width: 100%; border-radius: 28px; padding: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.08); }
         
-        // Prüfe, ob die Origin erlaubt ist
-        const allowed = allowedOrigins.some(allowedOrigin => {
-            if (typeof allowedOrigin === 'string') {
-                return origin === allowedOrigin;
-            } else if (allowedOrigin instanceof RegExp) {
-                return allowedOrigin.test(origin);
-            }
-            return false;
-        });
+        /* === HEADER === */
+        h1 { font-size: 28px; font-weight: 700; color: #1a202c; display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        h1 small { font-size: 16px; font-weight: 400; color: #4A90E2; }
+        .subtitle { color: #718096; font-size: 14px; margin-bottom: 24px; border-left: 3px solid #4A90E2; padding-left: 12px; }
+        .status-badge { 
+            display: inline-block; 
+            background: #48bb78; 
+            color: white; 
+            font-size: 11px; 
+            padding: 2px 10px; 
+            border-radius: 20px; 
+            margin-left: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+        .status-badge:hover { opacity: 0.8; transform: scale(0.95); }
+        .server-url { 
+            font-size: 11px; 
+            color: #a0aec0; 
+            margin-top: 4px; 
+            word-break: break-all;
+            display: block;
+        }
+
+        /* === UPLOAD BEREICH === */
+        .upload-area { background: #f7fafc; border: 2px dashed #cbd5e0; border-radius: 16px; padding: 40px 20px; text-align: center; cursor: pointer; transition: all 0.2s; margin-bottom: 24px; }
+        .upload-area:hover { border-color: #4A90E2; background: #edf2f7; }
+        .upload-area .icon { font-size: 48px; margin-bottom: 8px; }
+        .upload-area p { color: #4a5568; font-weight: 500; }
+        .upload-area small { color: #a0aec0; font-size: 13px; }
+        #fileInput { display: none; }
+
+        /* === VORSCHAU === */
+        #previewContainer { display: none; margin-bottom: 20px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        #previewContainer img { width: 100%; height: auto; display: block; }
+
+        /* === LADER & STATUS === */
+        #status { display: none; background: #edf2f7; padding: 14px 18px; border-radius: 12px; margin: 16px 0; font-weight: 500; color: #2d3748; gap: 12px; align-items: center; }
+        #status .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid #cbd5e0; border-top: 3px solid #4A90E2; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* === FORMULAR === */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 20px 0; }
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .form-group.full { grid-column: span 2; }
+        .form-group label { font-size: 13px; font-weight: 600; color: #4a5568; letter-spacing: 0.3px; }
+        .form-group input, .form-group select { padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 15px; transition: border 0.2s; background: white; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #4A90E2; box-shadow: 0 0 0 3px rgba(74,144,226,0.12); }
+        .form-group input::placeholder { color: #a0aec0; }
+
+        /* === BUTTONS === */
+        .actions { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+        .btn { padding: 12px 24px; border: none; border-radius: 12px; font-weight: 600; font-size: 15px; cursor: pointer; transition: all 0.2s; flex: 1; min-width: 120px; }
+        .btn-primary { background: #4A90E2; color: white; }
+        .btn-primary:hover { background: #357abd; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(74,144,226,0.25); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-secondary { background: #edf2f7; color: #4a5568; }
+        .btn-secondary:hover { background: #e2e8f0; }
+        .btn-success { background: #48bb78; color: white; }
+        .btn-success:hover { background: #38a169; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(72,187,120,0.25); }
+        .btn-danger { background: #fc8181; color: white; }
+        .btn-danger:hover { background: #f56565; }
+
+        /* === FEHLER === */
+        .error { background: #fed7d7; color: #c53030; padding: 12px 16px; border-radius: 10px; margin: 12px 0; display: none; font-weight: 500; border-left: 4px solid #fc8181; }
+
+        /* === RESPONSIVE === */
+        @media (max-width: 480px) { .form-grid { grid-template-columns: 1fr; } .form-group.full { grid-column: span 1; } .container { padding: 16px; } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- HEADER -->
+    <h1>
+        📇 LeadCapture
+        <small>v2</small>
+        <span class="status-badge" id="connectionStatus">🔗 Verbunden</span>
+    </h1>
+    <div class="subtitle">
+        KI-gestützte Lead-Erfassung mit DeepSeek V4 Flash
+        <span class="server-url" id="serverUrlDisplay">🔗 Server: wird geladen...</span>
+    </div>
+
+    <!-- UPLOAD AREA -->
+    <div class="upload-area" id="uploadArea">
+        <div class="icon">📸</div>
+        <p>Foto hochladen oder aufnehmen</p>
+        <small>Unterstützt JPG, PNG, WebP (max. 10MB)</small>
+        <input type="file" id="fileInput" accept="image/*" capture="environment">
+    </div>
+
+    <!-- VORSCHAU -->
+    <div id="previewContainer">
+        <img id="previewImage" alt="Vorschau des hochgeladenen Bildes">
+    </div>
+
+    <!-- STATUS / LADER -->
+    <div id="status">
+        <span class="spinner"></span>
+        <span id="statusText">DeepSeek analysiert das Bild...</span>
+    </div>
+
+    <!-- FEHLER -->
+    <div class="error" id="errorBox"></div>
+
+    <!-- FORMULAR -->
+    <form id="leadForm">
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="firstName">Vorname</label>
+                <input type="text" id="firstName" placeholder="Max">
+            </div>
+            <div class="form-group">
+                <label for="lastName">Nachname</label>
+                <input type="text" id="lastName" placeholder="Mustermann">
+            </div>
+            <div class="form-group full">
+                <label for="company">Firma</label>
+                <input type="text" id="company" placeholder="Firma GmbH">
+            </div>
+            <div class="form-group full">
+                <label for="position">Position</label>
+                <input type="text" id="position" placeholder="Geschäftsführer">
+            </div>
+            <div class="form-group">
+                <label for="email">E-Mail</label>
+                <input type="email" id="email" placeholder="max@firma.de">
+            </div>
+            <div class="form-group">
+                <label for="phone">Telefon</label>
+                <input type="tel" id="phone" placeholder="+49 123 456789">
+            </div>
+            <div class="form-group full">
+                <label for="street">Straße</label>
+                <input type="text" id="street" placeholder="Musterstraße 1">
+            </div>
+            <div class="form-group">
+                <label for="zip">PLZ</label>
+                <input type="text" id="zip" placeholder="12345">
+            </div>
+            <div class="form-group">
+                <label for="city">Stadt</label>
+                <input type="text" id="city" placeholder="Berlin">
+            </div>
+            <div class="form-group full">
+                <label for="interests">Interessensgebiete (kommagetrennt)</label>
+                <input type="text" id="interests" placeholder="KI, Automatisierung, Cloud">
+            </div>
+            <div class="form-group full">
+                <label for="visitorType">Besuchertyp</label>
+                <select id="visitorType">
+                    <option value="">Bitte wählen...</option>
+                    <option value="Entscheider">Entscheider</option>
+                    <option value="Fachbesucher">Fachbesucher</option>
+                    <option value="Student">Student</option>
+                    <option value="Presse">Presse</option>
+                    <option value="Sonstiges">Sonstiges</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button type="button" class="btn btn-secondary" id="clearBtn">🗑️ Leeren</button>
+            <button type="button" class="btn btn-primary" id="uploadBtn">📤 Foto hochladen</button>
+            <button type="button" class="btn btn-success" id="saveBtn">💾 Lead speichern</button>
+            <button type="button" class="btn btn-danger" id="resetTokenBtn">🔄 Token zurücksetzen</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    // ============================================================
+    // 1. KONFIGURATION
+    // ============================================================
+    // ⚠️ WICHTIG: Ersetze diese URL mit deiner Render-Backend-URL!
+    const PROXY_URL = 'https://leadcapture-proxy.onrender.com/api/process-image';
+    // const PROXY_URL = 'http://localhost:3000/api/process-image'; // Für lokale Tests
+
+    // Name für den localStorage-Eintrag
+    const TOKEN_STORAGE_KEY = 'leadcapture_auth_token';
+
+    // ============================================================
+    // 2. DOM-REFERENZEN
+    // ============================================================
+    const fileInput = document.getElementById('fileInput');
+    const uploadArea = document.getElementById('uploadArea');
+    const previewContainer = document.getElementById('previewContainer');
+    const previewImage = document.getElementById('previewImage');
+    const statusDiv = document.getElementById('status');
+    const statusText = document.getElementById('statusText');
+    const errorBox = document.getElementById('errorBox');
+    const connectionStatus = document.getElementById('connectionStatus');
+    const serverUrlDisplay = document.getElementById('serverUrlDisplay');
+
+    // Formularfelder
+    const fields = {
+        firstName: document.getElementById('firstName'),
+        lastName: document.getElementById('lastName'),
+        company: document.getElementById('company'),
+        position: document.getElementById('position'),
+        email: document.getElementById('email'),
+        phone: document.getElementById('phone'),
+        street: document.getElementById('street'),
+        zip: document.getElementById('zip'),
+        city: document.getElementById('city'),
+        interests: document.getElementById('interests'),
+        visitorType: document.getElementById('visitorType')
+    };
+
+    // Buttons
+    const uploadBtn = document.getElementById('uploadBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    const resetTokenBtn = document.getElementById('resetTokenBtn');
+
+    // ============================================================
+    // 3. TOKEN-VERWALTUNG
+    // ============================================================
+    function getAuthToken() {
+        // Prüfe, ob bereits ein Token im localStorage existiert
+        let token = localStorage.getItem(TOKEN_STORAGE_KEY);
         
-        if (allowed) {
-            callback(null, true);
+        if (token) {
+            return token;
+        }
+        
+        // Wenn nicht, frage den Benutzer beim ersten Start
+        token = prompt(
+            '🔐 Bitte gib den Authentifizierungs-Token ein:\n\n' +
+            'Du hast diesen Token vom Administrator erhalten.\n' +
+            'Er wird sicher in deinem Browser gespeichert.',
+            ''
+        );
+        
+        if (token && token.length > 10) {
+            // Token speichern für zukünftige Besuche
+            localStorage.setItem(TOKEN_STORAGE_KEY, token);
+            return token;
         } else {
-            console.warn(`⚠️ CORS-Block: ${origin} ist nicht erlaubt`);
-            callback(new Error('Nicht erlaubt durch CORS'));
+            alert('❌ Ungültiger Token! Die App kann nicht verwendet werden.');
+            throw new Error('Kein gültiger Token');
         }
-    },
-    methods: ['GET', 'POST', 'HEAD', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
-// Logging-Middleware
-app.use((req, res, next) => {
-    console.log(`📨 ${req.method} ${req.path} - ${req.ip}`);
-    next();
-});
-
-// ============================================================
-// 3. AUTHENTIFIZIERUNGS-MIDDLEWARE
-// ============================================================
-function authenticate(req, res, next) {
-    // Prüfe den Authorization-Header
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader) {
-        console.warn('⚠️ Kein Authorization-Header');
-        return res.status(401).json({
-            success: false,
-            error: '❌ Kein Authorization-Header gefunden'
-        });
     }
-    
-    // Erwartet Format: "Bearer <TOKEN>"
-    const parts = authHeader.split(' ');
-    if (parts.length !== 2 || parts[0] !== 'Bearer') {
-        console.warn('⚠️ Ungültiges Authorization-Format:', authHeader);
-        return res.status(401).json({
-            success: false,
-            error: '❌ Ungültiges Authorization-Format. Erwartet: Bearer TOKEN'
-        });
-    }
-    
-    const token = parts[1];
-    
-    if (!token || token !== PROXY_AUTH_TOKEN) {
-        console.warn('⚠️ Ungültiger Token');
-        return res.status(403).json({
-            success: false,
-            error: '❌ Ungültiger Authentifizierungs-Token'
-        });
-    }
-    
-    console.log('✅ Authentifizierung erfolgreich');
-    // Token ist gültig -> weiter zur eigentlichen Logik
-    next();
-}
 
-// ============================================================
-// 4. HEALTH CHECK (OHNE Authentifizierung)
-// ============================================================
-app.head('/api/process-image', (req, res) => {
-    res.status(200).send('OK');
-});
-
-app.get('/api/health', (req, res) => {
-    res.json({
-        status: 'OK',
-        timestamp: new Date().toISOString(),
-        environment: process.env.NODE_ENV || 'production'
-    });
-});
-
-// ============================================================
-// 5. HAUPT-ENDPUNKT (MIT Authentifizierung)
-// ============================================================
-app.post('/api/process-image', authenticate, async (req, res) => {
-    const startTime = Date.now();
-    
-    try {
-        const { image } = req.body;
-
-        if (!image) {
-            return res.status(400).json({
-                success: false,
-                error: 'Kein Bild übergeben'
-            });
+    function resetToken() {
+        if (confirm('⚠️ Möchtest du den gespeicherten Token wirklich löschen?\n\nDu musst ihn beim nächsten Start neu eingeben.')) {
+            localStorage.removeItem(TOKEN_STORAGE_KEY);
+            alert('✅ Token wurde zurückgesetzt. Seite wird neu geladen...');
+            location.reload();
         }
+    }
 
-        console.log('📸 Bild empfangen, Größe:', (image.length / 1024).toFixed(2), 'KB');
+    // ============================================================
+    // 4. HILFSFUNKTIONEN
+    // ============================================================
+    function showError(message) {
+        errorBox.textContent = message;
+        errorBox.style.display = 'block';
+        setTimeout(() => { errorBox.style.display = 'none'; }, 6000);
+    }
 
-        // System-Prompt für DeepSeek
-        const systemPrompt = `
-            Du bist ein OCR- und Parsing-Experte für Messeleads.
-            Extrahiere die folgenden Felder aus dem bereitgestellten Bild eines Fragebogens oder einer Visitenkarte:
-            - Vorname, Nachname, Firma, Position, E-Mail, Telefon, Adresse (Straße, PLZ, Stadt), Interessensgebiete (Liste), Besuchertyp.
+    function setStatus(message, show = true) {
+        statusText.textContent = message;
+        statusDiv.style.display = show ? 'flex' : 'none';
+    }
 
-            Gib das Ergebnis **ausschließlich** als gültiges JSON-Objekt zurück, das genau dieser Struktur entspricht:
-            {
-                "firstName": "",
-                "lastName": "",
-                "company": "",
-                "position": "",
-                "email": "",
-                "phone": "",
-                "address": {
-                    "street": "",
-                    "zip": "",
-                    "city": ""
+    function setLoading(loading) {
+        if (loading) {
+            setStatus('DeepSeek analysiert das Bild...', true);
+            uploadBtn.disabled = true;
+        } else {
+            setStatus('', false);
+            uploadBtn.disabled = false;
+        }
+    }
+
+    function fillForm(data) {
+        fields.firstName.value = data.firstName || '';
+        fields.lastName.value = data.lastName || '';
+        fields.company.value = data.company || '';
+        fields.position.value = data.position || '';
+        fields.email.value = data.email || '';
+        fields.phone.value = data.phone || '';
+        fields.street.value = data.address?.street || '';
+        fields.zip.value = data.address?.zip || '';
+        fields.city.value = data.address?.city || '';
+        fields.interests.value = Array.isArray(data.interests) ? data.interests.join(', ') : '';
+        fields.visitorType.value = data.visitorType || '';
+    }
+
+    function clearForm() {
+        Object.values(fields).forEach(field => field.value = '');
+        previewContainer.style.display = 'none';
+        previewImage.src = '';
+        fileInput.value = '';
+        setStatus('', false);
+        errorBox.style.display = 'none';
+    }
+
+    // ============================================================
+    // 5. PROXY AUFRUF (MIT AUTHENTIFIZIERUNG)
+    // ============================================================
+    async function processWithDeepSeek(base64Image) {
+        try {
+            // Hole den Token (wird beim ersten Start abgefragt)
+            const token = getAuthToken();
+            
+            const response = await fetch(PROXY_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 },
-                "interests": [],
-                "visitorType": ""
+                body: JSON.stringify({ image: base64Image })
+            });
+
+            // Wenn der Token ungültig ist (403), lösche ihn und zeige Fehler
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem(TOKEN_STORAGE_KEY);
+                throw new Error('❌ Authentifizierung fehlgeschlagen. Bitte klicke auf "Token zurücksetzen" und gib den korrekten Token ein.');
             }
-            Verwende leere Zeichenketten oder leere Arrays, wenn Informationen fehlen.
-            Antworte NUR mit dem JSON-Objekt, ohne zusätzlichen Text.
-        `;
 
-        const requestBody = {
-            model: 'deepseek-v4-flash',
-            messages: [
-                { role: 'system', content: systemPrompt },
-                {
-                    role: 'user',
-                    content: [
-                        { type: 'text', text: 'Extrahiere die Lead-Informationen aus diesem Bild:' },
-                        { type: 'image_url', image_url: { url: image } }
-                    ]
-                }
-            ],
-            temperature: 0.1,
-            response_format: { type: 'json_object' }
-        };
-
-        console.log('🚀 Sende Anfrage an DeepSeek API...');
-
-        const response = await axios.post(DEEPSEEK_API_URL, requestBody, {
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
-            },
-            timeout: 30000 // 30 Sekunden Timeout
-        });
-
-        // Antwort parsen
-        const content = response.data.choices[0]?.message?.content;
-        if (!content) {
-            throw new Error('Leere Antwort von DeepSeek erhalten.');
-        }
-
-        const leadData = JSON.parse(content);
-        const duration = Date.now() - startTime;
-        console.log(`✅ Lead erfolgreich geparst (${duration}ms)`);
-
-        // Erfolgreiche Antwort
-        res.json({
-            success: true,
-            data: leadData,
-            processingTime: duration
-        });
-
-    } catch (error) {
-        const duration = Date.now() - startTime;
-        console.error(`❌ Fehler (${duration}ms):`, error.message);
-        
-        // Detaillierte Fehlerbehandlung
-        let errorMessage = 'Interner Serverfehler';
-        let statusCode = 500;
-        
-        if (error.response) {
-            // Die Anfrage wurde gesendet und der Server hat geantwortet
-            console.error('📨 DeepSeek API Response:', error.response.status);
-            if (error.response.data) {
-                console.error('📨 Response Data:', JSON.stringify(error.response.data, null, 2));
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `Server Fehler (${response.status})`);
             }
-            errorMessage = error.response.data?.error?.message || `DeepSeek API Fehler (${error.response.status})`;
-            statusCode = error.response.status;
-        } else if (error.request) {
-            // Die Anfrage wurde gesendet, aber keine Antwort erhalten
-            console.error('⏰ Keine Antwort von DeepSeek API');
-            errorMessage = 'DeepSeek API antwortet nicht (Timeout)';
-            statusCode = 504;
-        } else {
-            // Etwas anderes ist schiefgelaufen
-            errorMessage = error.message;
-            statusCode = 500;
-        }
 
-        res.status(statusCode).json({
-            success: false,
-            error: errorMessage,
-            processingTime: duration
-        });
+            const result = await response.json();
+            
+            if (!result.success) {
+                throw new Error(result.error || 'Unbekannter Fehler');
+            }
+
+            return result.data;
+        } catch (error) {
+            console.error('❌ Proxy Fehler:', error);
+            throw error;
+        }
     }
-});
 
-// ============================================================
-// 6. 404 HANDLER
-// ============================================================
-app.use((req, res) => {
-    res.status(404).json({
-        success: false,
-        error: 'Endpunkt nicht gefunden'
+    // ============================================================
+    // 6. BILDVERARBEITUNG
+    // ============================================================
+    async function handleImage(file) {
+        if (!file) return;
+
+        // Prüfe Dateityp
+        if (!file.type.startsWith('image/')) {
+            showError('Bitte wähle ein Bild aus (JPG, PNG, WebP).');
+            return;
+        }
+
+        // Prüfe Dateigröße (max 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+            showError('Bild ist zu groß (max 10MB).');
+            return;
+        }
+
+        // Vorschau anzeigen
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            const base64Image = event.target.result;
+            previewImage.src = base64Image;
+            previewContainer.style.display = 'block';
+
+            // DeepSeek aufrufen
+            setLoading(true);
+            try {
+                const leadData = await processWithDeepSeek(base64Image);
+                fillForm(leadData);
+                console.log('✅ Lead erfolgreich geparst:', leadData);
+                setStatus('✅ Analyse abgeschlossen!', true);
+                setTimeout(() => setStatus('', false), 2000);
+            } catch (error) {
+                console.error('❌ Fehler:', error);
+                showError(`Parsing fehlgeschlagen: ${error.message}`);
+                setStatus('', false);
+            } finally {
+                setLoading(false);
+            }
+        };
+        reader.onerror = () => {
+            showError('Fehler beim Lesen der Datei.');
+            setLoading(false);
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // ============================================================
+    // 7. BACKEND-VERBINDUNG PRÜFEN
+    // ============================================================
+    async function checkConnection() {
+        try {
+            const response = await fetch(PROXY_URL, { method: 'HEAD' });
+            if (response.ok) {
+                connectionStatus.textContent = '✅ Verbunden';
+                connectionStatus.style.background = '#48bb78';
+                serverUrlDisplay.textContent = `🔗 Server: ${PROXY_URL}`;
+            } else {
+                throw new Error('Server antwortet nicht korrekt');
+            }
+        } catch (error) {
+            connectionStatus.textContent = '⚠️ Offline';
+            connectionStatus.style.background = '#ed8936';
+            serverUrlDisplay.textContent = `🔗 Server: ${PROXY_URL} (nicht erreichbar)`;
+            console.warn('⚠️ Backend nicht erreichbar:', error.message);
+        }
+    }
+
+    // ============================================================
+    // 8. EVENT LISTENER
+    // ============================================================
+    // Upload Area klick
+    uploadArea.addEventListener('click', () => fileInput.click());
+    uploadBtn.addEventListener('click', () => fileInput.click());
+
+    // Datei auswählen
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleImage(e.target.files[0]);
+        }
     });
-});
 
-// ============================================================
-// 7. FEHLERBEHANDLUNG FÜR UNERWARTETE FEHLER
-// ============================================================
-app.use((err, req, res, next) => {
-    console.error('💥 Unerwarteter Fehler:', err);
-    res.status(500).json({
-        success: false,
-        error: 'Interner Serverfehler'
+    // Drag & Drop (für Desktop)
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.style.borderColor = '#4A90E2';
+        uploadArea.style.background = '#edf2f7';
     });
-});
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.style.borderColor = '#cbd5e0';
+        uploadArea.style.background = '#f7fafc';
+    });
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.style.borderColor = '#cbd5e0';
+        uploadArea.style.background = '#f7fafc';
+        const file = e.dataTransfer.files[0];
+        if (file) handleImage(file);
+    });
 
-// ============================================================
-// 8. SERVER STARTEN
-// ============================================================
-app.listen(port, '0.0.0.0', () => {
-    console.log('\n' + '='.repeat(60));
-    console.log('✅ DeepSeek Proxy Server läuft erfolgreich!');
-    console.log('='.repeat(60));
-    console.log(`📡 Port: ${port}`);
-    console.log(`🔑 DeepSeek Key: ${DEEPSEEK_API_KEY ? '✅ GESETZT' : '❌ FEHLT'}`);
-    console.log(`🔐 Auth Token: ${PROXY_AUTH_TOKEN ? '✅ GESETZT' : '❌ FEHLT'}`);
-    console.log(`🌐 Endpunkt: http://localhost:${port}/api/process-image`);
-    console.log('='.repeat(60) + '\n');
-});
+    // Formular leeren
+    clearBtn.addEventListener('click', clearForm);
 
-// Uncaught Exception Handler
-process.on('uncaughtException', (error) => {
-    console.error('💥 Uncaught Exception:', error);
-});
+    // Token zurücksetzen
+    resetTokenBtn.addEventListener('click', resetToken);
 
-// Unhandled Rejection Handler
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('💥 Unhandled Rejection:', reason);
-});
+    // Doppelklick auf Status-Badge = Token zurücksetzen (Bonus)
+    connectionStatus.addEventListener('dblclick', resetToken);
+
+    // Lead speichern (Demo)
+    saveBtn.addEventListener('click', () => {
+        const data = {
+            firstName: fields.firstName.value,
+            lastName: fields.lastName.value,
+            company: fields.company.value,
+            position: fields.position.value,
+            email: fields.email.value,
+            phone: fields.phone.value,
+            address: {
+                street: fields.street.value,
+                zip: fields.zip.value,
+                city: fields.city.value
+            },
+            interests: fields.interests.value.split(',').map(s => s.trim()).filter(Boolean),
+            visitorType: fields.visitorType.value
+        };
+        console.log('💾 Lead gespeichert:', data);
+        alert('✅ Lead wurde in der Konsole ausgegeben!\n\n' + JSON.stringify(data, null, 2));
+        // Hier könntest du einen echten Save-Endpunkt aufrufen
+    });
+
+    // ============================================================
+    // 9. SERVICE WORKER REGISTRIERUNG & INIT
+    // ============================================================
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js')
+            .then(() => console.log('✅ Service Worker registriert'))
+            .catch(err => console.warn('⚠️ Service Worker Fehler:', err));
+    }
+
+    // Verbindung prüfen
+    checkConnection();
+
+    console.log('🚀 LeadCapture PWA mit sicherer Authentifizierung geladen');
+    console.log(`📡 Proxy URL: ${PROXY_URL}`);
+    console.log(`🔐 Token gespeichert: ${localStorage.getItem(TOKEN_STORAGE_KEY) ? '✅ Ja' : '❌ Nein'}`);
+</script>
+
+</body>
+</html>
