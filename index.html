@@ -10,7 +10,7 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
         body { background: #f0f4f8; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 16px; }
-        .container { background: white; max-width: 600px; width: 100%; border-radius: 28px; padding: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.08); }
+        .container { background: white; max-width: 700px; width: 100%; border-radius: 28px; padding: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.08); }
         h1 { font-size: 28px; font-weight: 700; color: #1a202c; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
         h1 small { font-size: 16px; font-weight: 400; color: #4A90E2; }
         .status-badge { display: inline-block; background: #48bb78; color: white; font-size: 11px; padding: 2px 10px; border-radius: 20px; cursor: pointer; }
@@ -61,7 +61,7 @@
         .lead-card .actions .edit { background: #4A90E2; color: white; }
         .lead-card .actions .questionnaire { background: #9F7AEA; color: white; }
         .lead-card .actions .delete { background: #fc8181; color: white; }
-        #leadsContainer, #questionnaireContainer { display: none; margin-top: 20px; border-top: 2px solid #e2e8f0; padding-top: 16px; }
+        #leadsContainer, #questionnaireContainer, #histogramContainer { display: none; margin-top: 20px; border-top: 2px solid #e2e8f0; padding-top: 16px; }
         .leads-header, .questionnaire-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
         .leads-header h3, .questionnaire-header h3 { font-size: 18px; color: #2d3748; }
         .leads-list { max-height: 400px; overflow-y: auto; }
@@ -73,6 +73,13 @@
         .questionnaire-answer textarea { resize: vertical; min-height: 50px; }
         .questionnaire-actions { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
         .export-actions { display: flex; gap: 12px; margin: 16px 0; flex-wrap: wrap; }
+        #histogramWrapper { background: #f7fafc; border-radius: 12px; padding: 20px; overflow-x: auto; min-height: 200px; }
+        #histogram { display: flex; align-items: flex-end; height: 200px; gap: 4px; min-width: 100%; }
+        #histogram div { flex: 1; min-width: 18px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; cursor: pointer; transition: all 0.2s ease; }
+        #histogram div:hover { transform: scaleY(1.02); transform-origin: bottom; }
+        #histogram .bar-fill { width: 100%; border-radius: 2px 2px 0 0; min-height: 4px; background: linear-gradient(180deg, #4A90E2 0%, #357ABD 100%); transition: height 0.3s ease; }
+        #histogram .bar-value { font-size: 9px; color: #2d3748; margin-bottom: 2px; font-weight: 600; opacity: 0.7; }
+        #histogramEmpty { display: none; text-align: center; padding: 40px; color: #a0aec0; }
         @media (max-width: 480px) { .form-grid { grid-template-columns: 1fr; } .form-group.full { grid-column: span 1; } .container { padding: 16px; } }
     </style>
 </head>
@@ -80,16 +87,13 @@
 
 <div class="container">
     <!-- HEADER -->
-    <h1>
-        📇 LeadCapture <small>v4</small>
-        <span class="status-badge" id="connectionStatus">🔗 Verbunden</span>
-    </h1>
+    <h1>📇 LeadCapture <small>v4</small> <span class="status-badge" id="connectionStatus">🔗 Verbunden</span></h1>
     <div class="subtitle">
-        KI-gestützte Lead-Erfassung + Fragebogen
+        KI-gestützte Lead-Erfassung + Fragebogen + Histogramm
         <span class="server-url" id="serverUrlDisplay">🔗 Server: wird geladen...</span>
     </div>
 
-    <!-- UPLOAD AREA -->
+    <!-- UPLOAD -->
     <div class="upload-area" id="uploadArea">
         <div class="icon">📸</div>
         <p>Foto hochladen oder aufnehmen</p>
@@ -97,16 +101,11 @@
         <input type="file" id="fileInput" accept="image/*,application/pdf" capture="environment">
     </div>
 
-    <!-- VORSCHAU -->
-    <div id="previewContainer">
-        <img id="previewImage" alt="Vorschau">
-    </div>
+    <!-- PREVIEW -->
+    <div id="previewContainer"><img id="previewImage" alt="Vorschau"></div>
 
     <!-- STATUS -->
-    <div id="status">
-        <span class="spinner"></span>
-        <span id="statusText">DeepSeek analysiert das Bild...</span>
-    </div>
+    <div id="status"><span class="spinner"></span><span id="statusText">DeepSeek analysiert...</span></div>
 
     <!-- FEHLER -->
     <div class="error" id="errorBox"></div>
@@ -135,7 +134,6 @@
                 </select>
             </div>
         </div>
-
         <div class="actions">
             <button type="button" class="btn btn-secondary" id="clearBtn">🗑️ Leeren</button>
             <button type="button" class="btn btn-primary" id="uploadBtn">📤 Foto hochladen</button>
@@ -144,21 +142,17 @@
         </div>
     </form>
 
-    <!-- EXPORT -->
+    <!-- EXPORT + HISTOGRAMM TOGGLE -->
     <div class="export-actions">
         <button type="button" class="btn btn-purple" id="exportCsvBtn">📊 CSV exportieren</button>
         <button type="button" class="btn btn-secondary" id="refreshLeadsBtn">🔄 Aktualisieren</button>
+        <button type="button" class="btn btn-outline" id="toggleHistogramBtn" style="flex:1;">📊 Histogramm anzeigen</button>
     </div>
 
     <!-- LEADS ANZEIGE -->
     <div id="leadsContainer">
-        <div class="leads-header">
-            <h3>📋 Gespeicherte Leads</h3>
-            <span id="leadsCount">0</span>
-        </div>
-        <div class="leads-list" id="leadsList">
-            <div class="empty-leads">📭 Noch keine Leads gespeichert.</div>
-        </div>
+        <div class="leads-header"><h3>📋 Gespeicherte Leads</h3><span id="leadsCount">0</span></div>
+        <div class="leads-list" id="leadsList"><div class="empty-leads">📭 Noch keine Leads gespeichert.</div></div>
     </div>
 
     <!-- FRAGEBOGEN -->
@@ -167,11 +161,28 @@
             <h3>📝 Fragebogen für <span id="questionnaireLeadName"></span></h3>
             <button type="button" class="btn btn-secondary" id="closeQuestionnaireBtn" style="padding:4px 12px; font-size:12px;">✕ Schließen</button>
         </div>
-        <div id="questionnaireForm">
-            <!-- Dynamisch generierte Fragen -->
-        </div>
+        <div id="questionnaireForm"></div>
         <div class="questionnaire-actions">
             <button type="button" class="btn btn-success" id="saveQuestionnaireBtn">💾 Antworten speichern</button>
+        </div>
+    </div>
+
+    <!-- HISTOGRAMM -->
+    <div id="histogramContainer">
+        <div class="leads-header">
+            <h3>📊 Leads pro Tag <small style="font-weight:400; font-size:14px; color:#718096;">(Histogramm)</small></h3>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <label style="font-size:13px; color:#4a5568;">Jahr:</label>
+                <select id="yearSelect" style="padding:4px 8px; border-radius:6px; border:1px solid #e2e8f0; font-size:14px;">
+                    <option value="alle">Alle Jahre</option>
+                </select>
+                <button id="refreshHistogramBtn" class="btn btn-outline" style="padding:4px 12px; font-size:12px;">🔄</button>
+                <span id="histogramTotal" style="font-size:13px; color:#718096;"></span>
+            </div>
+        </div>
+        <div id="histogramWrapper">
+            <div id="histogram" style="display:flex; align-items:flex-end; height:200px; gap:4px; min-width:100%;"></div>
+            <div id="histogramEmpty" style="display:none; text-align:center; padding:40px; color:#a0aec0;">📭 Keine Leads für diesen Zeitraum.</div>
         </div>
     </div>
 </div>
@@ -184,10 +195,11 @@ const PROXY_URL = 'https://leadcapture-backend.onrender.com/api/process-image';
 const LEADS_URL = 'https://leadcapture-backend.onrender.com/api/leads';
 const QUESTIONNAIRE_URL = 'https://leadcapture-backend.onrender.com/api/questionnaire';
 const EXPORT_URL = 'https://leadcapture-backend.onrender.com/api/export/csv';
+const STATS_URL = 'https://leadcapture-backend.onrender.com/api/stats/daily';
 const TOKEN_STORAGE_KEY = 'leadcapture_auth_token';
 
 // ============================================================
-// VORDEFINIERTER FRAGEBOGEN
+// FRAGEBOGEN
 // ============================================================
 const DEFAULT_QUESTIONS = [
     { id: 'needs', label: 'Welche konkreten Anforderungen/Probleme hat der Lead?', type: 'textarea' },
@@ -241,11 +253,19 @@ const questionnaireForm = document.getElementById('questionnaireForm');
 const questionnaireLeadName = document.getElementById('questionnaireLeadName');
 const closeQuestionnaireBtn = document.getElementById('closeQuestionnaireBtn');
 const saveQuestionnaireBtn = document.getElementById('saveQuestionnaireBtn');
+const histogramContainer = document.getElementById('histogramContainer');
+const histogram = document.getElementById('histogram');
+const histogramEmpty = document.getElementById('histogramEmpty');
+const yearSelect = document.getElementById('yearSelect');
+const refreshHistogramBtn = document.getElementById('refreshHistogramBtn');
+const toggleHistogramBtn = document.getElementById('toggleHistogramBtn');
+const histogramTotal = document.getElementById('histogramTotal');
 
 let currentLeadId = null;
+let histogramVisible = false;
 
 // ============================================================
-// TOKEN-VERWALTUNG
+// TOKEN
 // ============================================================
 function getAuthToken() {
     let token = localStorage.getItem(TOKEN_STORAGE_KEY);
@@ -281,7 +301,7 @@ function setStatus(message, show = true) {
 }
 
 function setLoading(loading) {
-    if (loading) { setStatus('DeepSeek analysiert das Bild...', true); uploadBtn.disabled = true; }
+    if (loading) { setStatus('DeepSeek analysiert...', true); uploadBtn.disabled = true; }
     else { setStatus('', false); uploadBtn.disabled = false; }
 }
 
@@ -333,23 +353,17 @@ async function processWithDeepSeek(base64Image) {
     const token = getAuthToken();
     const response = await fetch(PROXY_URL, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ image: base64Image })
     });
-
     if (response.status === 401 || response.status === 403) {
         localStorage.removeItem(TOKEN_STORAGE_KEY);
-        throw new Error('❌ Authentifizierung fehlgeschlagen. Token zurücksetzen.');
+        throw new Error('❌ Authentifizierung fehlgeschlagen.');
     }
-
     if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || `Server Fehler (${response.status})`);
     }
-
     const result = await response.json();
     if (!result.success) throw new Error(result.error || 'Unbekannter Fehler');
     return result;
@@ -362,17 +376,12 @@ async function loadLeads() {
             leadsList.innerHTML = '<div class="empty-leads">🔐 Bitte zuerst Token eingeben.</div>';
             return;
         }
-
-        const response = await fetch(LEADS_URL, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
+        const response = await fetch(LEADS_URL, { headers: { 'Authorization': `Bearer ${token}` } });
         if (response.status === 401 || response.status === 403) {
             localStorage.removeItem(TOKEN_STORAGE_KEY);
-            leadsList.innerHTML = '<div class="empty-leads">❌ Token ungültig. Bitte Token zurücksetzen.</div>';
+            leadsList.innerHTML = '<div class="empty-leads">❌ Token ungültig.</div>';
             return;
         }
-
         const result = await response.json();
         if (result.success) {
             displayLeads(result.data);
@@ -380,7 +389,6 @@ async function loadLeads() {
             leadsList.innerHTML = `<div class="empty-leads">❌ Fehler: ${result.error}</div>`;
         }
     } catch (error) {
-        console.error('Fehler beim Laden:', error);
         leadsList.innerHTML = `<div class="empty-leads">❌ Fehler: ${error.message}</div>`;
     }
 }
@@ -388,14 +396,12 @@ async function loadLeads() {
 function displayLeads(leads) {
     leadsContainer.style.display = 'block';
     leadsCount.textContent = `${leads.length} Einträge`;
-
     if (leads.length === 0) {
         leadsList.innerHTML = '<div class="empty-leads">📭 Noch keine Leads gespeichert.</div>';
         return;
     }
-
     let html = '';
-    leads.forEach((lead, index) => {
+    leads.forEach(lead => {
         const hasQuestionnaire = lead.questionnaire && Object.keys(lead.questionnaire).length > 0;
         html += `
             <div class="lead-card">
@@ -403,18 +409,10 @@ function displayLeads(leads) {
                     <span class="name">${lead.firstName || ''} ${lead.lastName || ''}</span>
                     <span class="company">${lead.company || 'Keine Firma'}</span>
                 </div>
-                <div class="details">
-                    ${lead.position || 'Keine Position'} 
-                    ${lead.email ? '· ✉️ ' + lead.email : ''}
-                    ${lead.phone ? '· 📞 ' + lead.phone : ''}
-                </div>
-                ${lead.address?.street || lead.address?.zip || lead.address?.city ? 
-                    `<div class="details">📍 ${lead.address?.street || ''}${lead.address?.zip ? ', ' + lead.address.zip : ''}${lead.address?.city ? ' ' + lead.address.city : ''}</div>` 
-                    : ''
-                }
+                <div class="details">${lead.position || 'Keine Position'} ${lead.email ? '· ✉️ ' + lead.email : ''} ${lead.phone ? '· 📞 ' + lead.phone : ''}</div>
+                ${lead.address?.street || lead.address?.zip || lead.address?.city ? `<div class="details">📍 ${lead.address?.street || ''}${lead.address?.zip ? ', ' + lead.address.zip : ''}${lead.address?.city ? ' ' + lead.address.city : ''}</div>` : ''}
                 ${lead.interests?.length ? `<div class="details">🏷️ ${lead.interests.join(', ')}</div>` : ''}
-                <div class="meta">🕐 ${lead.timestamp ? new Date(lead.timestamp).toLocaleString() : ''}
-                ${hasQuestionnaire ? ' 📝 Fragebogen ausgefüllt' : ''}</div>
+                <div class="meta">🕐 ${lead.timestamp ? new Date(lead.timestamp).toLocaleString() : ''} ${hasQuestionnaire ? ' 📝 Fragebogen ausgefüllt' : ''}</div>
                 <div class="actions">
                     <button class="edit" onclick="editLead('${lead.id}')">✏️ Bearbeiten</button>
                     <button class="questionnaire" onclick="openQuestionnaire('${lead.id}')">📝 Fragebogen</button>
@@ -430,39 +428,23 @@ async function deleteLead(id) {
     if (!confirm('Lead wirklich löschen?')) return;
     try {
         const token = getAuthToken();
-        const response = await fetch(`${LEADS_URL}/${id}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const response = await fetch(`${LEADS_URL}/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
         const result = await response.json();
-        if (result.success) {
-            loadLeads();
-        } else {
-            alert('Fehler beim Löschen: ' + result.error);
-        }
-    } catch (error) {
-        alert('Fehler: ' + error.message);
-    }
+        if (result.success) loadLeads();
+        else alert('Fehler beim Löschen: ' + result.error);
+    } catch (error) { alert('Fehler: ' + error.message); }
 }
 
 async function editLead(id) {
     try {
         const token = getAuthToken();
-        const response = await fetch(LEADS_URL, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const response = await fetch(LEADS_URL, { headers: { 'Authorization': `Bearer ${token}` } });
         const result = await response.json();
         if (result.success) {
             const lead = result.data.find(l => l.id === id);
-            if (lead) {
-                fillForm(lead);
-                alert('✅ Lead in Formular geladen');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
+            if (lead) { fillForm(lead); alert('✅ Lead in Formular geladen'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
         }
-    } catch (error) {
-        alert('Fehler: ' + error.message);
-    }
+    } catch (error) { alert('Fehler: ' + error.message); }
 }
 
 async function saveLeadManually() {
@@ -475,23 +457,13 @@ async function saveLeadManually() {
         const token = getAuthToken();
         const response = await fetch(LEADS_URL, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ lead: leadData })
         });
         const result = await response.json();
-        if (result.success) {
-            alert('✅ Lead gespeichert!');
-            loadLeads();
-            clearForm();
-        } else {
-            alert('❌ Fehler: ' + result.error);
-        }
-    } catch (error) {
-        alert('❌ Fehler: ' + error.message);
-    }
+        if (result.success) { alert('✅ Lead gespeichert!'); loadLeads(); clearForm(); }
+        else alert('❌ Fehler: ' + result.error);
+    } catch (error) { alert('❌ Fehler: ' + error.message); }
 }
 
 // ============================================================
@@ -500,24 +472,17 @@ async function saveLeadManually() {
 async function openQuestionnaire(leadId) {
     currentLeadId = leadId;
     questionnaireContainer.style.display = 'block';
-    
     try {
         const token = getAuthToken();
-        const response = await fetch(`${QUESTIONNAIRE_URL}/${leadId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const response = await fetch(`${QUESTIONNAIRE_URL}/${leadId}`, { headers: { 'Authorization': `Bearer ${token}` } });
         const result = await response.json();
-        
         if (result.success) {
             questionnaireLeadName.textContent = result.data.leadName || 'Unbekannt';
             renderQuestionnaire(result.data.answers || {});
         } else {
             alert('Fehler beim Laden des Fragebogens: ' + result.error);
         }
-    } catch (error) {
-        alert('Fehler: ' + error.message);
-    }
-    
+    } catch (error) { alert('Fehler: ' + error.message); }
     window.scrollTo({ top: document.getElementById('questionnaireContainer').offsetTop - 100, behavior: 'smooth' });
 }
 
@@ -526,62 +491,32 @@ function renderQuestionnaire(answers) {
     DEFAULT_QUESTIONS.forEach(q => {
         const value = answers[q.id] || '';
         if (q.type === 'select') {
-            html += `
-                <div class="questionnaire-answer">
-                    <label for="q_${q.id}">${q.label}</label>
-                    <select id="q_${q.id}">
-                        ${q.options.map(opt => `<option value="${opt}" ${opt === value ? 'selected' : ''}>${opt}</option>`).join('')}
-                    </select>
-                </div>
-            `;
+            html += `<div class="questionnaire-answer"><label for="q_${q.id}">${q.label}</label><select id="q_${q.id}">${q.options.map(opt => `<option value="${opt}" ${opt === value ? 'selected' : ''}>${opt}</option>`).join('')}</select></div>`;
         } else {
-            html += `
-                <div class="questionnaire-answer">
-                    <label for="q_${q.id}">${q.label}</label>
-                    <textarea id="q_${q.id}" rows="2">${value}</textarea>
-                </div>
-            `;
+            html += `<div class="questionnaire-answer"><label for="q_${q.id}">${q.label}</label><textarea id="q_${q.id}" rows="2">${value}</textarea></div>`;
         }
     });
     questionnaireForm.innerHTML = html;
 }
 
 async function saveQuestionnaire() {
-    if (!currentLeadId) {
-        alert('❌ Kein Lead ausgewählt.');
-        return;
-    }
-    
+    if (!currentLeadId) { alert('❌ Kein Lead ausgewählt.'); return; }
     const answers = {};
     DEFAULT_QUESTIONS.forEach(q => {
         const el = document.getElementById(`q_${q.id}`);
-        if (el) {
-            answers[q.id] = el.value;
-        }
+        if (el) answers[q.id] = el.value;
     });
-    
     try {
         const token = getAuthToken();
         const response = await fetch(`${QUESTIONNAIRE_URL}/${currentLeadId}`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ answers })
         });
         const result = await response.json();
-        
-        if (result.success) {
-            alert('✅ Fragebogen gespeichert!');
-            loadLeads();
-            questionnaireContainer.style.display = 'none';
-        } else {
-            alert('❌ Fehler: ' + result.error);
-        }
-    } catch (error) {
-        alert('❌ Fehler: ' + error.message);
-    }
+        if (result.success) { alert('✅ Fragebogen gespeichert!'); loadLeads(); questionnaireContainer.style.display = 'none'; }
+        else alert('❌ Fehler: ' + result.error);
+    } catch (error) { alert('❌ Fehler: ' + error.message); }
 }
 
 function closeQuestionnaire() {
@@ -595,23 +530,17 @@ function closeQuestionnaire() {
 async function exportCSV() {
     try {
         const token = getAuthToken();
-        const response = await fetch(EXPORT_URL, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
+        const response = await fetch(EXPORT_URL, { headers: { 'Authorization': `Bearer ${token}` } });
         if (response.status === 401 || response.status === 403) {
             localStorage.removeItem(TOKEN_STORAGE_KEY);
-            alert('❌ Token ungültig. Bitte Token zurücksetzen.');
+            alert('❌ Token ungültig.');
             return;
         }
-        
         if (!response.ok) {
             const error = await response.json();
             alert('❌ Fehler beim Export: ' + (error.error || response.status));
             return;
         }
-        
-        // CSV-Download auslösen
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -621,11 +550,100 @@ async function exportCSV() {
         a.click();
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
-        
-        console.log('📊 CSV-Export erfolgreich');
+    } catch (error) { alert('❌ Fehler beim Export: ' + error.message); }
+}
+
+// ============================================================
+// HISTOGRAMM
+// ============================================================
+async function loadHistogram(year = 'alle') {
+    try {
+        const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+        if (!token) {
+            histogramEmpty.style.display = 'block';
+            histogramEmpty.textContent = '🔐 Bitte zuerst Token eingeben.';
+            histogram.style.display = 'none';
+            return;
+        }
+        const url = year === 'alle' ? STATS_URL : `${STATS_URL}?year=${year}`;
+        const response = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (response.status === 401 || response.status === 403) {
+            localStorage.removeItem(TOKEN_STORAGE_KEY);
+            histogramEmpty.style.display = 'block';
+            histogramEmpty.textContent = '❌ Token ungültig.';
+            histogram.style.display = 'none';
+            return;
+        }
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error || 'Unbekannter Fehler');
+        updateYearSelect(result.availableYears || []);
+        renderHistogram(result.data, result.totalLeads);
+        histogramTotal.textContent = `📊 ${result.totalLeads} Leads`;
     } catch (error) {
-        alert('❌ Fehler beim Export: ' + error.message);
+        histogramEmpty.style.display = 'block';
+        histogramEmpty.textContent = '❌ Fehler: ' + error.message;
+        histogram.style.display = 'none';
     }
+}
+
+function updateYearSelect(availableYears) {
+    const currentValue = yearSelect.value;
+    const currentOptions = Array.from(yearSelect.options).map(o => o.value);
+    const newYears = ['alle', ...availableYears.map(y => String(y))];
+    if (JSON.stringify(currentOptions) === JSON.stringify(newYears)) return;
+    yearSelect.innerHTML = '';
+    newYears.forEach(y => {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y === 'alle' ? 'Alle Jahre' : String(y);
+        yearSelect.appendChild(opt);
+    });
+    yearSelect.value = currentValue;
+}
+
+function renderHistogram(data, totalLeads) {
+    histogram.innerHTML = '';
+    histogramEmpty.style.display = 'none';
+    histogram.style.display = 'flex';
+    if (!data || data.length === 0) {
+        histogramEmpty.style.display = 'block';
+        histogramEmpty.textContent = '📭 Keine Leads für diesen Zeitraum.';
+        histogram.style.display = 'none';
+        return;
+    }
+    const maxCount = Math.max(...data.map(d => d.count), 1);
+    const maxHeight = 180;
+    data.forEach(item => {
+        const height = (item.count / maxCount) * maxHeight;
+        const bar = document.createElement('div');
+        bar.style.cssText = `flex:1; min-width:18px; height:${Math.max(height + 14, 18)}px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; cursor:pointer; transition:all 0.2s ease;`;
+        const valueLabel = document.createElement('div');
+        valueLabel.textContent = item.count;
+        valueLabel.style.cssText = `font-size:9px; color:#2d3748; margin-bottom:2px; font-weight:600; opacity:0.7;`;
+        bar.appendChild(valueLabel);
+        const fill = document.createElement('div');
+        fill.style.cssText = `width:100%; height:${height}px; border-radius:2px 2px 0 0; min-height:4px; background:linear-gradient(180deg, #4A90E2 0%, #357ABD 100%); transition:height 0.3s ease;`;
+        bar.appendChild(fill);
+        bar.title = `${item.date}: ${item.count} Lead(s)`;
+        bar.addEventListener('click', () => alert(`Am ${item.date} wurden ${item.count} Leads erfasst.`));
+        bar.addEventListener('mouseenter', () => {
+            fill.style.background = 'linear-gradient(180deg, #63B3ED 0%, #3182CE 100%)';
+            bar.style.transform = 'scaleY(1.02)';
+            bar.style.transformOrigin = 'bottom';
+        });
+        bar.addEventListener('mouseleave', () => {
+            fill.style.background = 'linear-gradient(180deg, #4A90E2 0%, #357ABD 100%)';
+            bar.style.transform = 'scaleY(1)';
+        });
+        histogram.appendChild(bar);
+    });
+}
+
+function toggleHistogram() {
+    histogramVisible = !histogramVisible;
+    histogramContainer.style.display = histogramVisible ? 'block' : 'none';
+    toggleHistogramBtn.textContent = histogramVisible ? '📊 Histogramm ausblenden' : '📊 Histogramm anzeigen';
+    if (histogramVisible) loadHistogram(yearSelect.value);
 }
 
 // ============================================================
@@ -633,41 +651,29 @@ async function exportCSV() {
 // ============================================================
 async function handleImage(file) {
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
-        showError('Bitte wähle ein Bild aus (JPG, PNG).');
-        return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-        showError('Bild zu groß (max 10MB).');
-        return;
-    }
-
+    if (!file.type.startsWith('image/')) { showError('Bitte wähle ein Bild aus (JPG, PNG).'); return; }
+    if (file.size > 10 * 1024 * 1024) { showError('Bild zu groß (max 10MB).'); return; }
     const reader = new FileReader();
     reader.onload = async (event) => {
         const base64Image = event.target.result;
         previewImage.src = base64Image;
         previewContainer.style.display = 'block';
-
         setLoading(true);
         try {
             const result = await processWithDeepSeek(base64Image);
             fillForm(result.data);
-            setStatus(`✅ Analyse abgeschlossen! Lead gespeichert mit ID: ${result.saved.id}`, true);
+            setStatus(`✅ Lead gespeichert! ID: ${result.saved.id}`, true);
             setTimeout(() => setStatus('', false), 3000);
             loadLeads();
-        } catch (error) {
-            showError(`Parsing fehlgeschlagen: ${error.message}`);
-            setStatus('', false);
-        } finally {
-            setLoading(false);
-        }
+        } catch (error) { showError(`Parsing fehlgeschlagen: ${error.message}`); setStatus('', false); }
+        finally { setLoading(false); }
     };
     reader.onerror = () => { showError('Fehler beim Lesen der Datei.'); setLoading(false); };
     reader.readAsDataURL(file);
 }
 
 // ============================================================
-// BACKEND-VERBINDUNG PRÜFEN
+// BACKEND-VERBINDUNG
 // ============================================================
 async function checkConnection() {
     try {
@@ -676,9 +682,7 @@ async function checkConnection() {
             connectionStatus.textContent = '✅ Verbunden';
             connectionStatus.style.background = '#48bb78';
             serverUrlDisplay.textContent = '🔗 Server: leadcapture-backend.onrender.com';
-        } else {
-            throw new Error('Server antwortet nicht korrekt');
-        }
+        } else throw new Error('Server antwortet nicht korrekt');
     } catch (error) {
         connectionStatus.textContent = '⚠️ Offline';
         connectionStatus.style.background = '#ed8936';
@@ -691,27 +695,10 @@ async function checkConnection() {
 // ============================================================
 uploadArea.addEventListener('click', () => fileInput.click());
 uploadBtn.addEventListener('click', () => fileInput.click());
-
-fileInput.addEventListener('change', (e) => {
-    if (e.target.files.length > 0) handleImage(e.target.files[0]);
-});
-
-uploadArea.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    uploadArea.style.borderColor = '#4A90E2';
-    uploadArea.style.background = '#edf2f7';
-});
-uploadArea.addEventListener('dragleave', () => {
-    uploadArea.style.borderColor = '#cbd5e0';
-    uploadArea.style.background = '#f7fafc';
-});
-uploadArea.addEventListener('drop', (e) => {
-    e.preventDefault();
-    uploadArea.style.borderColor = '#cbd5e0';
-    uploadArea.style.background = '#f7fafc';
-    if (e.dataTransfer.files.length > 0) handleImage(e.dataTransfer.files[0]);
-});
-
+fileInput.addEventListener('change', (e) => { if (e.target.files.length > 0) handleImage(e.target.files[0]); });
+uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.style.borderColor = '#4A90E2'; uploadArea.style.background = '#edf2f7'; });
+uploadArea.addEventListener('dragleave', () => { uploadArea.style.borderColor = '#cbd5e0'; uploadArea.style.background = '#f7fafc'; });
+uploadArea.addEventListener('drop', (e) => { e.preventDefault(); uploadArea.style.borderColor = '#cbd5e0'; uploadArea.style.background = '#f7fafc'; if (e.dataTransfer.files.length > 0) handleImage(e.dataTransfer.files[0]); });
 clearBtn.addEventListener('click', clearForm);
 saveBtn.addEventListener('click', saveLeadManually);
 resetTokenBtn.addEventListener('click', resetToken);
@@ -719,27 +706,22 @@ refreshLeadsBtn.addEventListener('click', loadLeads);
 exportCsvBtn.addEventListener('click', exportCSV);
 closeQuestionnaireBtn.addEventListener('click', closeQuestionnaire);
 saveQuestionnaireBtn.addEventListener('click', saveQuestionnaire);
-
+toggleHistogramBtn.addEventListener('click', toggleHistogram);
+refreshHistogramBtn.addEventListener('click', () => loadHistogram(yearSelect.value));
+yearSelect.addEventListener('change', () => loadHistogram(yearSelect.value));
 connectionStatus.addEventListener('dblclick', resetToken);
 
 // ============================================================
-// SERVICE WORKER & INIT
+// INIT
 // ============================================================
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js')
-        .then(() => console.log('✅ Service Worker registriert'))
-        .catch(err => console.warn('⚠️ Service Worker Fehler:', err));
+    navigator.serviceWorker.register('sw.js').then(() => console.log('✅ SW registriert')).catch(err => console.warn('⚠️ SW Fehler:', err));
 }
-
 document.addEventListener('DOMContentLoaded', () => {
     checkConnection();
     loadLeads();
-    console.log('🚀 LeadCapture PWA mit Fragebogen und CSV-Export geladen');
-    console.log('📡 Proxy URL:', PROXY_URL);
-    console.log('📋 Leads URL:', LEADS_URL);
-    console.log('📊 Export URL:', EXPORT_URL);
+    console.log('🚀 LeadCapture PWA mit Histogramm geladen');
 });
 </script>
-
 </body>
 </html>
