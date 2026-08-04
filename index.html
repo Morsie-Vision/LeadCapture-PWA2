@@ -190,8 +190,21 @@
 // ============ CONFIG ============
 const OCR_URL = 'https://api.ocr.space/parse/image';
 
+// Robustes Laden aus localStorage: Falls ein Eintrag beschädigt/kein gültiges
+// JSON ist, wird NICHT stillschweigend alles auf leer zurückgesetzt.
+function loadFromStorage(key, fallback) {
+    const raw = localStorage.getItem(key);
+    if (raw === null) return fallback;
+    try {
+        return JSON.parse(raw);
+    } catch (e) {
+        console.error(`[Storage] "${key}" konnte nicht gelesen werden, alte Rohdaten bleiben unangetastet:`, e);
+        return fallback;
+    }
+}
+
 let stream = null, facing = 'environment';
-let leads = JSON.parse(localStorage.getItem('leads') || '[]');
+let leads = loadFromStorage('leads', []);
 let apiKey = localStorage.getItem('ocrspace_key') || '';
 let lastRawText = '';
 
@@ -432,7 +445,7 @@ function parseBusinessCard(text) {
 }
 
 // ============ FRAGEBOGEN ============
-let questionnaire = JSON.parse(localStorage.getItem('questionnaire') || '[]');
+let questionnaire = loadFromStorage('questionnaire', []);
 let currentAnswers = {};
  
 function saveQuestionnaire() { localStorage.setItem('questionnaire', JSON.stringify(questionnaire)); }
@@ -697,27 +710,16 @@ async function ocrSpaceRequest(base64Image, engine, timeoutMs) {
 async function ocrSpace(base64Image) {
     document.getElementById('loading').classList.add('show');
     const loadingText = document.getElementById('loadingText');
+    loadingText.textContent = 'OCR.space analysiert...';
 
     try {
-        // 1. Versuch: OCREngine 2 (genauer, aber teils langsamer) - 20s Zeitbudget
-        loadingText.textContent = 'OCR.space analysiert...';
-        try {
-            return await ocrSpaceRequest(base64Image, 2, 20000);
-        } catch (e1) {
-            if (e1.name === 'AbortError') console.log('[OCR] Engine 2 Timeout nach 20s, versuche Engine 1...');
-            else console.log('[OCR] Engine 2 fehlgeschlagen:', e1.message, '- versuche Engine 1...');
-
-            // 2. Versuch (Fallback): OCREngine 1 (schneller, etwas weniger genau) - weitere 20s
-            loadingText.textContent = 'Dauert länger als gewohnt – versuche schnellere Engine...';
-            try {
-                return await ocrSpaceRequest(base64Image, 1, 20000);
-            } catch (e2) {
-                if (e2.name === 'AbortError') {
-                    throw new Error('Zeitüberschreitung bei beiden Versuchen. Prüfe die Internetverbindung oder ob OCR.space gerade erreichbar ist (Browser-Konsole → Netzwerk-Tab zeigt den genauen Fehler).');
-                }
-                throw e2;
-            }
+        // Generell Engine 1 (schneller / zuverlässiger als Engine 2 auf dem Gratis-Tier), 40s Zeitbudget
+        return await ocrSpaceRequest(base64Image, 1, 40000);
+    } catch (e) {
+        if (e.name === 'AbortError') {
+            throw new Error('Zeitüberschreitung nach 40s. Prüfe die Internetverbindung oder ob OCR.space gerade erreichbar ist (Browser-Konsole → Netzwerk-Tab zeigt den genauen Fehler).');
         }
+        throw e;
     } finally {
         document.getElementById('loading').classList.remove('show');
         loadingText.textContent = 'OCR.space analysiert...';
@@ -849,3 +851,4 @@ document.getElementById('eventName').addEventListener('change', function(){local
 </script>
 </body>
 </html>
+ 
