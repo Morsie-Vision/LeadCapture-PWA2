@@ -1,924 +1,301 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="LeadCapture">
-    <meta name="theme-color" content="#007AFF">
-    <link rel="manifest" href="manifest.json">
-    <title>LeadCapture</title>
-    
-    
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f2f2f7; min-height: 100vh; padding-bottom: 90px; }
-        .header { background: #007AFF; color: white; padding: 50px 20px 15px; text-align: center; position: sticky; top: 0; z-index: 100; }
-        .header h1 { font-size: 22px; }
-        .header p { font-size: 13px; opacity: 0.9; margin-top: 3px; }
-        .scan-area { margin: 12px; padding: 16px; background: white; border-radius: 16px; }
-        .scan-title { font-size: 17px; font-weight: 600; margin-bottom: 12px; text-align: center; }
-        .video-container { width: 100%; height: 280px; background: #000; border-radius: 12px; overflow: hidden; margin-bottom: 12px; position: relative; }
-        #camera { width: 100%; height: 100%; object-fit: cover; }
-        #canvas { display: none; }
-        .btn-group { display: flex; gap: 8px; margin-top: 10px; }
-        .btn { flex: 1; padding: 14px 10px; background: #007AFF; color: white; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.15s; }
-        .btn:active { opacity: 0.8; transform: scale(0.97); }
-        .btn.gray { background: #e5e5ea; color: #000; }
-        .btn.green { background: #34C759; }
-        .btn.red { background: #FF3B30; }
-        .result-card { margin: 12px; padding: 16px; background: white; border-radius: 16px; display: none; }
-        .result-card.show { display: block; animation: fadeIn 0.25s; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .field { margin: 8px 0; padding: 12px; background: #f2f2f7; border-radius: 10px; display: flex; align-items: center; gap: 10px; }
-        .field-icon { font-size: 22px; width: 28px; text-align: center; }
-        .field-input-wrap { flex: 1; }
-        .field-label { font-size: 10px; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.5px; }
-        .field input { width: 100%; border: none; background: transparent; font-size: 16px; outline: none; padding: 2px 0; }
-        .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px; }
-        .stat-card { background: white; padding: 14px; border-radius: 14px; text-align: center; }
-        .stat-value { font-size: 26px; font-weight: bold; color: #007AFF; }
-        .stat-label { font-size: 11px; color: #8e8e93; margin-top: 2px; }
-        .leads-list { margin: 12px; }
-        .lead-card { background: white; padding: 14px; border-radius: 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
-        .lead-name { font-weight: 600; font-size: 15px; }
-        .lead-detail { font-size: 13px; color: #666; margin-top: 2px; }
-        .tab-bar { position: fixed; bottom: 0; width: 100%; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); display: flex; justify-content: space-around; padding: 8px 0 28px; border-top: 0.5px solid #ccc; }
-        .tab-item { text-align: center; font-size: 10px; color: #8e8e93; cursor: pointer; padding: 4px 8px; }
-        .tab-item.active { color: #007AFF; }
-        .tab-icon { font-size: 22px; display: block; margin-bottom: 2px; }
-        .screen { display: none; }
-        .screen.active { display: block; }
-        .toast { position: fixed; top: 15px; left: 50%; transform: translateX(-50%); background: #34C759; color: white; padding: 12px 24px; border-radius: 25px; font-weight: 600; z-index: 999; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-        .toast.show { display: block; animation: toastIn 0.3s; }
-        @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(-20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
-        .empty-state { text-align: center; padding: 60px 20px; color: #8e8e93; }
-        .empty-icon { font-size: 50px; margin-bottom: 12px; }
-        input[type="file"] { display: none; }
-        .loading { text-align: center; padding: 20px; display: none; }
-        .loading.show { display: block; }
-        .spinner { width: 36px; height: 36px; border: 3px solid #e0e0e0; border-top-color: #007AFF; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 8px; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .raw-text-box { margin: 12px; padding: 12px; background: #1a1a1a; color: #0f0; border-radius: 12px; font-size: 11px; font-family: monospace; white-space: pre-wrap; max-height: 150px; overflow-y: auto; display: none; }
-        .raw-text-box.show { display: block; }
-        .q-block { margin: 10px 0; padding: 12px; background: #f2f2f7; border-radius: 10px; }
-        .q-label { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
-        .choice-row { display: flex; flex-wrap: wrap; gap: 6px; }
-        .choice-btn { padding: 8px 12px; background: white; border: 1px solid #d1d1d6; border-radius: 20px; font-size: 13px; cursor: pointer; }
-        .choice-btn.selected { background: #007AFF; color: white; border-color: #007AFF; }
-        .rating-row { display: flex; gap: 6px; font-size: 26px; cursor: pointer; }
-        .rating-star { opacity: 0.3; }
-        .rating-star.selected { opacity: 1; }
-        .q-item { background: white; border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
-        .q-item-text { font-size: 14px; font-weight: 500; }
-        .q-item-type { font-size: 11px; color: #8e8e93; margin-top: 2px; }
-        .q-edit-box { background: white; border-radius: 12px; padding: 12px; margin-top: 10px; }
-    </style>
-</head>
-<body>
+// ============================================================
+// api-proxy.js - Sicheres Backend für DeepSeek API
+// ============================================================
+const express = require('express');
+const cors = require('cors');
+const axios = require('axios');
+const app = express();
+const port = process.env.PORT || 3000;
 
-<div class="header">
-    <h1>📱 LeadCapture</h1>
-    <p>OCR.space + Profi-Parser</p>
-</div>
+// ============================================================
+// 1. SICHERE KONFIGURATION
+// ============================================================
+// Diese Umgebungsvariablen werden auf Render gesetzt!
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+const PROXY_AUTH_TOKEN = process.env.PROXY_AUTH_TOKEN;
 
-<!-- SCAN SCREEN -->
-<div class="screen active" id="scanScreen">
-    <div class="scan-area" id="apiKeyBanner" style="display:none;background:#FFF3CD;border:1px solid #FFE69C;">
-        <p style="font-size:13px;color:#664d03;">🔑 Kein OCR.space API-Key hinterlegt. <a href="#" onclick="switchTab('settings');return false;" style="color:#007AFF;font-weight:600;">Jetzt in Settings eintragen</a> (kostenlos: <a href="https://ocr.space/ocrapi" target="_blank" style="color:#007AFF;">ocr.space/ocrapi</a>).</p>
-    </div>
-    <div class="scan-area">
-        <div class="scan-title">📸 Visitenkarte scannen</div>
-        <div class="video-container"><video id="camera" autoplay playsinline></video></div>
-        <canvas id="canvas"></canvas>
+// Prüfe, ob alle Keys gesetzt sind
+if (!DEEPSEEK_API_KEY) {
+    console.error('❌ DEEPSEEK_API_KEY nicht gesetzt!');
+    console.error('   Bitte setze die Umgebungsvariable DEEPSEEK_API_KEY');
+    process.exit(1);
+}
+if (!PROXY_AUTH_TOKEN) {
+    console.error('❌ PROXY_AUTH_TOKEN nicht gesetzt!');
+    console.error('   Bitte setze die Umgebungsvariable PROXY_AUTH_TOKEN');
+    process.exit(1);
+}
+
+const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
+
+console.log('✅ Konfiguration geladen:');
+console.log(`   DeepSeek Key: ${DEEPSEEK_API_KEY.substring(0, 10)}...`);
+console.log(`   Auth Token: ${PROXY_AUTH_TOKEN.substring(0, 10)}...`);
+
+// ============================================================
+// 2. MIDDLEWARE
+// ============================================================
+// Erweiterte CORS-Einstellungen für Sicherheit
+const allowedOrigins = [
+    'https://morsie-vision.github.io', // Deine GitHub Pages URL
+    'http://localhost:3000',            // Lokale Entwicklung
+    'http://localhost:5500',            // Live Server
+    /\.github\.io$/                     // Alle GitHub Pages Subdomains (Regex)
+];
+
+app.use(cors({
+    origin: function (origin, callback) {
+        // Erlaube Anfragen ohne Origin (z.B. von mobilen Apps)
+        if (!origin) return callback(null, true);
         
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <p style="color:#666;font-size:14px;" id="loadingText">OCR.space analysiert...</p>
-            <button class="btn gray" style="max-width:160px;margin:8px auto 0;display:block;" onclick="cancelOCR()">✕ Abbrechen</button>
-        </div>
+        // Prüfe, ob die Origin erlaubt ist
+        const allowed = allowedOrigins.some(allowedOrigin => {
+            if (typeof allowedOrigin === 'string') {
+                return origin === allowedOrigin;
+            } else if (allowedOrigin instanceof RegExp) {
+                return allowedOrigin.test(origin);
+            }
+            return false;
+        });
         
-        <div class="btn-group">
-            <button class="btn" onclick="capture()">📷 Foto</button>
-            <button class="btn gray" onclick="document.getElementById('fileInput').click()">📁 Galerie</button>
-            <input type="file" id="fileInput" accept="image/*" onchange="handleFile(event)" capture="environment">
-        </div>
-        <div class="btn-group">
-            <button class="btn gray" onclick="toggleCam()">🔄 Kamera</button>
-            <button class="btn gray" onclick="toggleRaw()">📝 Rohtext</button>
-        </div>
-    </div>
-    
-    <!-- Rohtext-Anzeige -->
-    <div class="raw-text-box" id="rawTextBox">
-        <strong style="color:#fff;">OCR Rohtext:</strong><br>
-        <span id="rawTextContent"></span>
-    </div>
-    
-    <div class="result-card" id="resultCard">
-        <h3 style="margin-bottom:12px;font-size:17px;">✅ Erkannt</h3>
-        <div class="field"><span class="field-icon">👤</span><div class="field-input-wrap"><div class="field-label">Vorname</div><input type="text" id="fFirstName" placeholder="Max"></div></div>
-        <div class="field"><span class="field-icon">👤</span><div class="field-input-wrap"><div class="field-label">Nachname</div><input type="text" id="fLastName" placeholder="Mustermann"></div></div>
-        <div class="field"><span class="field-icon">🏢</span><div class="field-input-wrap"><div class="field-label">Firma</div><input type="text" id="fCompany" placeholder="Firma GmbH"></div></div>
-        <div class="field"><span class="field-icon">💼</span><div class="field-input-wrap"><div class="field-label">Position</div><input type="text" id="fPosition" placeholder="CEO"></div></div>
-        <div class="field"><span class="field-icon">📧</span><div class="field-input-wrap"><div class="field-label">E-Mail</div><input type="email" id="fEmail" placeholder="max@firma.de"></div></div>
-        <div class="field"><span class="field-icon">📱</span><div class="field-input-wrap"><div class="field-label">Telefon</div><input type="tel" id="fPhone" placeholder="+49 123 456789"></div></div>
-        <div class="field"><span class="field-icon">🌐</span><div class="field-input-wrap"><div class="field-label">Website</div><input type="url" id="fWeb" placeholder="www.firma.de"></div></div>
-        <div class="field"><span class="field-icon">📍</span><div class="field-input-wrap"><div class="field-label">Ort</div><input type="text" id="fCity" placeholder="82178 Puchheim"></div></div>
-        <div class="field"><span class="field-icon">🗺️</span><div class="field-input-wrap"><div class="field-label">Bundesland</div><input type="text" id="fState" placeholder="wird aus PLZ abgeleitet"></div></div>
-        <div id="questionnaireFields"></div>
-        <div class="btn-group" style="margin-top:12px;">
-            <button class="btn green" onclick="saveLead()">💾 Speichern</button>
-            <button class="btn red" onclick="clearResult()">❌</button>
-        </div>
-    </div>
-</div>
-
-<!-- LEADS SCREEN -->
-<div class="screen" id="leadsScreen">
-    <div class="stats">
-        <div class="stat-card"><div class="stat-value" id="totalLeads">0</div><div class="stat-label">Gesamt</div></div>
-        <div class="stat-card"><div class="stat-value" id="todayLeads">0</div><div class="stat-label">Heute</div></div>
-    </div>
-    <div class="leads-list" id="leadsList"><div class="empty-state"><div class="empty-icon">📭</div><p>Keine Leads</p></div></div>
-</div>
-
-<!-- SETTINGS SCREEN -->
-<div class="screen" id="settingsScreen">
-    <div class="scan-area">
-        <h3 style="margin-bottom:12px;">⚙️ Einstellungen</h3>
-        <div class="field"><span class="field-icon">📅</span><div class="field-input-wrap"><div class="field-label">Event</div><input type="text" id="eventName" placeholder="z.B. Messe München 2025"></div></div>
-        <div class="field"><span class="field-icon">🔑</span><div class="field-input-wrap"><div class="field-label">OCR.space API Key</div><input type="text" id="apiKeyInput" placeholder="K1234567..."></div></div>
-        <p style="font-size:11px;color:#8e8e93;margin:6px 0;">Kostenlos: <a href="https://ocr.space/ocrapi" target="_blank" style="color:#007AFF;">ocr.space/ocrapi</a> • 500/Tag</p>
-        <button class="btn green" onclick="saveApiKey()" style="margin-top:8px;">💾 Key speichern</button>
-        <button class="btn" onclick="exportCSV()" style="margin-top:8px;">📤 CSV Export</button>
-        <button class="btn red" onclick="clearAll()" style="margin-top:8px;">🗑️ Alle löschen</button>
-    </div>
-
-    <!-- FRAGEBOGEN-VERWALTUNG -->
-    <div class="scan-area">
-        <h3 style="margin-bottom:6px;">📋 Fragebogen</h3>
-        <p style="font-size:12px;color:#8e8e93;margin-bottom:10px;">Diese Fragen werden nach jedem Scan zusätzlich abgefragt und mit dem Lead sowie im CSV-Export gespeichert.</p>
-        <div id="questionList"></div>
-
-        <div class="q-edit-box">
-            <div class="field"><span class="field-icon">❓</span><div class="field-input-wrap"><div class="field-label">Frage</div><input type="text" id="newQText" placeholder="z.B. Interesse an Produkt X?"></div></div>
-            <div class="field"><span class="field-icon">🔧</span><div class="field-input-wrap"><div class="field-label">Typ</div>
-                <select id="newQType" style="width:100%;border:none;background:transparent;font-size:16px;outline:none;padding:2px 0;" onchange="toggleOptionsInput()">
-                    <option value="text">Freitext</option>
-                    <option value="yesno">Ja / Nein</option>
-                    <option value="choice">Einfachauswahl</option>
-                    <option value="multichoice">Mehrfachauswahl</option>
-                    <option value="rating">Bewertung (1–5)</option>
-                </select>
-            </div></div>
-            <div class="field" id="newQOptionsWrap" style="display:none;"><span class="field-icon">📝</span><div class="field-input-wrap"><div class="field-label">Optionen (Komma-getrennt)</div><input type="text" id="newQOptions" placeholder="Ja, Nein, Vielleicht"></div></div>
-            <button class="btn" style="margin-top:8px;" onclick="addQuestion()">➕ Frage hinzufügen</button>
-        </div>
-    </div>
-</div>
-
-<!-- TAB BAR -->
-<div class="tab-bar">
-    <div class="tab-item active" onclick="switchTab('scan')"><span class="tab-icon">📷</span>Scannen</div>
-    <div class="tab-item" onclick="switchTab('leads')"><span class="tab-icon">👥</span>Leads</div>
-    <div class="tab-item" onclick="switchTab('settings')"><span class="tab-icon">⚙️</span>Settings</div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<script>
-// ============ CONFIG ============
-const OCR_URL = 'https://api.ocr.space/parse/image';
-
-// Robustes Laden aus localStorage: Falls ein Eintrag beschädigt/kein gültiges
-// JSON ist, wird NICHT stillschweigend alles auf leer zurückgesetzt.
-function loadFromStorage(key, fallback) {
-    const raw = localStorage.getItem(key);
-    if (raw === null) return fallback;
-    try {
-        return JSON.parse(raw);
-    } catch (e) {
-        console.error(`[Storage] "${key}" konnte nicht gelesen werden, alte Rohdaten bleiben unangetastet:`, e);
-        return fallback;
-    }
-}
-
-let stream = null, facing = 'environment';
-let leads = loadFromStorage('leads', []);
-let apiKey = localStorage.getItem('ocrspace_key') || '';
-let lastRawText = '';
-
-// ============ KAMERA ============
-async function startCam() {
-    try {
-        if (stream) stream.getTracks().forEach(t => t.stop());
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 1920 }, height: { ideal: 1080 } } });
-        document.getElementById('camera').srcObject = stream;
-    } catch(e) { toast('❌ Kamera-Zugriff benötigt'); }
-}
-function toggleCam() { facing = facing === 'environment' ? 'user' : 'environment'; startCam(); }
-function toggleRaw() {
-    const box = document.getElementById('rawTextBox');
-    if (box.classList.contains('show')) { box.classList.remove('show'); }
-    else if (lastRawText) { box.classList.add('show'); }
-}
-
-// (ocrSpace()-Implementierung: siehe weiter unten im Abschnitt "OCR FLOW",
-// dort inkl. Timeout/Abbruch-Logik gegen endlose Ladezustände)
-
-// ============ PROFESSIONELLER VISITENKARTEN-PARSER v2 ============
-// Hilfsfunktion: Wort mit "echten" Wortgrenzen suchen (auch für Wörter mit
-// Punkten wie "e.k." oder Umlauten), damit z.B. "ag" nicht in "Tag" matcht.
-function containsWord(lowerLine, word) {
-    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return new RegExp('(^|[^a-zäöüß])' + escaped + '([^a-zäöüß]|$)', 'i').test(lowerLine);
-}
-
-function normalizeUrl(u) {
-    u = u.replace(/[.,;)]+$/, '').trim();
-    if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
-    return u;
-}
-
-// OCR liest in URLs manchmal Buchstaben mit Störpunkten als Umlaute (z.B. "com" -> "cöm")
-// oder fügt Rauschpunkte ein (z.B. "c•öm"). Wird ausschließlich auf Website-Kandidaten
-// angewendet, damit echte Umlaute in Städtenamen o.ä. unangetastet bleiben.
-function fixDomainOcrGlitches(str) {
-    return str
-        .replace(/[•·°¨]/g, '')
-        .replace(/ö/g, 'o').replace(/Ö/g, 'O')
-        .replace(/ü/g, 'u').replace(/Ü/g, 'U')
-        .replace(/ä/g, 'a').replace(/Ä/g, 'A');
-}
-
-function cleanPhone(p) {
-    return p.replace(/\s+/g, ' ').replace(/[.,;]+$/, '').trim();
-}
-
-// Grobe Zuordnung PLZ-Präfix (erste 2 Ziffern) -> Bundesland. Basiert auf den
-// überwiegenden Postleitzahlbereichen; an einzelnen Landesgrenzen (z.B. 21,
-// 67-69, 88-89) ist die Zuordnung eine Näherung, da sich echte PLZ-Bereiche
-// dort minimal überschneiden.
-const PLZ_BUNDESLAND = {
-    '01': 'Sachsen', '02': 'Sachsen', '03': 'Brandenburg', '04': 'Sachsen',
-    '06': 'Sachsen-Anhalt', '07': 'Thüringen', '08': 'Sachsen', '09': 'Sachsen',
-    '10': 'Berlin', '11': 'Berlin', '12': 'Berlin', '13': 'Berlin',
-    '14': 'Brandenburg', '15': 'Brandenburg', '16': 'Brandenburg',
-    '17': 'Mecklenburg-Vorpommern', '18': 'Mecklenburg-Vorpommern', '19': 'Mecklenburg-Vorpommern',
-    '20': 'Hamburg', '21': 'Niedersachsen', '22': 'Hamburg',
-    '23': 'Schleswig-Holstein', '24': 'Schleswig-Holstein', '25': 'Schleswig-Holstein',
-    '26': 'Niedersachsen', '27': 'Niedersachsen', '28': 'Bremen', '29': 'Niedersachsen',
-    '30': 'Niedersachsen', '31': 'Niedersachsen', '32': 'Nordrhein-Westfalen', '33': 'Nordrhein-Westfalen',
-    '34': 'Hessen', '35': 'Hessen', '36': 'Hessen', '37': 'Niedersachsen', '38': 'Niedersachsen', '39': 'Sachsen-Anhalt',
-    '40': 'Nordrhein-Westfalen', '41': 'Nordrhein-Westfalen', '42': 'Nordrhein-Westfalen', '43': 'Nordrhein-Westfalen',
-    '44': 'Nordrhein-Westfalen', '45': 'Nordrhein-Westfalen', '46': 'Nordrhein-Westfalen', '47': 'Nordrhein-Westfalen',
-    '48': 'Nordrhein-Westfalen', '49': 'Niedersachsen',
-    '50': 'Nordrhein-Westfalen', '51': 'Nordrhein-Westfalen', '52': 'Nordrhein-Westfalen', '53': 'Nordrhein-Westfalen',
-    '54': 'Rheinland-Pfalz', '55': 'Rheinland-Pfalz', '56': 'Rheinland-Pfalz',
-    '57': 'Nordrhein-Westfalen', '58': 'Nordrhein-Westfalen', '59': 'Nordrhein-Westfalen',
-    '60': 'Hessen', '61': 'Hessen', '62': 'Hessen', '63': 'Hessen', '64': 'Hessen', '65': 'Hessen',
-    '66': 'Saarland', '67': 'Rheinland-Pfalz', '68': 'Baden-Württemberg', '69': 'Baden-Württemberg',
-    '70': 'Baden-Württemberg', '71': 'Baden-Württemberg', '72': 'Baden-Württemberg', '73': 'Baden-Württemberg',
-    '74': 'Baden-Württemberg', '75': 'Baden-Württemberg', '76': 'Baden-Württemberg', '77': 'Baden-Württemberg',
-    '78': 'Baden-Württemberg', '79': 'Baden-Württemberg',
-    '80': 'Bayern', '81': 'Bayern', '82': 'Bayern', '83': 'Bayern', '84': 'Bayern', '85': 'Bayern', '86': 'Bayern', '87': 'Bayern',
-    '88': 'Baden-Württemberg', '89': 'Baden-Württemberg',
-    '90': 'Bayern', '91': 'Bayern', '92': 'Bayern', '93': 'Bayern', '94': 'Bayern', '95': 'Bayern', '96': 'Bayern', '97': 'Bayern',
-    '98': 'Thüringen', '99': 'Thüringen'
-};
-
-function plzToBundesland(plz) {
-    if (!plz || plz.length < 2) return '';
-    return PLZ_BUNDESLAND[plz.slice(0, 2)] || '';
-}
-
-function parseBusinessCard(text) {
-    lastRawText = text;
-    document.getElementById('rawTextContent').textContent = text;
-
-    const result = {
-        firstName: '', lastName: '', fullName: '',
-        company: '', position: '', email: '', phone: '', web: '',
-        city: '', state: ''
-    };
-
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-    const fullText = lines.join('\n');
-
-    // ---------- 1. E-MAIL (sehr zuverlässig) ----------
-    // OCR bricht E-Mails manchmal über zwei Zeilen um (z.B. "rstenger" / "@firma.de").
-    // Zeilenumbrüche direkt vor einem "@" werden deshalb vor der Suche entfernt.
-    const emailSearchText = fullText.replace(/\r?\n\s*@/g, '@');
-    const emailMatches = emailSearchText.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g) || [];
-    if (emailMatches.length) {
-        result.email = emailMatches[0].toLowerCase().replace(/[.,;]+$/, '');
-    }
-
-    // ---------- 2. WEBSITE ----------
-    // Priorität: explizites Label > www./http-Zeile > generische Domain.
-    // E-Mail-Zeilen werden dabei ausgeschlossen, damit nicht versehentlich
-    // die Domain aus der E-Mail-Adresse als "Website" gezogen wird.
-    const webLabelRegex = /\b(?:website|web|internet|homepage)\b[.:]?\s*(\S+)/i;
-    const wwwRegex = /((?:https?:\/\/)?www\.[a-zA-Z0-9\-]+\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?[^\s,;]*)/i;
-    const httpRegex = /(https?:\/\/[^\s,;]+)/i;
-    const genericDomainRegex = /\b([a-zA-Z0-9\-]+\.(?:de|com|net|org|io|at|ch|eu|info|biz|shop|online))\b/i;
-
-    for (const line of lines) {
-        if (line.includes('@')) continue;
-        const m = fixDomainOcrGlitches(line).match(webLabelRegex);
-        if (m) { result.web = normalizeUrl(m[1]); break; }
-    }
-    if (!result.web) {
-        for (const line of lines) {
-            if (line.includes('@')) continue;
-            const cleanLine = fixDomainOcrGlitches(line);
-            const m = cleanLine.match(wwwRegex) || cleanLine.match(httpRegex);
-            if (m) { result.web = normalizeUrl(m[1]); break; }
-        }
-    }
-    if (!result.web) {
-        for (const line of lines) {
-            if (line.includes('@')) continue;
-            const m = fixDomainOcrGlitches(line).match(genericDomainRegex);
-            if (m) { result.web = normalizeUrl(m[1]); break; }
-        }
-    }
-
-    // ---------- 3. TELEFON ----------
-    // Mobil-/Handy-Nummern haben Priorität vor Festnetz, Fax wird ignoriert.
-    // \b sorgt dafür, dass z.B. "Tel" nicht versehentlich in einem Wort wie "Hotel" matcht.
-    const mobileLabelRegex = /\b(?:mobil|handy|mobile|cell)\b[.:]?\s*([+\d][\d\s\-()\/]{5,})/i;
-    const telLabelRegex = /\b(?:tel|fon|phone|telefon)\b[.:]?\s*([+\d][\d\s\-()\/]{5,})/i;
-    const genericPhoneRegex = /(\+\d{1,3}\s*(?:\(\d+\))?[\d\s\-.\/]{6,}|0\d{2,5}[\s\-.\/]\d{3,}[\s\-.\/]?\d{0,})/;
-
-    let mobilePhone = '', telPhone = '', genericPhone = '';
-    for (const line of lines) {
-        if (/^fax/i.test(line)) continue; // Faxnummern nie als Telefon werten
-
-        if (!mobilePhone) {
-            const m = line.match(mobileLabelRegex);
-            if (m) mobilePhone = cleanPhone(m[1]);
-        }
-        if (!telPhone) {
-            const m = line.match(telLabelRegex);
-            if (m) telPhone = cleanPhone(m[1]);
-        }
-        if (!genericPhone) {
-            const m = line.match(genericPhoneRegex);
-            if (m && /\d{3}/.test(m[1])) genericPhone = cleanPhone(m[1]);
-        }
-    }
-    result.phone = mobilePhone || telPhone || genericPhone;
-
-    // ---------- 4. PLZ, ORT, BUNDESLAND ----------
-    // Typische deutsche Adresszeile "PLZ Ort", z.B. "82178 Puchheim".
-    // Das Bundesland wird rein aus der PLZ abgeleitet, da es auf Visitenkarten nie steht.
-    let zip = '', city = '';
-    for (const line of lines) {
-        const m = /^(\d{5})\s+(.+)/.exec(line.trim());
-        if (m) { zip = m[1]; city = m[2].trim(); break; }
-    }
-    result.city = zip && city ? `${zip} ${city}` : (city || zip);
-    result.state = plzToBundesland(zip);
-
-    // ---------- 5. FIRMA, POSITION, NAME ----------
-    const titles = ['prof. dr.', 'dr. med.', 'dr.-ing.', 'dipl.-ing.', 'dipl.-kfm.', 'dipl.-inf.',
-        'dr.', 'prof.', 'mag.', 'ing.', 'b.sc.', 'm.sc.', 'b.a.', 'm.a.', 'herr', 'frau'];
-    const companyEndings = ['gmbh & co. kg', 'gmbh', 'ag', 'kg', 'ohg', 'mbh', 'ltd', 'inc', 'corp',
-        'llc', 'se', 'gbr', 'ug', 'e.k.', 'e.v.', '& co'];
-    const positionKeywords = ['ceo', 'cto', 'cfo', 'coo', 'chief', 'manager', 'director', 'leiter',
-        'head of', 'head', 'vp', 'president', 'geschäftsführer', 'geschäftsführung', 'inhaber',
-        'vorstand', 'chef', 'berater', 'consultant', 'entwickler', 'developer', 'architekt',
-        'engineer', 'ingenieur', 'sales', 'vertrieb', 'marketing', 'projektleiter', 'teamleiter',
-        'abteilungsleiter', 'assistenz', 'sachbearbeiter', 'key account', 'account manager'];
-
-    let companyLine = '', positionLine = '', companyConfident = false;
-    const nameCandidates = [];
-
-    lines.forEach((line, idx) => {
-        const lower = line.toLowerCase();
-
-        // Offensichtliche Nicht-Namen/Nicht-Firmen-Zeilen aussortieren
-        if (lower.includes('@')) return;
-        if (/^(www\.|https?:)/i.test(lower)) return;
-        if (/^\d{4,5}\s/.test(lower)) return; // PLZ + Ort
-        if (/(straße|strasse|str\.|platz|weg\s|allee)/i.test(lower)) return;
-        if (/^(tel|fon|mobil|phone|telefon|handy|fax)[.:]/i.test(lower)) return;
-
-        // Explizite Labels haben Vorrang vor jeder Heuristik ("Firma:", "Name:", ...)
-        const companyLabel = /^(firma|company|unternehmen)[.:]\s*(.+)/i.exec(line);
-        if (companyLabel) {
-            if (!companyLine) { companyLine = companyLabel[2].trim(); companyConfident = true; }
-            return;
-        }
-        const nameLabel = /^(name|kontakt|ansprechpartner)[.:]\s*(.+)/i.exec(line);
-        if (nameLabel) {
-            nameCandidates.push({ line: nameLabel[2].trim(), score: 10 });
-            return;
-        }
-        const positionLabel = /^(position|funktion|titel|rolle)[.:]\s*(.+)/i.exec(line);
-        if (positionLabel) {
-            if (!positionLine) positionLine = positionLabel[2].trim();
-            return;
-        }
-
-        // Firma über Rechtsform-Zusatz: erste passende Zeile gewinnt (nicht die letzte)
-        if (companyEndings.some(e => containsWord(lower, e))) {
-            if (!companyLine) { companyLine = line; companyConfident = true; }
-            return;
-        }
-
-        // Position: Schlüsselwörter direkt oder als Wortende (deutsche Komposita
-        // wie "Einkaufsleiter", "Objektmanager" enthalten den Begriff ohne Leerzeichen)
-        const positionSuffixes = ['leiter', 'leiterin', 'manager', 'managerin', 'berater', 'beraterin'];
-        const lineWords = lower.replace(/[:.,]/g, '').split(/\s+/);
-        const isPosition = positionKeywords.some(k => containsWord(lower, k)) ||
-            lineWords.some(w => positionSuffixes.some(s => w.endsWith(s) && w.length > s.length));
-        if (isPosition) {
-            if (!positionLine) positionLine = line;
-            return;
-        }
-
-        // Name-Kandidat sammeln und bewerten statt blind die erste Zeile zu nehmen
-        if (/\d/.test(line)) return; // Namen enthalten normalerweise keine Ziffern
-        const words = line.split(/[\s,]+/).filter(w => w.length > 1);
-        if (words.length < 2 || words.length > 5) return;
-
-        let score = 0;
-        if (titles.some(t => containsWord(lower, t))) score += 3; // Titel = starkes Namens-Signal
-        const capitalizedWords = words.filter(w => /^[A-ZÄÖÜ]/.test(w)).length;
-        if (capitalizedWords === words.length) score += 2; // "Max Mustermann" statt Fließtext
-        if (idx < 4) score += 2; // Name steht meist oben auf der Karte
-        if (words.length <= 3) score += 1; // Vor-/Nachname eher kurz
-        if (line === line.toUpperCase()) score -= 2; // GROSSSCHRIFT deutet eher auf Firmenlogo/-schriftzug hin
-        if (line.includes('&')) score -= 2; // "&" deutet eher auf Firmenname hin (z.B. "Vision & Control")
-
-        nameCandidates.push({ line, score });
-    });
-
-    nameCandidates.sort((a, b) => b.score - a.score);
-    let nameLine = nameCandidates.length ? nameCandidates[0].line : '';
-
-    // Fallback für Firmen OHNE Rechtsform-Zusatz (z.B. "Vision & Control" statt "Vision & Control GmbH"):
-    // Unter den übrigen Kandidaten nach typischen Firmen-Signalen suchen (Großschrift, "&"),
-    // dabei die bereits gewählte Namenszeile ausschließen.
-    if (!companyLine) {
-        const fallback = nameCandidates.find(c =>
-            c.line !== nameLine &&
-            (c.line === c.line.toUpperCase() || c.line.includes('&'))
-        );
-        if (fallback) companyLine = fallback.line;
-    }
-
-    // Sicherheitsnetz: Firma und Name dürfen niemals identisch sein.
-    if (companyLine && nameLine && companyLine.trim().toLowerCase() === nameLine.trim().toLowerCase()) {
-        const alt = nameCandidates.find(c => c.line.trim().toLowerCase() !== companyLine.trim().toLowerCase());
-        if (alt) {
-            nameLine = alt.line; // nächstbester Namens-Kandidat
-        } else if (!companyConfident) {
-            companyLine = ''; // keine Alternative und Firma war nur geraten -> lieber leer lassen
+        if (allowed) {
+            callback(null, true);
         } else {
-            nameLine = ''; // Firma stand sicher fest (Rechtsform/Label) -> Namensfeld leer statt Duplikat
+            console.warn(`⚠️ CORS-Block: ${origin} ist nicht erlaubt`);
+            callback(new Error('Nicht erlaubt durch CORS'));
         }
+    },
+    methods: ['GET', 'POST', 'HEAD', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Logging-Middleware
+app.use((req, res, next) => {
+    console.log(`📨 ${req.method} ${req.path} - ${req.ip}`);
+    next();
+});
+
+// ============================================================
+// 3. AUTHENTIFIZIERUNGS-MIDDLEWARE
+// ============================================================
+function authenticate(req, res, next) {
+    // Prüfe den Authorization-Header
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader) {
+        console.warn('⚠️ Kein Authorization-Header');
+        return res.status(401).json({
+            success: false,
+            error: '❌ Kein Authorization-Header gefunden'
+        });
     }
-
-    // Name aufteilen
-    if (nameLine) {
-        let cleanName = nameLine;
-        for (const title of titles) {
-            const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            cleanName = cleanName.replace(new RegExp('(^|\\s)' + escaped + '(\\s|$)', 'gi'), ' ').trim();
-        }
-        cleanName = cleanName.replace(/\s{2,}/g, ' ').trim();
-
-        const nameParts = cleanName.split(/[\s,]+/).filter(w => w.length > 1);
-        if (nameParts.length >= 2) {
-            result.firstName = nameParts[0];
-            result.lastName = nameParts[nameParts.length - 1];
-            result.fullName = cleanName;
-        } else {
-            result.fullName = cleanName;
-            result.firstName = cleanName;
-        }
+    
+    // Erwartet Format: "Bearer <TOKEN>"
+    const parts = authHeader.split(' ');
+    if (parts.length !== 2 || parts[0] !== 'Bearer') {
+        console.warn('⚠️ Ungültiges Authorization-Format:', authHeader);
+        return res.status(401).json({
+            success: false,
+            error: '❌ Ungültiges Authorization-Format. Erwartet: Bearer TOKEN'
+        });
     }
-
-    result.company = companyLine;
-    result.position = positionLine;
-
-    return result;
-}
-
-// ============ FRAGEBOGEN ============
-let questionnaire = loadFromStorage('questionnaire', []);
-let currentAnswers = {};
-
-function saveQuestionnaire() { localStorage.setItem('questionnaire', JSON.stringify(questionnaire)); }
-
-function toggleOptionsInput() {
-    const type = document.getElementById('newQType').value;
-    document.getElementById('newQOptionsWrap').style.display = (type === 'choice' || type === 'multichoice') ? 'flex' : 'none';
-}
-
-function addQuestion() {
-    const text = document.getElementById('newQText').value.trim();
-    const type = document.getElementById('newQType').value;
-    if (!text) { toast('❌ Bitte Fragetext eingeben'); return; }
-    let options = [];
-    if (type === 'choice' || type === 'multichoice') {
-        options = document.getElementById('newQOptions').value.split(',').map(o => o.trim()).filter(o => o);
-        if (options.length < 2) { toast('❌ Mind. 2 Optionen angeben'); return; }
+    
+    const token = parts[1];
+    
+    if (!token || token !== PROXY_AUTH_TOKEN) {
+        console.warn('⚠️ Ungültiger Token');
+        return res.status(403).json({
+            success: false,
+            error: '❌ Ungültiger Authentifizierungs-Token'
+        });
     }
-    questionnaire.push({ id: 'q' + Date.now(), text, type, options });
-    saveQuestionnaire();
-    document.getElementById('newQText').value = '';
-    document.getElementById('newQOptions').value = '';
-    document.getElementById('newQType').value = 'text';
-    toggleOptionsInput();
-    renderQuestionList();
-    toast('✅ Frage hinzugefügt');
+    
+    console.log('✅ Authentifizierung erfolgreich');
+    // Token ist gültig -> weiter zur eigentlichen Logik
+    next();
 }
 
-function deleteQuestion(id) {
-    if (!confirm('Frage löschen?')) return;
-    questionnaire = questionnaire.filter(q => q.id !== id);
-    saveQuestionnaire();
-    renderQuestionList();
-}
+// ============================================================
+// 4. HEALTH CHECK (OHNE Authentifizierung)
+// ============================================================
+app.head('/api/process-image', (req, res) => {
+    res.status(200).send('OK');
+});
 
-function renderQuestionList() {
-    const c = document.getElementById('questionList');
-    if (!questionnaire.length) { c.innerHTML = '<p style="font-size:12px;color:#8e8e93;">Noch keine Fragen angelegt.</p>'; return; }
-    const typeLabels = { text: 'Freitext', yesno: 'Ja/Nein', choice: 'Einfachauswahl', multichoice: 'Mehrfachauswahl', rating: 'Bewertung 1–5' };
-    c.innerHTML = questionnaire.map(q => `<div class="q-item"><div><div class="q-item-text">${q.text}</div><div class="q-item-type">${typeLabels[q.type] || q.type}${q.options && q.options.length ? ': ' + q.options.join(', ') : ''}</div></div><div onclick="deleteQuestion('${q.id}')" style="cursor:pointer;">🗑️</div></div>`).join('');
-}
-
-function renderQuestionnaireFields() {
-    currentAnswers = {};
-    const c = document.getElementById('questionnaireFields');
-    if (!questionnaire.length) { c.innerHTML = ''; return; }
-
-    c.innerHTML = '<h3 style="margin:16px 0 8px;font-size:15px;">📋 Fragebogen</h3>' + questionnaire.map(q => {
-        if (q.type === 'text') {
-            return `<div class="q-block"><div class="q-label">${q.text}</div><input type="text" style="width:100%;padding:8px;border-radius:8px;border:1px solid #d1d1d6;font-size:14px;" oninput="currentAnswers['${q.id}']=this.value"></div>`;
-        }
-        if (q.type === 'yesno') {
-            return `<div class="q-block"><div class="q-label">${q.text}</div><div class="choice-row">
-                <button type="button" class="choice-btn" onclick="selectSingleAnswer('${q.id}','Ja',this)">Ja</button>
-                <button type="button" class="choice-btn" onclick="selectSingleAnswer('${q.id}','Nein',this)">Nein</button>
-            </div></div>`;
-        }
-        if (q.type === 'choice') {
-            return `<div class="q-block"><div class="q-label">${q.text}</div><div class="choice-row">${q.options.map(o => `<button type="button" class="choice-btn" onclick="selectSingleAnswer('${q.id}','${o.replace(/'/g, "\\'")}',this)">${o}</button>`).join('')}</div></div>`;
-        }
-        if (q.type === 'multichoice') {
-            return `<div class="q-block"><div class="q-label">${q.text}</div><div class="choice-row">${q.options.map(o => `<button type="button" class="choice-btn" onclick="toggleMultiAnswer('${q.id}','${o.replace(/'/g, "\\'")}',this)">${o}</button>`).join('')}</div></div>`;
-        }
-        if (q.type === 'rating') {
-            return `<div class="q-block"><div class="q-label">${q.text}</div><div class="rating-row" id="rating-${q.id}">${[1, 2, 3, 4, 5].map(n => `<span class="rating-star" onclick="selectRating('${q.id}',${n})">★</span>`).join('')}</div></div>`;
-        }
-        return '';
-    }).join('');
-}
-
-function selectSingleAnswer(qid, value, btn) {
-    currentAnswers[qid] = value;
-    btn.parentElement.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
-}
-
-function toggleMultiAnswer(qid, value, btn) {
-    if (!Array.isArray(currentAnswers[qid])) currentAnswers[qid] = [];
-    const idx = currentAnswers[qid].indexOf(value);
-    if (idx > -1) { currentAnswers[qid].splice(idx, 1); btn.classList.remove('selected'); }
-    else { currentAnswers[qid].push(value); btn.classList.add('selected'); }
-}
-
-function selectRating(qid, n) {
-    currentAnswers[qid] = n;
-    document.getElementById('rating-' + qid).querySelectorAll('.rating-star').forEach((s, i) => s.classList.toggle('selected', i < n));
-}
-
-function collectAnswers() {
-    // Wandelt die internen Antworten in eine {Fragetext: Antwort}-Struktur um,
-    // damit Anzeige & CSV-Export unabhängig von der Fragen-ID lesbar bleiben.
-    const out = {};
-    questionnaire.forEach(q => {
-        let val = currentAnswers[q.id];
-        if (Array.isArray(val)) val = val.join(', ');
-        out[q.text] = val || '';
+app.get('/api/health', (req, res) => {
+    res.json({
+        status: 'OK',
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'production'
     });
-    return out;
-}
+});
 
-// ============ OCR FLOW ============
-let ocrInProgress = false;
-let currentOcrController = null;
+// ============================================================
+// 5. HAUPT-ENDPUNKT (MIT Authentifizierung)
+// ============================================================
+app.post('/api/process-image', authenticate, async (req, res) => {
+    const startTime = Date.now();
+    
+    try {
+        const { image } = req.body;
 
-// Komprimiert ein Bild iterativ auf eine Ziel-Dateigröße (Standard: 900 KB).
-// Startet mit hoher Qualität/Auflösung (gut für OCR-Genauigkeit) und reduziert
-// erst Qualität, dann bei Bedarf zusätzlich die Auflösung, bis das Zielmaß
-// unterschritten ist. So bleibt möglichst viel Bildschärfe erhalten, während
-// die Datei sicher unter dem 1-MB-Limit des kostenlosen OCR.space-Keys bleibt.
-function compressImage(dataUrl, targetKB = 900, maxDim = 2200) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => {
-            let width = img.width, height = img.height;
-            if (width > maxDim || height > maxDim) {
-                if (width > height) { height = Math.round(height * maxDim / width); width = maxDim; }
-                else { width = Math.round(width * maxDim / height); height = maxDim; }
+        if (!image) {
+            return res.status(400).json({
+                success: false,
+                error: 'Kein Bild übergeben'
+            });
+        }
+
+        console.log('📸 Bild empfangen, Größe:', (image.length / 1024).toFixed(2), 'KB');
+
+        // System-Prompt für DeepSeek
+        const systemPrompt = `
+            Du bist ein OCR- und Parsing-Experte für Messeleads.
+            Extrahiere die folgenden Felder aus dem bereitgestellten Bild eines Fragebogens oder einer Visitenkarte:
+            - Vorname, Nachname, Firma, Position, E-Mail, Telefon, Adresse (Straße, PLZ, Stadt), Interessensgebiete (Liste), Besuchertyp.
+
+            Gib das Ergebnis **ausschließlich** als gültiges JSON-Objekt zurück, das genau dieser Struktur entspricht:
+            {
+                "firstName": "",
+                "lastName": "",
+                "company": "",
+                "position": "",
+                "email": "",
+                "phone": "",
+                "address": {
+                    "street": "",
+                    "zip": "",
+                    "city": ""
+                },
+                "interests": [],
+                "visitorType": ""
             }
+            Verwende leere Zeichenketten oder leere Arrays, wenn Informationen fehlen.
+            Antworte NUR mit dem JSON-Objekt, ohne zusätzlichen Text.
+        `;
 
-            let canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-
-            const sizeKB = dataUrlStr => (dataUrlStr.length * 0.75) / 1024; // Base64 -> ungefähre Byte-Größe
-
-            let quality = 0.92;
-            let out = canvas.toDataURL('image/jpeg', quality);
-
-            // Schritt 1: Qualität schrittweise senken
-            while (sizeKB(out) > targetKB && quality > 0.35) {
-                quality -= 0.08;
-                out = canvas.toDataURL('image/jpeg', quality);
-            }
-
-            // Schritt 2: Falls minimale Qualität nicht reicht, zusätzlich Auflösung senken
-            while (sizeKB(out) > targetKB && width > 700) {
-                width = Math.round(width * 0.85);
-                height = Math.round(height * 0.85);
-                canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
-                canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-                out = canvas.toDataURL('image/jpeg', quality);
-            }
-
-            resolve(out.split(',')[1]);
+        const requestBody = {
+            model: 'deepseek-v4-flash',
+            messages: [
+                { role: 'system', content: systemPrompt },
+                {
+                    role: 'user',
+                    content: [
+                        { type: 'text', text: 'Extrahiere die Lead-Informationen aus diesem Bild:' },
+                        { type: 'image_url', image_url: { url: image } }
+                    ]
+                }
+            ],
+            temperature: 0.1,
+            response_format: { type: 'json_object' }
         };
-        img.onerror = () => reject(new Error('Bild konnte nicht geladen werden'));
-        img.src = dataUrl;
-    });
-}
 
-function blobToDataUrl(blob) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = () => reject(new Error('Foto konnte nicht gelesen werden'));
-        reader.readAsDataURL(blob);
-    });
-}
+        console.log('🚀 Sende Anfrage an DeepSeek API...');
 
-async function capture() {
-    try {
-        let dataUrl = null;
-
-        // Bevorzugt: native Foto-Aufnahme über die Kamera-Hardware (inkl. Autofokus).
-        // Das liefert ein deutlich schärferes Bild als ein einzelner Frame aus dem
-        // Live-Video-Stream und macht das "Stillhalten" weit weniger kritisch.
-        if (stream && 'ImageCapture' in window) {
-            try {
-                const track = stream.getVideoTracks()[0];
-                const imageCapture = new ImageCapture(track);
-                const blob = await imageCapture.takePhoto();
-                dataUrl = await blobToDataUrl(blob);
-            } catch (e) {
-                dataUrl = null; // Gerät/Browser unterstützt es nicht sauber -> Fallback unten
-            }
-        }
-
-        // Fallback für Browser ohne ImageCapture-Unterstützung (z.B. iOS Safari):
-        // aktuellen Video-Frame in ein Canvas zeichnen.
-        if (!dataUrl) {
-            const video = document.getElementById('camera');
-            const canvas = document.getElementById('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
-            dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-        }
-
-        const b64 = await compressImage(dataUrl);
-        await doOCR(b64);
-    } catch (e) {
-        toast('❌ ' + e.message);
-    }
-}
-
-function handleFile(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async function(e) {
-        try {
-            const b64 = await compressImage(e.target.result);
-            await doOCR(b64);
-        } catch (err) {
-            toast('❌ ' + err.message);
-        }
-    };
-    reader.onerror = () => toast('❌ Datei konnte nicht gelesen werden');
-    reader.readAsDataURL(file);
-    event.target.value = ''; // erlaubt erneute Auswahl derselben Datei
-}
-
-function cancelOCR() {
-    if (currentOcrController) currentOcrController.abort();
-}
-
-// Einzelner Request an OCR.space mit eigenem Timeout. Wird von ocrSpace()
-// bis zu zweimal mit unterschiedlicher Engine aufgerufen (siehe unten).
-async function ocrSpaceRequest(base64Image, engine, timeoutMs) {
-    const formData = new FormData();
-    formData.append('base64Image', 'data:image/jpeg;base64,' + base64Image);
-    formData.append('language', 'ger');
-    formData.append('isOverlayRequired', 'false');
-    formData.append('detectOrientation', 'true');
-    formData.append('scale', 'true');
-    formData.append('OCREngine', String(engine));
-
-    currentOcrController = new AbortController();
-    const timeoutId = setTimeout(() => currentOcrController.abort(), timeoutMs);
-    const t0 = performance.now();
-
-    try {
-        const resp = await fetch(OCR_URL, {
-            method: 'POST',
-            headers: { 'apikey': apiKey },
-            body: formData,
-            signal: currentOcrController.signal
+        const response = await axios.post(DEEPSEEK_API_URL, requestBody, {
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+            },
+            timeout: 30000 // 30 Sekunden Timeout
         });
 
-        console.log(`[OCR] Engine ${engine}: Antwort nach ${Math.round(performance.now() - t0)}ms, Status ${resp.status}`);
-
-        if (!resp.ok) throw new Error('API-Fehler: ' + resp.status);
-
-        const data = await resp.json();
-        console.log(`[OCR] Engine ${engine}: ExitCode ${data.OCRExitCode}`, data.ErrorMessage || '');
-
-        if ((data.OCRExitCode === 1 || data.OCRExitCode === 2) && data.ParsedResults && data.ParsedResults[0]) {
-            const parsedText = data.ParsedResults[0].ParsedText || '';
-            if (!parsedText.trim()) throw new Error('Kein Text im Bild erkannt');
-            return parsedText;
+        // Antwort parsen
+        const content = response.data.choices[0]?.message?.content;
+        if (!content) {
+            throw new Error('Leere Antwort von DeepSeek erhalten.');
         }
-        throw new Error(Array.isArray(data.ErrorMessage) ? data.ErrorMessage.join(', ') : (data.ErrorMessage || 'OCR fehlgeschlagen'));
-    } finally {
-        clearTimeout(timeoutId);
-        currentOcrController = null;
-    }
-}
 
-async function ocrSpace(base64Image) {
-    document.getElementById('loading').classList.add('show');
-    const loadingText = document.getElementById('loadingText');
-    loadingText.textContent = 'OCR.space analysiert...';
+        const leadData = JSON.parse(content);
+        const duration = Date.now() - startTime;
+        console.log(`✅ Lead erfolgreich geparst (${duration}ms)`);
 
-    try {
-        // Generell Engine 1 (schneller / zuverlässiger als Engine 2 auf dem Gratis-Tier), 40s Zeitbudget
-        return await ocrSpaceRequest(base64Image, 1, 40000);
-    } catch (e) {
-        if (e.name === 'AbortError') {
-            throw new Error('Zeitüberschreitung nach 40s. Prüfe die Internetverbindung oder ob OCR.space gerade erreichbar ist (Browser-Konsole → Netzwerk-Tab zeigt den genauen Fehler).');
+        // Erfolgreiche Antwort
+        res.json({
+            success: true,
+            data: leadData,
+            processingTime: duration
+        });
+
+    } catch (error) {
+        const duration = Date.now() - startTime;
+        console.error(`❌ Fehler (${duration}ms):`, error.message);
+        
+        // Detaillierte Fehlerbehandlung
+        let errorMessage = 'Interner Serverfehler';
+        let statusCode = 500;
+        
+        if (error.response) {
+            // Die Anfrage wurde gesendet und der Server hat geantwortet
+            console.error('📨 DeepSeek API Response:', error.response.status);
+            if (error.response.data) {
+                console.error('📨 Response Data:', JSON.stringify(error.response.data, null, 2));
+            }
+            errorMessage = error.response.data?.error?.message || `DeepSeek API Fehler (${error.response.status})`;
+            statusCode = error.response.status;
+        } else if (error.request) {
+            // Die Anfrage wurde gesendet, aber keine Antwort erhalten
+            console.error('⏰ Keine Antwort von DeepSeek API');
+            errorMessage = 'DeepSeek API antwortet nicht (Timeout)';
+            statusCode = 504;
+        } else {
+            // Etwas anderes ist schiefgelaufen
+            errorMessage = error.message;
+            statusCode = 500;
         }
-        throw e;
-    } finally {
-        document.getElementById('loading').classList.remove('show');
-        loadingText.textContent = 'OCR.space analysiert...';
+
+        res.status(statusCode).json({
+            success: false,
+            error: errorMessage,
+            processingTime: duration
+        });
     }
-}
-
-async function doOCR(b64) {
-    if (!apiKey) {
-        toast('❌ Bitte eigenen OCR.space API-Key in Settings eintragen');
-        switchTab('settings');
-        document.getElementById('apiKeyInput').focus();
-        return;
-    }
-    if (ocrInProgress) { toast('⏳ Scan läuft noch...'); return; }
-    ocrInProgress = true;
-    toast('🔍 OCR.space scannt...');
-    try {
-        const text = await ocrSpace(b64);
-        const parsed = parseBusinessCard(text);
-        showResult(parsed);
-        document.getElementById('rawTextBox').classList.add('show');
-        toast('✅ Erkannt!');
-    } catch(e) {
-        toast('❌ ' + e.message);
-    } finally {
-        ocrInProgress = false;
-    }
-}
-
-function showResult(p) {
-    document.getElementById('fFirstName').value = p.firstName || '';
-    document.getElementById('fLastName').value = p.lastName || '';
-    document.getElementById('fCompany').value = p.company || '';
-    document.getElementById('fPosition').value = p.position || '';
-    document.getElementById('fEmail').value = p.email || '';
-    document.getElementById('fPhone').value = p.phone || '';
-    document.getElementById('fWeb').value = p.web || '';
-    document.getElementById('fCity').value = p.city || '';
-    document.getElementById('fState').value = p.state || '';
-    renderQuestionnaireFields();
-    document.getElementById('resultCard').classList.add('show');
-}
-
-function clearResult() { 
-    document.getElementById('resultCard').classList.remove('show'); 
-    document.getElementById('rawTextBox').classList.remove('show');
-}
-
-// ============ LEADS ============
-function saveLead() {
-    const lead = {
-        id: Date.now(),
-        firstName: document.getElementById('fFirstName').value,
-        lastName: document.getElementById('fLastName').value,
-        company: document.getElementById('fCompany').value,
-        position: document.getElementById('fPosition').value,
-        email: document.getElementById('fEmail').value,
-        phone: document.getElementById('fPhone').value,
-        web: document.getElementById('fWeb').value,
-        city: document.getElementById('fCity').value,
-        state: document.getElementById('fState').value,
-        answers: collectAnswers(),
-        event: document.getElementById('eventName').value || 'Messe',
-        date: new Date().toISOString()
-    };
-    leads.unshift(lead);
-    localStorage.setItem('leads', JSON.stringify(leads));
-    clearResult();
-    updateList();
-    toast('💾 Gespeichert!');
-}
-
-function updateList() {
-    document.getElementById('totalLeads').textContent = leads.length;
-    const today = new Date().toDateString();
-    document.getElementById('todayLeads').textContent = leads.filter(l => new Date(l.date).toDateString() === today).length;
-    const c = document.getElementById('leadsList');
-    if (!leads.length) { c.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>Keine Leads</p></div>'; return; }
-    c.innerHTML = leads.map(l => {
-        const answeredCount = l.answers ? Object.values(l.answers).filter(v => v).length : 0;
-        const locationLine = (l.city || l.state) ? `<div class="lead-detail">📍 ${[l.city, l.state].filter(Boolean).join(' • ')}</div>` : '';
-        return `<div class="lead-card" onclick="if(confirm('Löschen?')){leads=leads.filter(x=>x.id!==${l.id});localStorage.setItem('leads',JSON.stringify(leads));updateList();}"><div><div class="lead-name">${l.firstName || ''} ${l.lastName || ''}</div><div class="lead-detail">${l.company || ''} • ${l.position || ''}</div><div class="lead-detail" style="color:#007AFF;">${l.email || ''} • ${l.phone || ''}</div>${locationLine}${answeredCount ? `<div class="lead-detail">📋 ${answeredCount} Antwort${answeredCount > 1 ? 'en' : ''}</div>` : ''}</div><div>🗑️</div></div>`;
-    }).join('');
-}
-
-function switchTab(t) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    document.querySelectorAll('.tab-item').forEach(i => i.classList.remove('active'));
-    if (t === 'scan') { document.getElementById('scanScreen').classList.add('active'); document.querySelectorAll('.tab-item')[0].classList.add('active'); startCam(); }
-    else if (t === 'leads') { document.getElementById('leadsScreen').classList.add('active'); document.querySelectorAll('.tab-item')[1].classList.add('active'); updateList(); if(stream) stream.getTracks().forEach(tr => tr.stop()); }
-    else { document.getElementById('settingsScreen').classList.add('active'); document.querySelectorAll('.tab-item')[2].classList.add('active'); if(stream) stream.getTracks().forEach(tr => tr.stop()); document.getElementById('apiKeyInput').value = apiKey; renderQuestionList(); }
-}
-
-function exportCSV() {
-    if (!leads.length) { toast('❌ Keine Leads'); return; }
-    const qHeaders = questionnaire.map(q => q.text);
-    const esc = s => `"${(s || '').toString().replace(/"/g, '""')}"`;
-    let csv = 'Vorname,Nachname,Firma,Position,E-Mail,Telefon,Website,Ort,Bundesland,Event,Datum' + (qHeaders.length ? ',' + qHeaders.map(esc).join(',') : '') + '\n';
-    leads.forEach(l => {
-        let row = `${esc(l.firstName)},${esc(l.lastName)},${esc(l.company)},${esc(l.position)},${esc(l.email)},${esc(l.phone)},${esc(l.web)},${esc(l.city)},${esc(l.state)},${esc(l.event)},${esc(new Date(l.date).toLocaleDateString('de-DE'))}`;
-        if (qHeaders.length) row += ',' + qHeaders.map(h => esc(l.answers && l.answers[h])).join(',');
-        csv += row + '\n';
-    });
-    const b = new Blob(['\ufeff'+csv],{type:'text/csv'});
-    const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'leads.csv'; a.click();
-    toast('📤 Exportiert!');
-}
-
-function clearAll() { if (confirm('Alle Leads löschen?')) { leads = []; localStorage.setItem('leads', JSON.stringify(leads)); updateList(); toast('🗑️ Gelöscht'); } }
-function saveApiKey() {
-    const val = document.getElementById('apiKeyInput').value.trim();
-    if (!val) { toast('❌ Bitte einen Key eingeben'); return; }
-    apiKey = val;
-    localStorage.setItem('ocrspace_key', apiKey);
-    updateApiKeyBanner();
-    toast('✅ Key gespeichert');
-}
-function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2500); }
-
-function updateApiKeyBanner() {
-    document.getElementById('apiKeyBanner').style.display = apiKey ? 'none' : 'block';
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    startCam();
-    updateList();
-    document.getElementById('eventName').value = localStorage.getItem('eventName')||'';
-    document.getElementById('apiKeyInput').value = apiKey;
-    updateApiKeyBanner();
-    renderQuestionList();
-    toggleOptionsInput();
 });
-document.getElementById('eventName').addEventListener('change', function(){localStorage.setItem('eventName',this.value)});
-</script>
-</body>
-</html>
+
+// ============================================================
+// 6. 404 HANDLER
+// ============================================================
+app.use((req, res) => {
+    res.status(404).json({
+        success: false,
+        error: 'Endpunkt nicht gefunden'
+    });
+});
+
+// ============================================================
+// 7. FEHLERBEHANDLUNG FÜR UNERWARTETE FEHLER
+// ============================================================
+app.use((err, req, res, next) => {
+    console.error('💥 Unerwarteter Fehler:', err);
+    res.status(500).json({
+        success: false,
+        error: 'Interner Serverfehler'
+    });
+});
+
+// ============================================================
+// 8. SERVER STARTEN
+// ============================================================
+app.listen(port, '0.0.0.0', () => {
+    console.log('\n' + '='.repeat(60));
+    console.log('✅ DeepSeek Proxy Server läuft erfolgreich!');
+    console.log('='.repeat(60));
+    console.log(`📡 Port: ${port}`);
+    console.log(`🔑 DeepSeek Key: ${DEEPSEEK_API_KEY ? '✅ GESETZT' : '❌ FEHLT'}`);
+    console.log(`🔐 Auth Token: ${PROXY_AUTH_TOKEN ? '✅ GESETZT' : '❌ FEHLT'}`);
+    console.log(`🌐 Endpunkt: http://localhost:${port}/api/process-image`);
+    console.log('='.repeat(60) + '\n');
+});
+
+// Uncaught Exception Handler
+process.on('uncaughtException', (error) => {
+    console.error('💥 Uncaught Exception:', error);
+});
+
+// Unhandled Rejection Handler
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('💥 Unhandled Rejection:', reason);
+});
