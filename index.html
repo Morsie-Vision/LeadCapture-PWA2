@@ -319,10 +319,10 @@ function isLoggedIn() {
 }
 
 // ============================================================
-// 3. API HELPER (mit Token)
+// 3. API HELPER (mit Token-Erneuerung)
 // ============================================================
 async function apiRequest(endpoint, options = {}) {
-    const token = getToken();
+    let token = getToken();
     if (!token) {
         throw new Error('Nicht eingeloggt');
     }
@@ -336,7 +336,44 @@ async function apiRequest(endpoint, options = {}) {
         }
     });
     
+    // Wenn Token abgelaufen ist (401)
     if (response.status === 401) {
+        console.warn('⚠️ Token abgelaufen – versuche Refresh...');
+        
+        // Hole den Refresh-Token aus dem localStorage (der beim Login gespeichert wurde)
+        const refreshToken = localStorage.getItem('leadcapture_refresh_token');
+        if (refreshToken) {
+            try {
+                // Token erneuern
+                const refreshResponse = await fetch(`${API_URL}/auth/refresh`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ refresh_token: refreshToken })
+                });
+                
+                const refreshResult = await refreshResponse.json();
+                if (refreshResult.success) {
+                    console.log('✅ Token erfolgreich erneuert');
+                    localStorage.setItem('leadcapture_token', refreshResult.data.token);
+                    localStorage.setItem('leadcapture_refresh_token', refreshResult.data.refreshToken);
+                    
+                    // Original-Anfrage mit neuem Token wiederholen
+                    const newResponse = await fetch(`${API_URL}${endpoint}`, {
+                        ...options,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${refreshResult.data.token}`,
+                            ...(options.headers || {})
+                        }
+                    });
+                    return newResponse;
+                }
+            } catch (refreshError) {
+                console.error('❌ Token-Erneuerung fehlgeschlagen:', refreshError);
+            }
+        }
+        
+        // Wenn Refresh nicht möglich ist → Logout
         removeToken();
         showLogin();
         throw new Error('Session abgelaufen. Bitte erneut einloggen.');
@@ -344,7 +381,6 @@ async function apiRequest(endpoint, options = {}) {
     
     return response;
 }
-
 // ============================================================
 // 4. LOGIN / REGISTER
 // ============================================================
@@ -360,21 +396,13 @@ async function login(email, password) {
         body: JSON.stringify({ email, password })
     });
     
-    console.log('📨 Login-Response Status:', response.status);
     const result = await response.json();
-    console.log('📨 Login-Response:', result);
+    if (!result.success) throw new Error(result.error || 'Login fehlgeschlagen');
     
-    if (!result.success) {
-        throw new Error(result.error || 'Login fehlgeschlagen');
-    }
-    
-    // 🔥 WICHTIG: Token und Nutzer in localStorage speichern
-    console.log('💾 Speichere Token:', result.data.token);
+    // 🔥 NEU: Refresh-Token ebenfalls speichern
     localStorage.setItem('leadcapture_token', result.data.token);
+    localStorage.setItem('leadcapture_refresh_token', result.data.refreshToken);
     localStorage.setItem('leadcapture_user', JSON.stringify(result.data.user));
-    
-    // Prüfen ob gespeichert
-    console.log('🔑 Token im localStorage:', localStorage.getItem('leadcapture_token'));
     
     return result.data;
 }
