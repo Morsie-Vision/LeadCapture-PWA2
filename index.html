@@ -8,108 +8,17 @@
     <link rel="apple-touch-icon" href="icons/icon-192.png">
     <meta name="theme-color" content="#4A90E2">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
-        body { background: #f0f4f8; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 16px; }
-        .container { background: white; max-width: 700px; width: 100%; border-radius: 28px; padding: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.08); }
-        h1 { font-size: 28px; font-weight: 700; color: #1a202c; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-        h1 small { font-size: 16px; font-weight: 400; color: #4A90E2; }
-        .status-badge { display: inline-block; background: #48bb78; color: white; font-size: 11px; padding: 2px 10px; border-radius: 20px; cursor: pointer; }
-        .status-badge.offline { background: #ed8936; }
-        .subtitle { color: #718096; font-size: 14px; margin-bottom: 24px; border-left: 3px solid #4A90E2; padding-left: 12px; }
-        .server-url { font-size: 11px; color: #a0aec0; margin-top: 4px; word-break: break-all; display: block; }
+        /* ... (dein bestehender CSS-Code) ... */
 
-        /* LOGIN */
-        #loginContainer { display: block; }
+        /* Zusätzlich für Login/Register */
         #loginContainer h2 { font-size: 20px; color: #2d3748; margin-bottom: 16px; }
         .login-form { display: flex; flex-direction: column; gap: 12px; }
         .login-form input { padding: 12px 16px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 15px; }
         .login-form input:focus { outline: none; border-color: #4A90E2; box-shadow: 0 0 0 3px rgba(74,144,226,0.12); }
         .login-form .error { color: #e53e3e; font-size: 14px; display: none; }
         .login-form .hint { color: #718096; font-size: 13px; text-align: center; }
-
-        /* APP-BEREICH (nach Login) */
-        #appContainer { display: none; }
-
-        .upload-area { background: #f7fafc; border: 2px dashed #cbd5e0; border-radius: 16px; padding: 40px 20px; text-align: center; cursor: pointer; transition: all 0.2s; margin-bottom: 24px; }
-        .upload-area:hover { border-color: #4A90E2; background: #edf2f7; }
-        .upload-area .icon { font-size: 48px; margin-bottom: 8px; }
-        .upload-area p { color: #4a5568; font-weight: 500; }
-        .upload-area small { color: #a0aec0; font-size: 13px; }
-        #fileInput { display: none; }
-        #previewContainer { display: none; margin-bottom: 20px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        #previewContainer img { width: 100%; height: auto; display: block; }
-        #status { display: none; background: #edf2f7; padding: 14px 18px; border-radius: 12px; margin: 16px 0; font-weight: 500; color: #2d3748; gap: 12px; align-items: center; }
-        #status .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid #cbd5e0; border-top: 3px solid #4A90E2; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 10px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 20px 0; }
-        .form-group { display: flex; flex-direction: column; gap: 4px; }
-        .form-group.full { grid-column: span 2; }
-        .form-group label { font-size: 13px; font-weight: 600; color: #4a5568; letter-spacing: 0.3px; }
-        .form-group input, .form-group select, .form-group textarea { padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 15px; transition: border 0.2s; background: white; width: 100%; }
-        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #4A90E2; box-shadow: 0 0 0 3px rgba(74,144,226,0.12); }
-        .form-group textarea { resize: vertical; min-height: 60px; }
-
-        .actions { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
-        .btn { padding: 12px 24px; border: none; border-radius: 12px; font-weight: 600; font-size: 15px; cursor: pointer; transition: all 0.2s; flex: 1; min-width: 120px; }
-        .btn-primary { background: #4A90E2; color: white; }
-        .btn-primary:hover { background: #357abd; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(74,144,226,0.25); }
-        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-        .btn-secondary { background: #edf2f7; color: #4a5568; }
-        .btn-secondary:hover { background: #e2e8f0; }
-        .btn-success { background: #48bb78; color: white; }
-        .btn-success:hover { background: #38a169; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(72,187,120,0.25); }
-        .btn-danger { background: #fc8181; color: white; }
-        .btn-danger:hover { background: #f56565; }
-        .btn-outline { background: transparent; color: #4A90E2; border: 2px solid #4A90E2; }
-        .btn-outline:hover { background: #ebf4ff; }
-        .btn-purple { background: #9F7AEA; color: white; }
-        .btn-purple:hover { background: #805AD5; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(159,122,234,0.25); }
-        .btn-dropbox { background: #0061FF; color: white; }
-        .btn-dropbox:hover { background: #0050D0; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,97,255,0.25); }
-        .btn-logout { background: #e53e3e; color: white; }
-        .btn-logout:hover { background: #c53030; }
-
-        .error { background: #fed7d7; color: #c53030; padding: 12px 16px; border-radius: 10px; margin: 12px 0; display: none; font-weight: 500; border-left: 4px solid #fc8181; }
-
-        .lead-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 8px; background: #f7fafc; }
-        .lead-card .header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
-        .lead-card .name { font-weight: 600; color: #2d3748; }
-        .lead-card .company { color: #4A90E2; font-weight: 600; }
-        .lead-card .details { font-size: 13px; color: #4a5568; margin-top: 2px; }
-        .lead-card .meta { font-size: 12px; color: #a0aec0; margin-top: 4px; }
-        .lead-card .actions { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
-        .lead-card .actions button { padding: 4px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
-        .lead-card .actions .edit { background: #4A90E2; color: white; }
-        .lead-card .actions .questionnaire { background: #9F7AEA; color: white; }
-        .lead-card .actions .delete { background: #fc8181; color: white; }
-
-        #leadsContainer, #questionnaireContainer, #histogramContainer { display: none; margin-top: 20px; border-top: 2px solid #e2e8f0; padding-top: 16px; }
-        .leads-header, .questionnaire-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
-        .leads-header h3, .questionnaire-header h3 { font-size: 18px; color: #2d3748; }
-        .leads-list { max-height: 400px; overflow-y: auto; }
-        .empty-leads { color: #718096; text-align: center; padding: 20px; }
-        .questionnaire-answer { margin-bottom: 12px; }
-        .questionnaire-answer label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 14px; color: #2d3748; }
-        .questionnaire-answer textarea, .questionnaire-answer select { width: 100%; padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 14px; }
-        .questionnaire-answer select { background: white; }
-        .questionnaire-answer textarea { resize: vertical; min-height: 50px; }
-        .questionnaire-actions { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
-
-        .export-actions { display: flex; gap: 12px; margin: 16px 0; flex-wrap: wrap; }
-        #histogramWrapper { background: #f7fafc; border-radius: 12px; padding: 20px; overflow-x: auto; min-height: 200px; }
-        #histogram { display: flex; align-items: flex-end; height: 200px; gap: 4px; min-width: 100%; }
-        #histogram .bar-wrapper { flex: 1; min-width: 18px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; cursor: pointer; transition: all 0.2s ease; }
-        #histogram .bar-wrapper:hover { transform: scaleY(1.02); transform-origin: bottom; }
-        #histogram .bar-fill { width: 100%; border-radius: 2px 2px 0 0; min-height: 4px; background: linear-gradient(180deg, #4A90E2 0%, #357ABD 100%); transition: height 0.3s ease; }
-        #histogram .bar-value { font-size: 9px; color: #2d3748; margin-bottom: 2px; font-weight: 600; opacity: 0.7; }
-        #histogramEmpty { display: none; text-align: center; padding: 40px; color: #a0aec0; }
-
-        .user-info { display: flex; justify-content: space-between; align-items: center; background: #edf2f7; padding: 8px 16px; border-radius: 10px; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
-        .user-info span { font-size: 14px; color: #2d3748; }
-        .user-info .tenant { font-weight: 600; color: #4A90E2; }
-
-        @media (max-width: 480px) { .form-grid { grid-template-columns: 1fr; } .form-group.full { grid-column: span 1; } .container { padding: 16px; } }
+        .login-form .hint a { color: #4A90E2; text-decoration: underline; cursor: pointer; }
+        .login-form .hint a:hover { color: #357abd; }
     </style>
 </head>
 <body>
@@ -122,30 +31,233 @@
     </div>
 
     <!-- ============================================================ -->
-    <!-- LOGIN-BEREICH -->
+    <!-- LOGIN + REGISTRIERUNG -->
     <!-- ============================================================ -->
     <div id="loginContainer">
-        <h2>🔐 Anmelden</h2>
-        <form class="login-form" id="loginForm">
-            <input type="email" id="loginEmail" placeholder="E-Mail" required>
-            <input type="password" id="loginPassword" placeholder="Passwort" required>
-            <div class="error" id="loginError"></div>
-            <button type="submit" class="btn btn-primary" id="loginBtn">Anmelden</button>
-            <div class="hint">Noch keinen Account? <a href="#" id="showRegisterLink">Registrieren</a></div>
-        </form>
+        <!-- LOGIN-FORMULAR -->
+        <div id="loginFormContainer">
+            <h2>🔐 Anmelden</h2>
+            <form class="login-form" id="loginForm">
+                <input type="email" id="loginEmail" placeholder="E-Mail" required>
+                <input type="password" id="loginPassword" placeholder="Passwort" required>
+                <div class="error" id="loginError"></div>
+                <button type="submit" class="btn btn-primary" id="loginBtn">Anmelden</button>
+                <div class="hint">
+                    Noch keinen Account? <a href="#" id="showRegisterLink">Jetzt registrieren</a>
+                </div>
+            </form>
+        </div>
 
-        <form class="login-form" id="registerForm" style="display:none;">
+        <!-- REGISTRIERUNGS-FORMULAR -->
+        <div id="registerFormContainer" style="display:none;">
             <h2>📝 Registrieren</h2>
-            <input type="email" id="registerEmail" placeholder="E-Mail" required>
-            <input type="password" id="registerPassword" placeholder="Passwort" required>
-            <input type="text" id="registerFullName" placeholder="Vollständiger Name">
-            <input type="text" id="registerTenantName" placeholder="Firmenname (Mandant)" required>
-            <div class="error" id="registerError"></div>
-            <button type="submit" class="btn btn-success" id="registerBtn">Registrieren</button>
-            <div class="hint">Bereits registriert? <a href="#" id="showLoginLink">Zum Login</a></div>
-        </form>
+            <form class="login-form" id="registerForm">
+                <input type="email" id="registerEmail" placeholder="E-Mail" required>
+                <input type="password" id="registerPassword" placeholder="Passwort" required>
+                <input type="text" id="registerFullName" placeholder="Vollständiger Name (optional)">
+                <input type="text" id="registerTenantName" placeholder="Firmenname (Mandant)" required>
+                <div class="error" id="registerError"></div>
+                <button type="submit" class="btn btn-success" id="registerBtn">Registrieren</button>
+                <div class="hint">
+                    Bereits registriert? <a href="#" id="showLoginLink">Zum Login</a>
+                </div>
+            </form>
+        </div>
     </div>
 
+    <!-- ============================================================ -->
+    <!-- APP-BEREICH (nach Login) -->
+    <!-- ============================================================ -->
+    <div id="appContainer" style="display:none;">
+        <!-- ... (dein bestehender App-Code) ... -->
+    </div>
+</div>
+
+<script>
+// ============================================================
+// KONFIGURATION
+// ============================================================
+const API_URL = 'https://leadcapture-backend.onrender.com/api';
+
+// ============================================================
+// TOKEN-VERWALTUNG
+// ============================================================
+function getToken() {
+    return localStorage.getItem('leadcapture_token');
+}
+
+function setToken(token) {
+    localStorage.setItem('leadcapture_token', token);
+}
+
+function removeToken() {
+    localStorage.removeItem('leadcapture_token');
+    localStorage.removeItem('leadcapture_user');
+}
+
+function getUser() {
+    const user = localStorage.getItem('leadcapture_user');
+    return user ? JSON.parse(user) : null;
+}
+
+function setUser(user) {
+    localStorage.setItem('leadcapture_user', JSON.stringify(user));
+}
+
+function isLoggedIn() {
+    return !!getToken();
+}
+
+// ============================================================
+// LOGIN / REGISTER FUNKTIONEN
+// ============================================================
+async function login(email, password) {
+    const response = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+    });
+    const result = await response.json();
+    if (!result.success) throw new Error(result.error || 'Login fehlgeschlagen');
+    return result.data;
+}
+
+async function register(email, password, fullName, tenantName) {
+    const response = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, fullName, tenantName })
+    });
+    const result = await response.json();
+    if (!result.success) throw new Error(result.error || 'Registrierung fehlgeschlagen');
+    return result.data;
+}
+
+// ============================================================
+// DOM-REFERENZEN (Login/Register)
+// ============================================================
+const loginContainer = document.getElementById('loginContainer');
+const appContainer = document.getElementById('appContainer');
+
+const loginFormContainer = document.getElementById('loginFormContainer');
+const registerFormContainer = document.getElementById('registerFormContainer');
+
+const loginForm = document.getElementById('loginForm');
+const registerForm = document.getElementById('registerForm');
+
+const loginEmail = document.getElementById('loginEmail');
+const loginPassword = document.getElementById('loginPassword');
+const loginError = document.getElementById('loginError');
+const loginBtn = document.getElementById('loginBtn');
+
+const registerEmail = document.getElementById('registerEmail');
+const registerPassword = document.getElementById('registerPassword');
+const registerFullName = document.getElementById('registerFullName');
+const registerTenantName = document.getElementById('registerTenantName');
+const registerError = document.getElementById('registerError');
+const registerBtn = document.getElementById('registerBtn');
+
+const showRegisterLink = document.getElementById('showRegisterLink');
+const showLoginLink = document.getElementById('showLoginLink');
+
+const userName = document.getElementById('userName');
+const tenantName = document.getElementById('tenantName');
+const logoutBtn = document.getElementById('logoutBtn');
+const connectionStatus = document.getElementById('connectionStatus');
+
+// ============================================================
+// LOGIN/REGISTER UMSCHALTEN
+// ============================================================
+showRegisterLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    loginFormContainer.style.display = 'none';
+    registerFormContainer.style.display = 'block';
+    registerError.style.display = 'none';
+});
+
+showLoginLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    loginFormContainer.style.display = 'block';
+    registerFormContainer.style.display = 'none';
+    loginError.style.display = 'none';
+});
+
+// ============================================================
+// LOGIN
+// ============================================================
+loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    loginError.style.display = 'none';
+    loginBtn.disabled = true;
+    loginBtn.textContent = '⏳ ...';
+    
+    try {
+        const data = await login(loginEmail.value, loginPassword.value);
+        setToken(data.token);
+        setUser(data.user);
+        showApp(data.user);
+    } catch (error) {
+        loginError.textContent = error.message || 'Login fehlgeschlagen';
+        loginError.style.display = 'block';
+    } finally {
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Anmelden';
+    }
+});
+
+// ============================================================
+// REGISTRIERUNG
+// ============================================================
+registerForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    registerError.style.display = 'none';
+    registerBtn.disabled = true;
+    registerBtn.textContent = '⏳ ...';
+    
+    try {
+        const data = await register(
+            registerEmail.value,
+            registerPassword.value,
+            registerFullName.value,
+            registerTenantName.value
+        );
+        setToken(data.token);
+        setUser(data.user);
+        showApp(data.user);
+    } catch (error) {
+        registerError.textContent = error.message || 'Registrierung fehlgeschlagen';
+        registerError.style.display = 'block';
+    } finally {
+        registerBtn.disabled = false;
+        registerBtn.textContent = 'Registrieren';
+    }
+});
+
+// ============================================================
+// APP ANZEIGEN / LOGOUT
+// ============================================================
+function showApp(user) {
+    loginContainer.style.display = 'none';
+    appContainer.style.display = 'block';
+    userName.textContent = user.fullName || user.email;
+    tenantName.textContent = user.tenant?.name || 'Unbekannter Mandant';
+    loadLeads();
+}
+
+function showLogin() {
+    loginContainer.style.display = 'block';
+    appContainer.style.display = 'none';
+    loginFormContainer.style.display = 'block';
+    registerFormContainer.style.display = 'none';
+    loginError.style.display = 'none';
+    loginEmail.value = '';
+    loginPassword.value = '';
+}
+
+logoutBtn.addEventListener('click', () => {
+    removeToken();
+    showLogin();
+});
     <!-- ============================================================ -->
     <!-- APP-BEREICH (nach Login) -->
     <!-- ============================================================ -->
