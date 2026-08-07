@@ -348,14 +348,34 @@ async function apiRequest(endpoint, options = {}) {
 // ============================================================
 // 4. LOGIN / REGISTER
 // ============================================================
+// ============================================================
+// LOGIN-FUNKTION (KORRIGIERT)
+// ============================================================
 async function login(email, password) {
+    console.log('📤 Login-Versuch für:', email);
+    
     const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
     });
+    
+    console.log('📨 Login-Response Status:', response.status);
     const result = await response.json();
-    if (!result.success) throw new Error(result.error || 'Login fehlgeschlagen');
+    console.log('📨 Login-Response:', result);
+    
+    if (!result.success) {
+        throw new Error(result.error || 'Login fehlgeschlagen');
+    }
+    
+    // 🔥 WICHTIG: Token und Nutzer in localStorage speichern
+    console.log('💾 Speichere Token:', result.data.token);
+    localStorage.setItem('leadcapture_token', result.data.token);
+    localStorage.setItem('leadcapture_user', JSON.stringify(result.data.user));
+    
+    // Prüfen ob gespeichert
+    console.log('🔑 Token im localStorage:', localStorage.getItem('leadcapture_token'));
+    
     return result.data;
 }
 
