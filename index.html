@@ -48,21 +48,61 @@
             </form>
         </div>
 
-        <!-- REGISTRIERUNGS-FORMULAR -->
-        <div id="registerFormContainer" style="display:none;">
-            <h2>📝 Registrieren</h2>
-            <form class="login-form" id="registerForm">
-                <input type="email" id="registerEmail" placeholder="E-Mail" required>
-                <input type="password" id="registerPassword" placeholder="Passwort" required>
-                <input type="text" id="registerFullName" placeholder="Vollständiger Name (optional)">
-                <input type="text" id="registerTenantName" placeholder="Firmenname (Mandant)" required>
-                <div class="error" id="registerError"></div>
-                <button type="submit" class="btn btn-success" id="registerBtn">Registrieren</button>
-                <div class="hint">
-                    Bereits registriert? <a href="#" id="showLoginLink">Zum Login</a>
-                </div>
-            </form>
-        </div>
+        
+        // ============================================================
+// REGISTRIERUNG (KORRIGIERT)
+// ============================================================
+const registerForm = document.getElementById('registerForm');
+const registerBtn = document.getElementById('registerBtn');
+
+// Event-Listener für das gesamte Formular (nicht nur den Button!)
+registerForm.addEventListener('submit', async (e) => {
+    e.preventDefault(); // Verhindert Neuladen der Seite
+    console.log('📝 Registrierung gestartet...');
+    
+    const email = document.getElementById('registerEmail').value;
+    const password = document.getElementById('registerPassword').value;
+    const fullName = document.getElementById('registerFullName').value;
+    const tenantName = document.getElementById('registerTenantName').value;
+    
+    console.log('📤 Sende:', { email, fullName, tenantName });
+    
+    const registerError = document.getElementById('registerError');
+    registerError.style.display = 'none';
+    registerBtn.disabled = true;
+    registerBtn.textContent = '⏳ ...';
+    
+    try {
+        const response = await fetch('https://leadcapture-backend.onrender.com/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password, fullName, tenantName })
+        });
+        
+        console.log('📨 Response Status:', response.status);
+        const result = await response.json();
+        console.log('📨 Response Data:', result);
+        
+        if (!result.success) {
+            throw new Error(result.error || 'Registrierung fehlgeschlagen');
+        }
+        
+        // Token speichern
+        localStorage.setItem('leadcapture_token', result.data.token);
+        localStorage.setItem('leadcapture_user', JSON.stringify(result.data.user));
+        
+        alert('✅ Registrierung erfolgreich!');
+        showApp(result.data.user);
+        
+    } catch (error) {
+        console.error('❌ Registrierungsfehler:', error);
+        registerError.textContent = error.message || 'Registrierung fehlgeschlagen';
+        registerError.style.display = 'block';
+    } finally {
+        registerBtn.disabled = false;
+        registerBtn.textContent = 'Registrieren';
+    }
+});
     </div>
 
     <!-- ============================================================ -->
