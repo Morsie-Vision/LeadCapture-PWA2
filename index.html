@@ -8,9 +8,20 @@
     <link rel="apple-touch-icon" href="icons/icon-192.png">
     <meta name="theme-color" content="#4A90E2">
     <style>
-        /* ... (dein bestehender CSS-Code) ... */
+        /* ===== RESET & GRUNDLAGEN ===== */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+        body { background: #f0f4f8; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 16px; }
+        .container { background: white; max-width: 700px; width: 100%; border-radius: 28px; padding: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.08); }
+        
+        /* ===== HEADER ===== */
+        h1 { font-size: 28px; font-weight: 700; color: #1a202c; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        h1 small { font-size: 16px; font-weight: 400; color: #4A90E2; }
+        .status-badge { display: inline-block; background: #48bb78; color: white; font-size: 11px; padding: 2px 10px; border-radius: 20px; cursor: pointer; }
+        .status-badge.offline { background: #ed8936; }
+        .subtitle { color: #718096; font-size: 14px; margin-bottom: 24px; border-left: 3px solid #4A90E2; padding-left: 12px; }
+        .server-url { font-size: 11px; color: #a0aec0; margin-top: 4px; word-break: break-all; display: block; }
 
-        /* Zusätzlich für Login/Register */
+        /* ===== LOGIN / REGISTER ===== */
         #loginContainer h2 { font-size: 20px; color: #2d3748; margin-bottom: 16px; }
         .login-form { display: flex; flex-direction: column; gap: 12px; }
         .login-form input { padding: 12px 16px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 15px; }
@@ -19,11 +30,109 @@
         .login-form .hint { color: #718096; font-size: 13px; text-align: center; }
         .login-form .hint a { color: #4A90E2; text-decoration: underline; cursor: pointer; }
         .login-form .hint a:hover { color: #357abd; }
+
+        /* ===== APP-BEREICH ===== */
+        #appContainer { display: none; }
+        .user-info { display: flex; justify-content: space-between; align-items: center; background: #edf2f7; padding: 8px 16px; border-radius: 10px; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+        .user-info span { font-size: 14px; color: #2d3748; }
+        .user-info .tenant { font-weight: 600; color: #4A90E2; }
+        .btn-logout { background: #e53e3e; color: white; border: none; border-radius: 8px; padding: 6px 16px; font-size: 13px; cursor: pointer; }
+        .btn-logout:hover { background: #c53030; }
+
+        /* ===== UPLOAD ===== */
+        .upload-area { background: #f7fafc; border: 2px dashed #cbd5e0; border-radius: 16px; padding: 40px 20px; text-align: center; cursor: pointer; transition: all 0.2s; margin-bottom: 24px; }
+        .upload-area:hover { border-color: #4A90E2; background: #edf2f7; }
+        .upload-area .icon { font-size: 48px; margin-bottom: 8px; }
+        .upload-area p { color: #4a5568; font-weight: 500; }
+        .upload-area small { color: #a0aec0; font-size: 13px; }
+        #fileInput { display: none; }
+        #previewContainer { display: none; margin-bottom: 20px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        #previewContainer img { width: 100%; height: auto; display: block; }
+
+        /* ===== STATUS ===== */
+        #status { display: none; background: #edf2f7; padding: 14px 18px; border-radius: 12px; margin: 16px 0; font-weight: 500; color: #2d3748; gap: 12px; align-items: center; }
+        #status .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid #cbd5e0; border-top: 3px solid #4A90E2; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* ===== FORMULAR ===== */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 20px 0; }
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .form-group.full { grid-column: span 2; }
+        .form-group label { font-size: 13px; font-weight: 600; color: #4a5568; letter-spacing: 0.3px; }
+        .form-group input, .form-group select, .form-group textarea { padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 15px; transition: border 0.2s; background: white; width: 100%; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #4A90E2; box-shadow: 0 0 0 3px rgba(74,144,226,0.12); }
+        .form-group textarea { resize: vertical; min-height: 60px; }
+
+        /* ===== BUTTONS ===== */
+        .actions { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+        .btn { padding: 12px 24px; border: none; border-radius: 12px; font-weight: 600; font-size: 15px; cursor: pointer; transition: all 0.2s; flex: 1; min-width: 120px; }
+        .btn-primary { background: #4A90E2; color: white; }
+        .btn-primary:hover { background: #357abd; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(74,144,226,0.25); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-secondary { background: #edf2f7; color: #4a5568; }
+        .btn-secondary:hover { background: #e2e8f0; }
+        .btn-success { background: #48bb78; color: white; }
+        .btn-success:hover { background: #38a169; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(72,187,120,0.25); }
+        .btn-danger { background: #fc8181; color: white; }
+        .btn-danger:hover { background: #f56565; }
+        .btn-outline { background: transparent; color: #4A90E2; border: 2px solid #4A90E2; }
+        .btn-outline:hover { background: #ebf4ff; }
+        .btn-purple { background: #9F7AEA; color: white; }
+        .btn-purple:hover { background: #805AD5; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(159,122,234,0.25); }
+        .btn-dropbox { background: #0061FF; color: white; }
+        .btn-dropbox:hover { background: #0050D0; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,97,255,0.25); }
+
+        /* ===== FEHLER ===== */
+        .error { background: #fed7d7; color: #c53030; padding: 12px 16px; border-radius: 10px; margin: 12px 0; display: none; font-weight: 500; border-left: 4px solid #fc8181; }
+
+        /* ===== LEAD-KARTEN ===== */
+        .lead-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 8px; background: #f7fafc; }
+        .lead-card .header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        .lead-card .name { font-weight: 600; color: #2d3748; }
+        .lead-card .company { color: #4A90E2; font-weight: 600; }
+        .lead-card .details { font-size: 13px; color: #4a5568; margin-top: 2px; }
+        .lead-card .meta { font-size: 12px; color: #a0aec0; margin-top: 4px; }
+        .lead-card .actions { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+        .lead-card .actions button { padding: 4px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .lead-card .actions .edit { background: #4A90E2; color: white; }
+        .lead-card .actions .questionnaire { background: #9F7AEA; color: white; }
+        .lead-card .actions .delete { background: #fc8181; color: white; }
+
+        /* ===== LEADS, FRAGEBOGEN, HISTOGRAMM ===== */
+        #leadsContainer, #questionnaireContainer, #histogramContainer { display: none; margin-top: 20px; border-top: 2px solid #e2e8f0; padding-top: 16px; }
+        .leads-header, .questionnaire-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+        .leads-header h3, .questionnaire-header h3 { font-size: 18px; color: #2d3748; }
+        .leads-list { max-height: 400px; overflow-y: auto; }
+        .empty-leads { color: #718096; text-align: center; padding: 20px; }
+
+        /* ===== FRAGEBOGEN ===== */
+        .questionnaire-answer { margin-bottom: 12px; }
+        .questionnaire-answer label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 14px; color: #2d3748; }
+        .questionnaire-answer textarea, .questionnaire-answer select { width: 100%; padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 14px; }
+        .questionnaire-answer select { background: white; }
+        .questionnaire-answer textarea { resize: vertical; min-height: 50px; }
+        .questionnaire-actions { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+
+        /* ===== EXPORT / IMPORT ===== */
+        .export-actions { display: flex; gap: 12px; margin: 16px 0; flex-wrap: wrap; }
+
+        /* ===== HISTOGRAMM ===== */
+        #histogramWrapper { background: #f7fafc; border-radius: 12px; padding: 20px; overflow-x: auto; min-height: 200px; }
+        #histogram { display: flex; align-items: flex-end; height: 200px; gap: 4px; min-width: 100%; }
+        #histogram .bar-wrapper { flex: 1; min-width: 18px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; cursor: pointer; transition: all 0.2s ease; }
+        #histogram .bar-wrapper:hover { transform: scaleY(1.02); transform-origin: bottom; }
+        #histogram .bar-fill { width: 100%; border-radius: 2px 2px 0 0; min-height: 4px; background: linear-gradient(180deg, #4A90E2 0%, #357ABD 100%); transition: height 0.3s ease; }
+        #histogram .bar-value { font-size: 9px; color: #2d3748; margin-bottom: 2px; font-weight: 600; opacity: 0.7; }
+        #histogramEmpty { display: none; text-align: center; padding: 40px; color: #a0aec0; }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 480px) { .form-grid { grid-template-columns: 1fr; } .form-group.full { grid-column: span 1; } .container { padding: 16px; } }
     </style>
 </head>
 <body>
 
 <div class="container">
+    <!-- ===== HEADER ===== -->
     <h1>📇 LeadCapture <small>v6</small> <span class="status-badge" id="connectionStatus">🔗 Verbunden</span></h1>
     <div class="subtitle">
         KI-gestützte Lead-Erfassung mit Multi-Tenancy
@@ -34,7 +143,7 @@
     <!-- LOGIN + REGISTRIERUNG -->
     <!-- ============================================================ -->
     <div id="loginContainer">
-        <!-- LOGIN-FORMULAR -->
+        <!-- LOGIN -->
         <div id="loginFormContainer">
             <h2>🔐 Anmelden</h2>
             <form class="login-form" id="loginForm">
@@ -48,256 +157,23 @@
             </form>
         </div>
 
-        
-        // ============================================================
-// REGISTRIERUNG (KORRIGIERT)
-// ============================================================
-const registerForm = document.getElementById('registerForm');
-const registerBtn = document.getElementById('registerBtn');
-
-// Event-Listener für das gesamte Formular (nicht nur den Button!)
-registerForm.addEventListener('submit', async (e) => {
-    e.preventDefault(); // Verhindert Neuladen der Seite
-    console.log('📝 Registrierung gestartet...');
-    
-    const email = document.getElementById('registerEmail').value;
-    const password = document.getElementById('registerPassword').value;
-    const fullName = document.getElementById('registerFullName').value;
-    const tenantName = document.getElementById('registerTenantName').value;
-    
-    console.log('📤 Sende:', { email, fullName, tenantName });
-    
-    const registerError = document.getElementById('registerError');
-    registerError.style.display = 'none';
-    registerBtn.disabled = true;
-    registerBtn.textContent = '⏳ ...';
-    
-    try {
-        const response = await fetch('https://leadcapture-backend.onrender.com/api/auth/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password, fullName, tenantName })
-        });
-        
-        console.log('📨 Response Status:', response.status);
-        const result = await response.json();
-        console.log('📨 Response Data:', result);
-        
-        if (!result.success) {
-            throw new Error(result.error || 'Registrierung fehlgeschlagen');
-        }
-        
-        // Token speichern
-        localStorage.setItem('leadcapture_token', result.data.token);
-        localStorage.setItem('leadcapture_user', JSON.stringify(result.data.user));
-        
-        alert('✅ Registrierung erfolgreich!');
-        showApp(result.data.user);
-        
-    } catch (error) {
-        console.error('❌ Registrierungsfehler:', error);
-        registerError.textContent = error.message || 'Registrierung fehlgeschlagen';
-        registerError.style.display = 'block';
-    } finally {
-        registerBtn.disabled = false;
-        registerBtn.textContent = 'Registrieren';
-    }
-});
+        <!-- REGISTRIERUNG -->
+        <div id="registerFormContainer" style="display:none;">
+            <h2>📝 Registrieren</h2>
+            <form class="login-form" id="registerForm">
+                <input type="email" id="registerEmail" placeholder="E-Mail" required>
+                <input type="password" id="registerPassword" placeholder="Passwort" required>
+                <input type="text" id="registerFullName" placeholder="Vollständiger Name (optional)">
+                <input type="text" id="registerTenantName" placeholder="Firmenname (Mandant)" required>
+                <div class="error" id="registerError"></div>
+                <button type="submit" class="btn btn-success" id="registerBtn">Registrieren</button>
+                <div class="hint">
+                    Bereits registriert? <a href="#" id="showLoginLink">Zum Login</a>
+                </div>
+            </form>
+        </div>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- APP-BEREICH (nach Login) -->
-    <!-- ============================================================ -->
-    <div id="appContainer" style="display:none;">
-        <!-- ... (dein bestehender App-Code) ... -->
-    </div>
-</div>
-
-<script>
-// ============================================================
-// KONFIGURATION
-// ============================================================
-const API_URL = 'https://leadcapture-backend.onrender.com/api';
-
-// ============================================================
-// TOKEN-VERWALTUNG
-// ============================================================
-function getToken() {
-    return localStorage.getItem('leadcapture_token');
-}
-
-function setToken(token) {
-    localStorage.setItem('leadcapture_token', token);
-}
-
-function removeToken() {
-    localStorage.removeItem('leadcapture_token');
-    localStorage.removeItem('leadcapture_user');
-}
-
-function getUser() {
-    const user = localStorage.getItem('leadcapture_user');
-    return user ? JSON.parse(user) : null;
-}
-
-function setUser(user) {
-    localStorage.setItem('leadcapture_user', JSON.stringify(user));
-}
-
-function isLoggedIn() {
-    return !!getToken();
-}
-
-// ============================================================
-// LOGIN / REGISTER FUNKTIONEN
-// ============================================================
-async function login(email, password) {
-    const response = await fetch(`${API_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-    });
-    const result = await response.json();
-    if (!result.success) throw new Error(result.error || 'Login fehlgeschlagen');
-    return result.data;
-}
-
-async function register(email, password, fullName, tenantName) {
-    const response = await fetch(`${API_URL}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, fullName, tenantName })
-    });
-    const result = await response.json();
-    if (!result.success) throw new Error(result.error || 'Registrierung fehlgeschlagen');
-    return result.data;
-}
-
-// ============================================================
-// DOM-REFERENZEN (Login/Register)
-// ============================================================
-const loginContainer = document.getElementById('loginContainer');
-const appContainer = document.getElementById('appContainer');
-
-const loginFormContainer = document.getElementById('loginFormContainer');
-const registerFormContainer = document.getElementById('registerFormContainer');
-
-const loginForm = document.getElementById('loginForm');
-const registerForm = document.getElementById('registerForm');
-
-const loginEmail = document.getElementById('loginEmail');
-const loginPassword = document.getElementById('loginPassword');
-const loginError = document.getElementById('loginError');
-const loginBtn = document.getElementById('loginBtn');
-
-const registerEmail = document.getElementById('registerEmail');
-const registerPassword = document.getElementById('registerPassword');
-const registerFullName = document.getElementById('registerFullName');
-const registerTenantName = document.getElementById('registerTenantName');
-const registerError = document.getElementById('registerError');
-const registerBtn = document.getElementById('registerBtn');
-
-const showRegisterLink = document.getElementById('showRegisterLink');
-const showLoginLink = document.getElementById('showLoginLink');
-
-const userName = document.getElementById('userName');
-const tenantName = document.getElementById('tenantName');
-const logoutBtn = document.getElementById('logoutBtn');
-const connectionStatus = document.getElementById('connectionStatus');
-
-// ============================================================
-// LOGIN/REGISTER UMSCHALTEN
-// ============================================================
-showRegisterLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    loginFormContainer.style.display = 'none';
-    registerFormContainer.style.display = 'block';
-    registerError.style.display = 'none';
-});
-
-showLoginLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    loginFormContainer.style.display = 'block';
-    registerFormContainer.style.display = 'none';
-    loginError.style.display = 'none';
-});
-
-// ============================================================
-// LOGIN
-// ============================================================
-loginForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    loginError.style.display = 'none';
-    loginBtn.disabled = true;
-    loginBtn.textContent = '⏳ ...';
-    
-    try {
-        const data = await login(loginEmail.value, loginPassword.value);
-        setToken(data.token);
-        setUser(data.user);
-        showApp(data.user);
-    } catch (error) {
-        loginError.textContent = error.message || 'Login fehlgeschlagen';
-        loginError.style.display = 'block';
-    } finally {
-        loginBtn.disabled = false;
-        loginBtn.textContent = 'Anmelden';
-    }
-});
-
-// ============================================================
-// REGISTRIERUNG
-// ============================================================
-registerForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    registerError.style.display = 'none';
-    registerBtn.disabled = true;
-    registerBtn.textContent = '⏳ ...';
-    
-    try {
-        const data = await register(
-            registerEmail.value,
-            registerPassword.value,
-            registerFullName.value,
-            registerTenantName.value
-        );
-        setToken(data.token);
-        setUser(data.user);
-        showApp(data.user);
-    } catch (error) {
-        registerError.textContent = error.message || 'Registrierung fehlgeschlagen';
-        registerError.style.display = 'block';
-    } finally {
-        registerBtn.disabled = false;
-        registerBtn.textContent = 'Registrieren';
-    }
-});
-
-// ============================================================
-// APP ANZEIGEN / LOGOUT
-// ============================================================
-function showApp(user) {
-    loginContainer.style.display = 'none';
-    appContainer.style.display = 'block';
-    userName.textContent = user.fullName || user.email;
-    tenantName.textContent = user.tenant?.name || 'Unbekannter Mandant';
-    loadLeads();
-}
-
-function showLogin() {
-    loginContainer.style.display = 'block';
-    appContainer.style.display = 'none';
-    loginFormContainer.style.display = 'block';
-    registerFormContainer.style.display = 'none';
-    loginError.style.display = 'none';
-    loginEmail.value = '';
-    loginPassword.value = '';
-}
-
-logoutBtn.addEventListener('click', () => {
-    removeToken();
-    showLogin();
-});
     <!-- ============================================================ -->
     <!-- APP-BEREICH (nach Login) -->
     <!-- ============================================================ -->
@@ -305,7 +181,7 @@ logoutBtn.addEventListener('click', () => {
         <!-- User Info -->
         <div class="user-info">
             <span>👤 <span id="userName"></span> · <span class="tenant" id="tenantName"></span></span>
-            <button class="btn btn-logout" id="logoutBtn" style="padding:6px 16px; font-size:13px; flex:0;">🚪 Logout</button>
+            <button class="btn-logout" id="logoutBtn">🚪 Logout</button>
         </div>
 
         <!-- UPLOAD -->
@@ -356,7 +232,7 @@ logoutBtn.addEventListener('click', () => {
             </div>
         </form>
 
-        <!-- EXPORT + IMPORT -->
+        <!-- EXPORT / IMPORT -->
         <div class="export-actions">
             <button type="button" class="btn btn-purple" id="exportCsvBtn">📊 CSV exportieren</button>
             <button type="button" class="btn btn-success" id="importCsvBtn">📥 CSV importieren</button>
@@ -409,12 +285,12 @@ logoutBtn.addEventListener('click', () => {
 
 <script>
 // ============================================================
-// KONFIGURATION
+// 1. KONFIGURATION
 // ============================================================
 const API_URL = 'https://leadcapture-backend.onrender.com/api';
 
 // ============================================================
-// TOKEN-VERWALTUNG
+// 2. TOKEN-VERWALTUNG
 // ============================================================
 function getToken() {
     return localStorage.getItem('leadcapture_token');
@@ -443,7 +319,7 @@ function isLoggedIn() {
 }
 
 // ============================================================
-// API HELPER (mit Token)
+// 3. API HELPER (mit Token)
 // ============================================================
 async function apiRequest(endpoint, options = {}) {
     const token = getToken();
@@ -461,7 +337,6 @@ async function apiRequest(endpoint, options = {}) {
     });
     
     if (response.status === 401) {
-        // Token ungültig → Logout
         removeToken();
         showLogin();
         throw new Error('Session abgelaufen. Bitte erneut einloggen.');
@@ -471,7 +346,7 @@ async function apiRequest(endpoint, options = {}) {
 }
 
 // ============================================================
-// LOGIN / REGISTER
+// 4. LOGIN / REGISTER
 // ============================================================
 async function login(email, password) {
     const response = await fetch(`${API_URL}/auth/login`, {
@@ -496,51 +371,57 @@ async function register(email, password, fullName, tenantName) {
 }
 
 // ============================================================
-// DOM-REFERENZEN (Login)
+// 5. DOM-REFERENZEN (Login/Register)
 // ============================================================
 const loginContainer = document.getElementById('loginContainer');
 const appContainer = document.getElementById('appContainer');
+const loginFormContainer = document.getElementById('loginFormContainer');
+const registerFormContainer = document.getElementById('registerFormContainer');
+
 const loginForm = document.getElementById('loginForm');
 const registerForm = document.getElementById('registerForm');
+
 const loginEmail = document.getElementById('loginEmail');
 const loginPassword = document.getElementById('loginPassword');
 const loginError = document.getElementById('loginError');
 const loginBtn = document.getElementById('loginBtn');
+
 const registerEmail = document.getElementById('registerEmail');
 const registerPassword = document.getElementById('registerPassword');
 const registerFullName = document.getElementById('registerFullName');
 const registerTenantName = document.getElementById('registerTenantName');
 const registerError = document.getElementById('registerError');
 const registerBtn = document.getElementById('registerBtn');
+
 const showRegisterLink = document.getElementById('showRegisterLink');
 const showLoginLink = document.getElementById('showLoginLink');
+
 const userName = document.getElementById('userName');
 const tenantName = document.getElementById('tenantName');
 const logoutBtn = document.getElementById('logoutBtn');
 const connectionStatus = document.getElementById('connectionStatus');
+const serverUrlDisplay = document.getElementById('serverUrlDisplay');
 
 // ============================================================
-// LOGIN-FUNKTIONEN
+// 6. LOGIN / REGISTER UMSCHALTEN
 // ============================================================
-function showApp(user) {
-    loginContainer.style.display = 'none';
-    appContainer.style.display = 'block';
-    userName.textContent = user.fullName || user.email;
-    tenantName.textContent = user.tenant?.name || 'Unbekannter Mandant';
-    loadLeads();
-}
+showRegisterLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    loginFormContainer.style.display = 'none';
+    registerFormContainer.style.display = 'block';
+    registerError.style.display = 'none';
+});
 
-function showLogin() {
-    loginContainer.style.display = 'block';
-    appContainer.style.display = 'none';
-    loginForm.style.display = 'block';
-    registerForm.style.display = 'none';
+showLoginLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    loginFormContainer.style.display = 'block';
+    registerFormContainer.style.display = 'none';
     loginError.style.display = 'none';
-    loginEmail.value = '';
-    loginPassword.value = '';
-}
+});
 
-// Login-Form
+// ============================================================
+// 7. LOGIN
+// ============================================================
 loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     loginError.style.display = 'none';
@@ -561,7 +442,9 @@ loginForm.addEventListener('submit', async (e) => {
     }
 });
 
-// Register-Form
+// ============================================================
+// 8. REGISTRIERUNG
+// ============================================================
 registerForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     registerError.style.display = 'none';
@@ -587,27 +470,35 @@ registerForm.addEventListener('submit', async (e) => {
     }
 });
 
-// Login/Register umschalten
-showRegisterLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    loginForm.style.display = 'none';
-    registerForm.style.display = 'block';
-});
+// ============================================================
+// 9. APP ANZEIGEN / LOGOUT
+// ============================================================
+function showApp(user) {
+    loginContainer.style.display = 'none';
+    appContainer.style.display = 'block';
+    userName.textContent = user.fullName || user.email;
+    tenantName.textContent = user.tenant?.name || 'Unbekannter Mandant';
+    loadLeads();
+    loadHistogram('alle');
+}
 
-showLoginLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    loginForm.style.display = 'block';
-    registerForm.style.display = 'none';
-});
+function showLogin() {
+    loginContainer.style.display = 'block';
+    appContainer.style.display = 'none';
+    loginFormContainer.style.display = 'block';
+    registerFormContainer.style.display = 'none';
+    loginError.style.display = 'none';
+    loginEmail.value = '';
+    loginPassword.value = '';
+}
 
-// Logout
 logoutBtn.addEventListener('click', () => {
     removeToken();
     showLogin();
 });
 
 // ============================================================
-// BACKEND-VERBINDUNG PRÜFEN
+// 10. BACKEND-VERBINDUNG PRÜFEN
 // ============================================================
 async function checkConnection() {
     try {
@@ -615,17 +506,19 @@ async function checkConnection() {
         if (response.ok) {
             connectionStatus.textContent = '✅ Verbunden';
             connectionStatus.className = 'status-badge';
+            serverUrlDisplay.textContent = `🔗 Server: ${API_URL}`;
         } else {
             throw new Error('Server antwortet nicht korrekt');
         }
     } catch (error) {
         connectionStatus.textContent = '⚠️ Offline';
         connectionStatus.className = 'status-badge offline';
+        serverUrlDisplay.textContent = '🔗 Server: nicht erreichbar';
     }
 }
 
 // ============================================================
-// APP-FUNKTIONEN (nach Login)
+// 11. DOM-REFERENZEN (App)
 // ============================================================
 const fileInput = document.getElementById('fileInput');
 const uploadArea = document.getElementById('uploadArea');
@@ -657,14 +550,17 @@ const exportCsvBtn = document.getElementById('exportCsvBtn');
 const importCsvBtn = document.getElementById('importCsvBtn');
 const importDropboxBtn = document.getElementById('importDropboxBtn');
 const csvFileInput = document.getElementById('csvFileInput');
+
 const leadsContainer = document.getElementById('leadsContainer');
 const leadsList = document.getElementById('leadsList');
 const leadsCount = document.getElementById('leadsCount');
+
 const questionnaireContainer = document.getElementById('questionnaireContainer');
 const questionnaireForm = document.getElementById('questionnaireForm');
 const questionnaireLeadName = document.getElementById('questionnaireLeadName');
 const closeQuestionnaireBtn = document.getElementById('closeQuestionnaireBtn');
 const saveQuestionnaireBtn = document.getElementById('saveQuestionnaireBtn');
+
 const histogramContainer = document.getElementById('histogramContainer');
 const histogram = document.getElementById('histogram');
 const histogramEmpty = document.getElementById('histogramEmpty');
@@ -688,7 +584,7 @@ const DEFAULT_QUESTIONS = [
 ];
 
 // ============================================================
-// HILFSFUNKTIONEN
+// 12. HILFSFUNKTIONEN
 // ============================================================
 function showError(message) {
     errorBox.textContent = message;
@@ -749,7 +645,7 @@ function getFormData() {
 }
 
 // ============================================================
-// LEADS (mit API)
+// 13. LEADS (mit API)
 // ============================================================
 async function processWithDeepSeek(base64Image) {
     const response = await apiRequest('/process-image', {
@@ -849,7 +745,7 @@ async function saveLeadManually() {
 }
 
 // ============================================================
-// FRAGEBOGEN
+// 14. FRAGEBOGEN
 // ============================================================
 async function openQuestionnaire(leadId) {
     currentLeadId = leadId;
@@ -904,7 +800,7 @@ function closeQuestionnaire() {
 }
 
 // ============================================================
-// CSV-EXPORT & IMPORT
+// 15. CSV-EXPORT & IMPORT
 // ============================================================
 async function exportCSV() {
     try {
@@ -998,7 +894,7 @@ importDropboxBtn.addEventListener('click', async () => {
 });
 
 // ============================================================
-// HISTOGRAMM
+// 16. HISTOGRAMM
 // ============================================================
 async function loadHistogram(year = 'alle') {
     try {
@@ -1076,7 +972,7 @@ function toggleHistogram() {
 }
 
 // ============================================================
-// BILDVERARBEITUNG
+// 17. BILDVERARBEITUNG
 // ============================================================
 async function handleImage(file) {
     if (!file) return;
@@ -1102,7 +998,7 @@ async function handleImage(file) {
 }
 
 // ============================================================
-// EVENT LISTENER
+// 18. EVENT LISTENER
 // ============================================================
 uploadArea.addEventListener('click', () => fileInput.click());
 uploadBtn.addEventListener('click', () => fileInput.click());
@@ -1121,7 +1017,7 @@ refreshHistogramBtn.addEventListener('click', () => loadHistogram(yearSelect.val
 yearSelect.addEventListener('change', () => loadHistogram(yearSelect.value));
 
 // ============================================================
-// INIT
+// 19. SERVICE WORKER & INIT
 // ============================================================
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').then(() => console.log('✅ SW registriert')).catch(err => console.warn('⚠️ SW Fehler:', err));
@@ -1135,7 +1031,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         showLogin();
     }
-    console.log('🚀 LeadCapture PWA mit Login geladen');
+    console.log('🚀 LeadCapture PWA mit Login und Registrierung geladen');
 });
 </script>
 
