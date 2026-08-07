@@ -14,8 +14,22 @@
         h1 { font-size: 28px; font-weight: 700; color: #1a202c; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
         h1 small { font-size: 16px; font-weight: 400; color: #4A90E2; }
         .status-badge { display: inline-block; background: #48bb78; color: white; font-size: 11px; padding: 2px 10px; border-radius: 20px; cursor: pointer; }
+        .status-badge.offline { background: #ed8936; }
         .subtitle { color: #718096; font-size: 14px; margin-bottom: 24px; border-left: 3px solid #4A90E2; padding-left: 12px; }
         .server-url { font-size: 11px; color: #a0aec0; margin-top: 4px; word-break: break-all; display: block; }
+
+        /* LOGIN */
+        #loginContainer { display: block; }
+        #loginContainer h2 { font-size: 20px; color: #2d3748; margin-bottom: 16px; }
+        .login-form { display: flex; flex-direction: column; gap: 12px; }
+        .login-form input { padding: 12px 16px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 15px; }
+        .login-form input:focus { outline: none; border-color: #4A90E2; box-shadow: 0 0 0 3px rgba(74,144,226,0.12); }
+        .login-form .error { color: #e53e3e; font-size: 14px; display: none; }
+        .login-form .hint { color: #718096; font-size: 13px; text-align: center; }
+
+        /* APP-BEREICH (nach Login) */
+        #appContainer { display: none; }
+
         .upload-area { background: #f7fafc; border: 2px dashed #cbd5e0; border-radius: 16px; padding: 40px 20px; text-align: center; cursor: pointer; transition: all 0.2s; margin-bottom: 24px; }
         .upload-area:hover { border-color: #4A90E2; background: #edf2f7; }
         .upload-area .icon { font-size: 48px; margin-bottom: 8px; }
@@ -27,6 +41,7 @@
         #status { display: none; background: #edf2f7; padding: 14px 18px; border-radius: 12px; margin: 16px 0; font-weight: 500; color: #2d3748; gap: 12px; align-items: center; }
         #status .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid #cbd5e0; border-top: 3px solid #4A90E2; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 10px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 20px 0; }
         .form-group { display: flex; flex-direction: column; gap: 4px; }
         .form-group.full { grid-column: span 2; }
@@ -34,6 +49,7 @@
         .form-group input, .form-group select, .form-group textarea { padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 15px; transition: border 0.2s; background: white; width: 100%; }
         .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #4A90E2; box-shadow: 0 0 0 3px rgba(74,144,226,0.12); }
         .form-group textarea { resize: vertical; min-height: 60px; }
+
         .actions { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
         .btn { padding: 12px 24px; border: none; border-radius: 12px; font-weight: 600; font-size: 15px; cursor: pointer; transition: all 0.2s; flex: 1; min-width: 120px; }
         .btn-primary { background: #4A90E2; color: white; }
@@ -51,7 +67,11 @@
         .btn-purple:hover { background: #805AD5; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(159,122,234,0.25); }
         .btn-dropbox { background: #0061FF; color: white; }
         .btn-dropbox:hover { background: #0050D0; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,97,255,0.25); }
+        .btn-logout { background: #e53e3e; color: white; }
+        .btn-logout:hover { background: #c53030; }
+
         .error { background: #fed7d7; color: #c53030; padding: 12px 16px; border-radius: 10px; margin: 12px 0; display: none; font-weight: 500; border-left: 4px solid #fc8181; }
+
         .lead-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 8px; background: #f7fafc; }
         .lead-card .header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
         .lead-card .name { font-weight: 600; color: #2d3748; }
@@ -63,6 +83,7 @@
         .lead-card .actions .edit { background: #4A90E2; color: white; }
         .lead-card .actions .questionnaire { background: #9F7AEA; color: white; }
         .lead-card .actions .delete { background: #fc8181; color: white; }
+
         #leadsContainer, #questionnaireContainer, #histogramContainer { display: none; margin-top: 20px; border-top: 2px solid #e2e8f0; padding-top: 16px; }
         .leads-header, .questionnaire-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
         .leads-header h3, .questionnaire-header h3 { font-size: 18px; color: #2d3748; }
@@ -74,6 +95,7 @@
         .questionnaire-answer select { background: white; }
         .questionnaire-answer textarea { resize: vertical; min-height: 50px; }
         .questionnaire-actions { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+
         .export-actions { display: flex; gap: 12px; margin: 16px 0; flex-wrap: wrap; }
         #histogramWrapper { background: #f7fafc; border-radius: 12px; padding: 20px; overflow-x: auto; min-height: 200px; }
         #histogram { display: flex; align-items: flex-end; height: 200px; gap: 4px; min-width: 100%; }
@@ -82,115 +104,153 @@
         #histogram .bar-fill { width: 100%; border-radius: 2px 2px 0 0; min-height: 4px; background: linear-gradient(180deg, #4A90E2 0%, #357ABD 100%); transition: height 0.3s ease; }
         #histogram .bar-value { font-size: 9px; color: #2d3748; margin-bottom: 2px; font-weight: 600; opacity: 0.7; }
         #histogramEmpty { display: none; text-align: center; padding: 40px; color: #a0aec0; }
-        .import-progress { background: #edf2f7; padding: 8px 12px; border-radius: 8px; margin: 8px 0; display: none; }
+
+        .user-info { display: flex; justify-content: space-between; align-items: center; background: #edf2f7; padding: 8px 16px; border-radius: 10px; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+        .user-info span { font-size: 14px; color: #2d3748; }
+        .user-info .tenant { font-weight: 600; color: #4A90E2; }
+
         @media (max-width: 480px) { .form-grid { grid-template-columns: 1fr; } .form-group.full { grid-column: span 1; } .container { padding: 16px; } }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <!-- HEADER -->
-    <h1>📇 LeadCapture <small>v4</small> <span class="status-badge" id="connectionStatus">🔗 Verbunden</span></h1>
+    <h1>📇 LeadCapture <small>v6</small> <span class="status-badge" id="connectionStatus">🔗 Verbunden</span></h1>
     <div class="subtitle">
-        KI-gestützte Lead-Erfassung + Fragebogen + Histogramm + Dropbox
+        KI-gestützte Lead-Erfassung mit Multi-Tenancy
         <span class="server-url" id="serverUrlDisplay">🔗 Server: wird geladen...</span>
     </div>
 
-    <!-- UPLOAD -->
-    <div class="upload-area" id="uploadArea">
-        <div class="icon">📸</div>
-        <p>Foto hochladen oder aufnehmen</p>
-        <small>Unterstützt JPG, PNG, PDF (max. 10MB)</small>
-        <input type="file" id="fileInput" accept="image/*,application/pdf" capture="environment">
+    <!-- ============================================================ -->
+    <!-- LOGIN-BEREICH -->
+    <!-- ============================================================ -->
+    <div id="loginContainer">
+        <h2>🔐 Anmelden</h2>
+        <form class="login-form" id="loginForm">
+            <input type="email" id="loginEmail" placeholder="E-Mail" required>
+            <input type="password" id="loginPassword" placeholder="Passwort" required>
+            <div class="error" id="loginError"></div>
+            <button type="submit" class="btn btn-primary" id="loginBtn">Anmelden</button>
+            <div class="hint">Noch keinen Account? <a href="#" id="showRegisterLink">Registrieren</a></div>
+        </form>
+
+        <form class="login-form" id="registerForm" style="display:none;">
+            <h2>📝 Registrieren</h2>
+            <input type="email" id="registerEmail" placeholder="E-Mail" required>
+            <input type="password" id="registerPassword" placeholder="Passwort" required>
+            <input type="text" id="registerFullName" placeholder="Vollständiger Name">
+            <input type="text" id="registerTenantName" placeholder="Firmenname (Mandant)" required>
+            <div class="error" id="registerError"></div>
+            <button type="submit" class="btn btn-success" id="registerBtn">Registrieren</button>
+            <div class="hint">Bereits registriert? <a href="#" id="showLoginLink">Zum Login</a></div>
+        </form>
     </div>
 
-    <!-- PREVIEW -->
-    <div id="previewContainer"><img id="previewImage" alt="Vorschau"></div>
+    <!-- ============================================================ -->
+    <!-- APP-BEREICH (nach Login) -->
+    <!-- ============================================================ -->
+    <div id="appContainer">
+        <!-- User Info -->
+        <div class="user-info">
+            <span>👤 <span id="userName"></span> · <span class="tenant" id="tenantName"></span></span>
+            <button class="btn btn-logout" id="logoutBtn" style="padding:6px 16px; font-size:13px; flex:0;">🚪 Logout</button>
+        </div>
 
-    <!-- STATUS -->
-    <div id="status"><span class="spinner"></span><span id="statusText">DeepSeek analysiert...</span></div>
+        <!-- UPLOAD -->
+        <div class="upload-area" id="uploadArea">
+            <div class="icon">📸</div>
+            <p>Foto hochladen oder aufnehmen</p>
+            <small>Unterstützt JPG, PNG, PDF (max. 10MB)</small>
+            <input type="file" id="fileInput" accept="image/*,application/pdf" capture="environment">
+        </div>
 
-    <!-- FEHLER -->
-    <div class="error" id="errorBox"></div>
+        <!-- PREVIEW -->
+        <div id="previewContainer"><img id="previewImage" alt="Vorschau"></div>
 
-    <!-- FORMULAR -->
-    <form id="leadForm">
-        <div class="form-grid">
-            <div class="form-group"><label for="firstName">Vorname</label><input type="text" id="firstName" placeholder="Max"></div>
-            <div class="form-group"><label for="lastName">Nachname</label><input type="text" id="lastName" placeholder="Mustermann"></div>
-            <div class="form-group full"><label for="company">Firma</label><input type="text" id="company" placeholder="Firma GmbH"></div>
-            <div class="form-group full"><label for="position">Position</label><input type="text" id="position" placeholder="Geschäftsführer"></div>
-            <div class="form-group"><label for="email">E-Mail</label><input type="email" id="email" placeholder="max@firma.de"></div>
-            <div class="form-group"><label for="phone">Telefon</label><input type="tel" id="phone" placeholder="+49 123 456789"></div>
-            <div class="form-group full"><label for="street">Straße</label><input type="text" id="street" placeholder="Musterstraße 1"></div>
-            <div class="form-group"><label for="zip">PLZ</label><input type="text" id="zip" placeholder="12345"></div>
-            <div class="form-group"><label for="city">Stadt</label><input type="text" id="city" placeholder="Berlin"></div>
-            <div class="form-group full"><label for="interests">Interessensgebiete</label><input type="text" id="interests" placeholder="KI, Automatisierung, Cloud"></div>
-            <div class="form-group full"><label for="visitorType">Besuchertyp</label>
-                <select id="visitorType">
-                    <option value="">Bitte wählen...</option>
-                    <option value="Entscheider">Entscheider</option>
-                    <option value="Fachbesucher">Fachbesucher</option>
-                    <option value="Student">Student</option>
-                    <option value="Presse">Presse</option>
-                    <option value="Sonstiges">Sonstiges</option>
-                </select>
+        <!-- STATUS -->
+        <div id="status"><span class="spinner"></span><span id="statusText">DeepSeek analysiert...</span></div>
+
+        <!-- FEHLER -->
+        <div class="error" id="errorBox"></div>
+
+        <!-- FORMULAR -->
+        <form id="leadForm">
+            <div class="form-grid">
+                <div class="form-group"><label for="firstName">Vorname</label><input type="text" id="firstName" placeholder="Max"></div>
+                <div class="form-group"><label for="lastName">Nachname</label><input type="text" id="lastName" placeholder="Mustermann"></div>
+                <div class="form-group full"><label for="company">Firma</label><input type="text" id="company" placeholder="Firma GmbH"></div>
+                <div class="form-group full"><label for="position">Position</label><input type="text" id="position" placeholder="Geschäftsführer"></div>
+                <div class="form-group"><label for="email">E-Mail</label><input type="email" id="email" placeholder="max@firma.de"></div>
+                <div class="form-group"><label for="phone">Telefon</label><input type="tel" id="phone" placeholder="+49 123 456789"></div>
+                <div class="form-group full"><label for="street">Straße</label><input type="text" id="street" placeholder="Musterstraße 1"></div>
+                <div class="form-group"><label for="zip">PLZ</label><input type="text" id="zip" placeholder="12345"></div>
+                <div class="form-group"><label for="city">Stadt</label><input type="text" id="city" placeholder="Berlin"></div>
+                <div class="form-group full"><label for="interests">Interessensgebiete</label><input type="text" id="interests" placeholder="KI, Automatisierung, Cloud"></div>
+                <div class="form-group full"><label for="visitorType">Besuchertyp</label>
+                    <select id="visitorType">
+                        <option value="">Bitte wählen...</option>
+                        <option value="Entscheider">Entscheider</option>
+                        <option value="Fachbesucher">Fachbesucher</option>
+                        <option value="Student">Student</option>
+                        <option value="Presse">Presse</option>
+                        <option value="Sonstiges">Sonstiges</option>
+                    </select>
+                </div>
+            </div>
+            <div class="actions">
+                <button type="button" class="btn btn-secondary" id="clearBtn">🗑️ Leeren</button>
+                <button type="button" class="btn btn-primary" id="uploadBtn">📤 Foto hochladen</button>
+                <button type="button" class="btn btn-success" id="saveBtn">💾 Lead speichern</button>
+            </div>
+        </form>
+
+        <!-- EXPORT + IMPORT -->
+        <div class="export-actions">
+            <button type="button" class="btn btn-purple" id="exportCsvBtn">📊 CSV exportieren</button>
+            <button type="button" class="btn btn-success" id="importCsvBtn">📥 CSV importieren</button>
+            <button type="button" class="btn btn-dropbox" id="importDropboxBtn">☁️ Dropbox import</button>
+            <input type="file" id="csvFileInput" accept=".csv" style="display:none;">
+        </div>
+        <div class="export-actions">
+            <button type="button" class="btn btn-secondary" id="refreshLeadsBtn">🔄 Aktualisieren</button>
+            <button type="button" class="btn btn-outline" id="toggleHistogramBtn" style="flex:1;">📊 Histogramm anzeigen</button>
+        </div>
+
+        <!-- LEADS -->
+        <div id="leadsContainer">
+            <div class="leads-header"><h3>📋 Gespeicherte Leads</h3><span id="leadsCount">0</span></div>
+            <div class="leads-list" id="leadsList"><div class="empty-leads">📭 Noch keine Leads gespeichert.</div></div>
+        </div>
+
+        <!-- FRAGEBOGEN -->
+        <div id="questionnaireContainer">
+            <div class="questionnaire-header">
+                <h3>📝 Fragebogen für <span id="questionnaireLeadName"></span></h3>
+                <button type="button" class="btn btn-secondary" id="closeQuestionnaireBtn" style="padding:4px 12px; font-size:12px;">✕ Schließen</button>
+            </div>
+            <div id="questionnaireForm"></div>
+            <div class="questionnaire-actions">
+                <button type="button" class="btn btn-success" id="saveQuestionnaireBtn">💾 Antworten speichern</button>
             </div>
         </div>
-        <div class="actions">
-            <button type="button" class="btn btn-secondary" id="clearBtn">🗑️ Leeren</button>
-            <button type="button" class="btn btn-primary" id="uploadBtn">📤 Foto hochladen</button>
-            <button type="button" class="btn btn-success" id="saveBtn">💾 Lead speichern</button>
-            <button type="button" class="btn btn-danger" id="resetTokenBtn">🔄 Token</button>
-        </div>
-    </form>
 
-    <!-- EXPORT + IMPORT + HISTOGRAMM TOGGLE -->
-    <div class="export-actions">
-        <button type="button" class="btn btn-purple" id="exportCsvBtn">📊 CSV exportieren</button>
-        <button type="button" class="btn btn-success" id="importCsvBtn">📥 CSV importieren</button>
-        <button type="button" class="btn btn-dropbox" id="importDropboxBtn">☁️ Dropbox import</button>
-        <input type="file" id="csvFileInput" accept=".csv" style="display:none;">
-    </div>
-    <div class="export-actions">
-        <button type="button" class="btn btn-secondary" id="refreshLeadsBtn">🔄 Aktualisieren</button>
-        <button type="button" class="btn btn-outline" id="toggleHistogramBtn" style="flex:1;">📊 Histogramm anzeigen</button>
-    </div>
-
-    <!-- LEADS ANZEIGE -->
-    <div id="leadsContainer">
-        <div class="leads-header"><h3>📋 Gespeicherte Leads</h3><span id="leadsCount">0</span></div>
-        <div class="leads-list" id="leadsList"><div class="empty-leads">📭 Noch keine Leads gespeichert.</div></div>
-    </div>
-
-    <!-- FRAGEBOGEN -->
-    <div id="questionnaireContainer">
-        <div class="questionnaire-header">
-            <h3>📝 Fragebogen für <span id="questionnaireLeadName"></span></h3>
-            <button type="button" class="btn btn-secondary" id="closeQuestionnaireBtn" style="padding:4px 12px; font-size:12px;">✕ Schließen</button>
-        </div>
-        <div id="questionnaireForm"></div>
-        <div class="questionnaire-actions">
-            <button type="button" class="btn btn-success" id="saveQuestionnaireBtn">💾 Antworten speichern</button>
-        </div>
-    </div>
-
-    <!-- HISTOGRAMM -->
-    <div id="histogramContainer">
-        <div class="leads-header">
-            <h3>📊 Leads pro Tag <small style="font-weight:400; font-size:14px; color:#718096;">(Histogramm)</small></h3>
-            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                <label style="font-size:13px; color:#4a5568;">Jahr:</label>
-                <select id="yearSelect" style="padding:4px 8px; border-radius:6px; border:1px solid #e2e8f0; font-size:14px;">
-                    <option value="alle">Alle Jahre</option>
-                </select>
-                <button id="refreshHistogramBtn" class="btn btn-outline" style="padding:4px 12px; font-size:12px;">🔄</button>
-                <span id="histogramTotal" style="font-size:13px; color:#718096;"></span>
+        <!-- HISTOGRAMM -->
+        <div id="histogramContainer">
+            <div class="leads-header">
+                <h3>📊 Leads pro Tag <small style="font-weight:400; font-size:14px; color:#718096;">(Histogramm)</small></h3>
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <label style="font-size:13px; color:#4a5568;">Jahr:</label>
+                    <select id="yearSelect" style="padding:4px 8px; border-radius:6px; border:1px solid #e2e8f0; font-size:14px;">
+                        <option value="alle">Alle Jahre</option>
+                    </select>
+                    <button id="refreshHistogramBtn" class="btn btn-outline" style="padding:4px 12px; font-size:12px;">🔄</button>
+                    <span id="histogramTotal" style="font-size:13px; color:#718096;"></span>
+                </div>
             </div>
-        </div>
-        <div id="histogramWrapper">
-            <div id="histogram" style="display:flex; align-items:flex-end; height:200px; gap:4px; min-width:100%;"></div>
-            <div id="histogramEmpty" style="display:none; text-align:center; padding:40px; color:#a0aec0;">📭 Keine Leads für diesen Zeitraum.</div>
+            <div id="histogramWrapper">
+                <div id="histogram" style="display:flex; align-items:flex-end; height:200px; gap:4px; min-width:100%;"></div>
+                <div id="histogramEmpty" style="display:none; text-align:center; padding:40px; color:#a0aec0;">📭 Keine Leads für diesen Zeitraum.</div>
+            </div>
         </div>
     </div>
 </div>
@@ -199,31 +259,221 @@
 // ============================================================
 // KONFIGURATION
 // ============================================================
-const PROXY_URL = 'https://leadcapture-backend.onrender.com/api/process-image';
-const LEADS_URL = 'https://leadcapture-backend.onrender.com/api/leads';
-const QUESTIONNAIRE_URL = 'https://leadcapture-backend.onrender.com/api/questionnaire';
-const EXPORT_URL = 'https://leadcapture-backend.onrender.com/api/export/csv';
-const STATS_URL = 'https://leadcapture-backend.onrender.com/api/stats/daily';
-const IMPORT_URL = 'https://leadcapture-backend.onrender.com/api/import/csv';
-const DROPBOX_IMPORT_URL = 'https://leadcapture-backend.onrender.com/api/import/dropbox';
-const TOKEN_STORAGE_KEY = 'leadcapture_auth_token';
+const API_URL = 'https://leadcapture-backend.onrender.com/api';
 
 // ============================================================
-// FRAGEBOGEN
+// TOKEN-VERWALTUNG
 // ============================================================
-const DEFAULT_QUESTIONS = [
-    { id: 'needs', label: 'Welche konkreten Anforderungen/Probleme hat der Lead?', type: 'textarea' },
-    { id: 'budget', label: 'Budgetrahmen / Investitionsbereitschaft?', type: 'text' },
-    { id: 'timeline', label: 'Zeitplan / Entscheidungszeitraum?', type: 'text' },
-    { id: 'competition', label: 'Welche Wettbewerber werden aktuell geprüft?', type: 'text' },
-    { id: 'decision_maker', label: 'Wer ist der Entscheider / mit wem haben wir gesprochen?', type: 'text' },
-    { id: 'next_steps', label: 'Nächste Schritte / vereinbarte Termine?', type: 'textarea' },
-    { id: 'interest_rating', label: 'Interesse / Priorität (1-10)', type: 'select', options: ['', '1 - Sehr niedrig', '2', '3', '4', '5 - Mittel', '6', '7', '8', '9', '10 - Sehr hoch'] },
-    { id: 'notes', label: 'Weitere Notizen / Beobachtungen', type: 'textarea' }
-];
+function getToken() {
+    return localStorage.getItem('leadcapture_token');
+}
+
+function setToken(token) {
+    localStorage.setItem('leadcapture_token', token);
+}
+
+function removeToken() {
+    localStorage.removeItem('leadcapture_token');
+    localStorage.removeItem('leadcapture_user');
+}
+
+function getUser() {
+    const user = localStorage.getItem('leadcapture_user');
+    return user ? JSON.parse(user) : null;
+}
+
+function setUser(user) {
+    localStorage.setItem('leadcapture_user', JSON.stringify(user));
+}
+
+function isLoggedIn() {
+    return !!getToken();
+}
 
 // ============================================================
-// DOM-REFERENZEN
+// API HELPER (mit Token)
+// ============================================================
+async function apiRequest(endpoint, options = {}) {
+    const token = getToken();
+    if (!token) {
+        throw new Error('Nicht eingeloggt');
+    }
+    
+    const response = await fetch(`${API_URL}${endpoint}`, {
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            ...(options.headers || {})
+        }
+    });
+    
+    if (response.status === 401) {
+        // Token ungültig → Logout
+        removeToken();
+        showLogin();
+        throw new Error('Session abgelaufen. Bitte erneut einloggen.');
+    }
+    
+    return response;
+}
+
+// ============================================================
+// LOGIN / REGISTER
+// ============================================================
+async function login(email, password) {
+    const response = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+    });
+    const result = await response.json();
+    if (!result.success) throw new Error(result.error || 'Login fehlgeschlagen');
+    return result.data;
+}
+
+async function register(email, password, fullName, tenantName) {
+    const response = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, fullName, tenantName })
+    });
+    const result = await response.json();
+    if (!result.success) throw new Error(result.error || 'Registrierung fehlgeschlagen');
+    return result.data;
+}
+
+// ============================================================
+// DOM-REFERENZEN (Login)
+// ============================================================
+const loginContainer = document.getElementById('loginContainer');
+const appContainer = document.getElementById('appContainer');
+const loginForm = document.getElementById('loginForm');
+const registerForm = document.getElementById('registerForm');
+const loginEmail = document.getElementById('loginEmail');
+const loginPassword = document.getElementById('loginPassword');
+const loginError = document.getElementById('loginError');
+const loginBtn = document.getElementById('loginBtn');
+const registerEmail = document.getElementById('registerEmail');
+const registerPassword = document.getElementById('registerPassword');
+const registerFullName = document.getElementById('registerFullName');
+const registerTenantName = document.getElementById('registerTenantName');
+const registerError = document.getElementById('registerError');
+const registerBtn = document.getElementById('registerBtn');
+const showRegisterLink = document.getElementById('showRegisterLink');
+const showLoginLink = document.getElementById('showLoginLink');
+const userName = document.getElementById('userName');
+const tenantName = document.getElementById('tenantName');
+const logoutBtn = document.getElementById('logoutBtn');
+const connectionStatus = document.getElementById('connectionStatus');
+
+// ============================================================
+// LOGIN-FUNKTIONEN
+// ============================================================
+function showApp(user) {
+    loginContainer.style.display = 'none';
+    appContainer.style.display = 'block';
+    userName.textContent = user.fullName || user.email;
+    tenantName.textContent = user.tenant?.name || 'Unbekannter Mandant';
+    loadLeads();
+}
+
+function showLogin() {
+    loginContainer.style.display = 'block';
+    appContainer.style.display = 'none';
+    loginForm.style.display = 'block';
+    registerForm.style.display = 'none';
+    loginError.style.display = 'none';
+    loginEmail.value = '';
+    loginPassword.value = '';
+}
+
+// Login-Form
+loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    loginError.style.display = 'none';
+    loginBtn.disabled = true;
+    loginBtn.textContent = '⏳ ...';
+    
+    try {
+        const data = await login(loginEmail.value, loginPassword.value);
+        setToken(data.token);
+        setUser(data.user);
+        showApp(data.user);
+    } catch (error) {
+        loginError.textContent = error.message || 'Login fehlgeschlagen';
+        loginError.style.display = 'block';
+    } finally {
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Anmelden';
+    }
+});
+
+// Register-Form
+registerForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    registerError.style.display = 'none';
+    registerBtn.disabled = true;
+    registerBtn.textContent = '⏳ ...';
+    
+    try {
+        const data = await register(
+            registerEmail.value,
+            registerPassword.value,
+            registerFullName.value,
+            registerTenantName.value
+        );
+        setToken(data.token);
+        setUser(data.user);
+        showApp(data.user);
+    } catch (error) {
+        registerError.textContent = error.message || 'Registrierung fehlgeschlagen';
+        registerError.style.display = 'block';
+    } finally {
+        registerBtn.disabled = false;
+        registerBtn.textContent = 'Registrieren';
+    }
+});
+
+// Login/Register umschalten
+showRegisterLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    loginForm.style.display = 'none';
+    registerForm.style.display = 'block';
+});
+
+showLoginLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    loginForm.style.display = 'block';
+    registerForm.style.display = 'none';
+});
+
+// Logout
+logoutBtn.addEventListener('click', () => {
+    removeToken();
+    showLogin();
+});
+
+// ============================================================
+// BACKEND-VERBINDUNG PRÜFEN
+// ============================================================
+async function checkConnection() {
+    try {
+        const response = await fetch(`${API_URL}/health`);
+        if (response.ok) {
+            connectionStatus.textContent = '✅ Verbunden';
+            connectionStatus.className = 'status-badge';
+        } else {
+            throw new Error('Server antwortet nicht korrekt');
+        }
+    } catch (error) {
+        connectionStatus.textContent = '⚠️ Offline';
+        connectionStatus.className = 'status-badge offline';
+    }
+}
+
+// ============================================================
+// APP-FUNKTIONEN (nach Login)
 // ============================================================
 const fileInput = document.getElementById('fileInput');
 const uploadArea = document.getElementById('uploadArea');
@@ -232,8 +482,6 @@ const previewImage = document.getElementById('previewImage');
 const statusDiv = document.getElementById('status');
 const statusText = document.getElementById('statusText');
 const errorBox = document.getElementById('errorBox');
-const connectionStatus = document.getElementById('connectionStatus');
-const serverUrlDisplay = document.getElementById('serverUrlDisplay');
 
 const fields = {
     firstName: document.getElementById('firstName'),
@@ -252,13 +500,11 @@ const fields = {
 const uploadBtn = document.getElementById('uploadBtn');
 const clearBtn = document.getElementById('clearBtn');
 const saveBtn = document.getElementById('saveBtn');
-const resetTokenBtn = document.getElementById('resetTokenBtn');
 const refreshLeadsBtn = document.getElementById('refreshLeadsBtn');
 const exportCsvBtn = document.getElementById('exportCsvBtn');
 const importCsvBtn = document.getElementById('importCsvBtn');
 const importDropboxBtn = document.getElementById('importDropboxBtn');
 const csvFileInput = document.getElementById('csvFileInput');
-
 const leadsContainer = document.getElementById('leadsContainer');
 const leadsList = document.getElementById('leadsList');
 const leadsCount = document.getElementById('leadsCount');
@@ -267,7 +513,6 @@ const questionnaireForm = document.getElementById('questionnaireForm');
 const questionnaireLeadName = document.getElementById('questionnaireLeadName');
 const closeQuestionnaireBtn = document.getElementById('closeQuestionnaireBtn');
 const saveQuestionnaireBtn = document.getElementById('saveQuestionnaireBtn');
-
 const histogramContainer = document.getElementById('histogramContainer');
 const histogram = document.getElementById('histogram');
 const histogramEmpty = document.getElementById('histogramEmpty');
@@ -279,27 +524,16 @@ const histogramTotal = document.getElementById('histogramTotal');
 let currentLeadId = null;
 let histogramVisible = false;
 
-// ============================================================
-// TOKEN
-// ============================================================
-function getAuthToken() {
-    let token = localStorage.getItem(TOKEN_STORAGE_KEY);
-    if (token) return token;
-    token = prompt('🔐 Bitte gib den Authentifizierungs-Token ein:');
-    if (token && token.length > 10) {
-        localStorage.setItem(TOKEN_STORAGE_KEY, token);
-        return token;
-    }
-    throw new Error('Kein gültiger Token');
-}
-
-function resetToken() {
-    if (confirm('⚠️ Token wirklich zurücksetzen?')) {
-        localStorage.removeItem(TOKEN_STORAGE_KEY);
-        alert('✅ Token zurückgesetzt. Seite wird neu geladen...');
-        location.reload();
-    }
-}
+const DEFAULT_QUESTIONS = [
+    { id: 'needs', label: 'Welche konkreten Anforderungen/Probleme hat der Lead?', type: 'textarea' },
+    { id: 'budget', label: 'Budgetrahmen / Investitionsbereitschaft?', type: 'text' },
+    { id: 'timeline', label: 'Zeitplan / Entscheidungszeitraum?', type: 'text' },
+    { id: 'competition', label: 'Welche Wettbewerber werden aktuell geprüft?', type: 'text' },
+    { id: 'decision_maker', label: 'Wer ist der Entscheider / mit wem haben wir gesprochen?', type: 'text' },
+    { id: 'next_steps', label: 'Nächste Schritte / vereinbarte Termine?', type: 'textarea' },
+    { id: 'interest_rating', label: 'Interesse / Priorität (1-10)', type: 'select', options: ['', '1 - Sehr niedrig', '2', '3', '4', '5 - Mittel', '6', '7', '8', '9', '10 - Sehr hoch'] },
+    { id: 'notes', label: 'Weitere Notizen / Beobachtungen', type: 'textarea' }
+];
 
 // ============================================================
 // HILFSFUNKTIONEN
@@ -321,17 +555,17 @@ function setLoading(loading) {
 }
 
 function fillForm(data) {
-    fields.firstName.value = data.firstName || '';
-    fields.lastName.value = data.lastName || '';
+    fields.firstName.value = data.first_name || data.firstName || '';
+    fields.lastName.value = data.last_name || data.lastName || '';
     fields.company.value = data.company || '';
     fields.position.value = data.position || '';
     fields.email.value = data.email || '';
     fields.phone.value = data.phone || '';
-    fields.street.value = data.address?.street || '';
-    fields.zip.value = data.address?.zip || '';
-    fields.city.value = data.address?.city || '';
+    fields.street.value = data.street || data.address?.street || '';
+    fields.zip.value = data.zip || data.address?.zip || '';
+    fields.city.value = data.city || data.address?.city || '';
     fields.interests.value = Array.isArray(data.interests) ? data.interests.join(', ') : '';
-    fields.visitorType.value = data.visitorType || '';
+    fields.visitorType.value = data.visitor_type || data.visitorType || '';
 }
 
 function clearForm() {
@@ -357,28 +591,19 @@ function getFormData() {
             city: fields.city.value
         },
         interests: fields.interests.value.split(',').map(s => s.trim()).filter(Boolean),
-        visitorType: fields.visitorType.value
+        visitorType: fields.visitorType.value,
+        questionnaire: {}
     };
 }
 
 // ============================================================
-// API AUFRUFE
+// LEADS (mit API)
 // ============================================================
 async function processWithDeepSeek(base64Image) {
-    const token = getAuthToken();
-    const response = await fetch(PROXY_URL, {
+    const response = await apiRequest('/process-image', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ image: base64Image })
     });
-    if (response.status === 401 || response.status === 403) {
-        localStorage.removeItem(TOKEN_STORAGE_KEY);
-        throw new Error('❌ Authentifizierung fehlgeschlagen.');
-    }
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Server Fehler (${response.status})`);
-    }
     const result = await response.json();
     if (!result.success) throw new Error(result.error || 'Unbekannter Fehler');
     return result;
@@ -386,17 +611,7 @@ async function processWithDeepSeek(base64Image) {
 
 async function loadLeads() {
     try {
-        const token = localStorage.getItem(TOKEN_STORAGE_KEY);
-        if (!token) {
-            leadsList.innerHTML = '<div class="empty-leads">🔐 Bitte zuerst Token eingeben.</div>';
-            return;
-        }
-        const response = await fetch(LEADS_URL, { headers: { 'Authorization': `Bearer ${token}` } });
-        if (response.status === 401 || response.status === 403) {
-            localStorage.removeItem(TOKEN_STORAGE_KEY);
-            leadsList.innerHTML = '<div class="empty-leads">❌ Token ungültig.</div>';
-            return;
-        }
+        const response = await apiRequest('/leads');
         const result = await response.json();
         if (result.success) {
             displayLeads(result.data);
@@ -404,7 +619,11 @@ async function loadLeads() {
             leadsList.innerHTML = `<div class="empty-leads">❌ Fehler: ${result.error}</div>`;
         }
     } catch (error) {
-        leadsList.innerHTML = `<div class="empty-leads">❌ Fehler: ${error.message}</div>`;
+        if (error.message.includes('Nicht eingeloggt')) {
+            showLogin();
+        } else {
+            leadsList.innerHTML = `<div class="empty-leads">❌ Fehler: ${error.message}</div>`;
+        }
     }
 }
 
@@ -421,13 +640,13 @@ function displayLeads(leads) {
         html += `
             <div class="lead-card">
                 <div class="header">
-                    <span class="name">${lead.firstName || ''} ${lead.lastName || ''}</span>
+                    <span class="name">${lead.first_name || ''} ${lead.last_name || ''}</span>
                     <span class="company">${lead.company || 'Keine Firma'}</span>
                 </div>
                 <div class="details">${lead.position || 'Keine Position'} ${lead.email ? '· ✉️ ' + lead.email : ''} ${lead.phone ? '· 📞 ' + lead.phone : ''}</div>
-                ${lead.address?.street || lead.address?.zip || lead.address?.city ? `<div class="details">📍 ${lead.address?.street || ''}${lead.address?.zip ? ', ' + lead.address.zip : ''}${lead.address?.city ? ' ' + lead.address.city : ''}</div>` : ''}
+                ${lead.street || lead.zip || lead.city ? `<div class="details">📍 ${lead.street || ''}${lead.zip ? ', ' + lead.zip : ''}${lead.city ? ' ' + lead.city : ''}</div>` : ''}
                 ${lead.interests?.length ? `<div class="details">🏷️ ${lead.interests.join(', ')}</div>` : ''}
-                <div class="meta">🕐 ${lead.timestamp ? new Date(lead.timestamp).toLocaleString() : ''} ${hasQuestionnaire ? ' 📝 Fragebogen ausgefüllt' : ''}</div>
+                <div class="meta">🕐 ${lead.created_at ? new Date(lead.created_at).toLocaleString() : ''} ${hasQuestionnaire ? ' 📝 Fragebogen ausgefüllt' : ''}</div>
                 <div class="actions">
                     <button class="edit" onclick="editLead('${lead.id}')">✏️ Bearbeiten</button>
                     <button class="questionnaire" onclick="openQuestionnaire('${lead.id}')">📝 Fragebogen</button>
@@ -442,8 +661,7 @@ function displayLeads(leads) {
 async function deleteLead(id) {
     if (!confirm('Lead wirklich löschen?')) return;
     try {
-        const token = getAuthToken();
-        const response = await fetch(`${LEADS_URL}/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+        const response = await apiRequest(`/leads/${id}`, { method: 'DELETE' });
         const result = await response.json();
         if (result.success) loadLeads();
         else alert('Fehler beim Löschen: ' + result.error);
@@ -452,8 +670,7 @@ async function deleteLead(id) {
 
 async function editLead(id) {
     try {
-        const token = getAuthToken();
-        const response = await fetch(LEADS_URL, { headers: { 'Authorization': `Bearer ${token}` } });
+        const response = await apiRequest('/leads');
         const result = await response.json();
         if (result.success) {
             const lead = result.data.find(l => l.id === id);
@@ -469,10 +686,8 @@ async function saveLeadManually() {
         return;
     }
     try {
-        const token = getAuthToken();
-        const response = await fetch(LEADS_URL, {
+        const response = await apiRequest('/leads', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ lead: leadData })
         });
         const result = await response.json();
@@ -488,8 +703,7 @@ async function openQuestionnaire(leadId) {
     currentLeadId = leadId;
     questionnaireContainer.style.display = 'block';
     try {
-        const token = getAuthToken();
-        const response = await fetch(`${QUESTIONNAIRE_URL}/${leadId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const response = await apiRequest(`/questionnaire/${leadId}`);
         const result = await response.json();
         if (result.success) {
             questionnaireLeadName.textContent = result.data.leadName || 'Unbekannt';
@@ -522,10 +736,8 @@ async function saveQuestionnaire() {
         if (el) answers[q.id] = el.value;
     });
     try {
-        const token = getAuthToken();
-        const response = await fetch(`${QUESTIONNAIRE_URL}/${currentLeadId}`, {
+        const response = await apiRequest(`/questionnaire/${currentLeadId}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ answers })
         });
         const result = await response.json();
@@ -544,13 +756,7 @@ function closeQuestionnaire() {
 // ============================================================
 async function exportCSV() {
     try {
-        const token = getAuthToken();
-        const response = await fetch(EXPORT_URL, { headers: { 'Authorization': `Bearer ${token}` } });
-        if (response.status === 401 || response.status === 403) {
-            localStorage.removeItem(TOKEN_STORAGE_KEY);
-            alert('❌ Token ungültig.');
-            return;
-        }
+        const response = await apiRequest('/export/csv');
         if (!response.ok) {
             const error = await response.json();
             alert('❌ Fehler beim Export: ' + (error.error || response.status));
@@ -568,13 +774,11 @@ async function exportCSV() {
     } catch (error) { alert('❌ Fehler beim Export: ' + error.message); }
 }
 
-// CSV-Import (lokale Datei)
 importCsvBtn.addEventListener('click', () => { csvFileInput.click(); });
 
 csvFileInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
     if (!file.name.endsWith('.csv')) {
         alert('❌ Bitte wähle eine CSV-Datei aus.');
         csvFileInput.value = '';
@@ -585,44 +789,32 @@ csvFileInput.addEventListener('change', async (e) => {
         csvFileInput.value = '';
         return;
     }
-    
-    if (!confirm(`📥 Möchtest du die Datei "${file.name}" wirklich importieren?\n\nBestehende Leads mit gleicher ID werden überschrieben.`)) {
+    if (!confirm(`📥 Möchtest du die Datei "${file.name}" wirklich importieren?`)) {
         csvFileInput.value = '';
         return;
     }
-    
     try {
-        const token = getAuthToken();
         const formData = new FormData();
         formData.append('file', file);
-        
         setStatus('📥 Importiere CSV...', true);
         importCsvBtn.disabled = true;
         
-        const response = await fetch(IMPORT_URL, {
+        const token = getToken();
+        const response = await fetch(`${API_URL}/import/csv`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` },
             body: formData
         });
-        
-        if (response.status === 401 || response.status === 403) {
-            localStorage.removeItem(TOKEN_STORAGE_KEY);
-            throw new Error('❌ Authentifizierung fehlgeschlagen.');
-        }
-        
         const result = await response.json();
-        
         if (result.success) {
-            alert(`✅ Import erfolgreich!\n\n📥 ${result.imported} neue Leads\n🔄 ${result.updated} aktualisiert\n📊 ${result.total} insgesamt`);
+            alert(`✅ Import erfolgreich!\n📥 ${result.imported} neue Leads\n🔄 ${result.updated} aktualisiert`);
             loadLeads();
             clearForm();
         } else {
             throw new Error(result.error || 'Unbekannter Fehler');
         }
-        
     } catch (error) {
         alert('❌ Fehler beim Import: ' + error.message);
-        console.error('Import-Fehler:', error);
     } finally {
         setStatus('', false);
         importCsvBtn.disabled = false;
@@ -633,35 +825,20 @@ csvFileInput.addEventListener('change', async (e) => {
 // Dropbox-Import
 importDropboxBtn.addEventListener('click', async () => {
     if (!confirm('☁️ Möchtest du die neueste CSV aus Dropbox importieren?')) return;
-    
     try {
-        const token = getAuthToken();
         setStatus('☁️ Lade aus Dropbox...', true);
         importDropboxBtn.disabled = true;
-        
-        const response = await fetch(DROPBOX_IMPORT_URL, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (response.status === 401 || response.status === 403) {
-            localStorage.removeItem(TOKEN_STORAGE_KEY);
-            throw new Error('❌ Authentifizierung fehlgeschlagen.');
-        }
-        
+        const response = await apiRequest('/import/dropbox', { method: 'POST' });
         const result = await response.json();
-        
         if (result.success) {
-            alert(`☁️ Dropbox-Import erfolgreich!\n\n📥 ${result.imported} neue Leads\n🔄 ${result.updated} aktualisiert\n📁 Datei: ${result.file || 'Unbekannt'}`);
+            alert(`☁️ Dropbox-Import erfolgreich!\n📥 ${result.imported} neue Leads\n🔄 ${result.updated} aktualisiert`);
             loadLeads();
             clearForm();
         } else {
             throw new Error(result.error || 'Unbekannter Fehler');
         }
-        
     } catch (error) {
         alert('❌ Fehler beim Dropbox-Import: ' + error.message);
-        console.error('Dropbox-Import-Fehler:', error);
     } finally {
         setStatus('', false);
         importDropboxBtn.disabled = false;
@@ -673,22 +850,8 @@ importDropboxBtn.addEventListener('click', async () => {
 // ============================================================
 async function loadHistogram(year = 'alle') {
     try {
-        const token = localStorage.getItem(TOKEN_STORAGE_KEY);
-        if (!token) {
-            histogramEmpty.style.display = 'block';
-            histogramEmpty.textContent = '🔐 Bitte zuerst Token eingeben.';
-            histogram.style.display = 'none';
-            return;
-        }
-        const url = year === 'alle' ? STATS_URL : `${STATS_URL}?year=${year}`;
-        const response = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
-        if (response.status === 401 || response.status === 403) {
-            localStorage.removeItem(TOKEN_STORAGE_KEY);
-            histogramEmpty.style.display = 'block';
-            histogramEmpty.textContent = '❌ Token ungültig.';
-            histogram.style.display = 'none';
-            return;
-        }
+        const url = year === 'alle' ? '/stats/daily' : `/stats/daily?year=${year}`;
+        const response = await apiRequest(url);
         const result = await response.json();
         if (!result.success) throw new Error(result.error || 'Unbekannter Fehler');
         updateYearSelect(result.availableYears || []);
@@ -733,17 +896,14 @@ function renderHistogram(data, totalLeads) {
         const wrapper = document.createElement('div');
         wrapper.className = 'bar-wrapper';
         wrapper.style.height = `${Math.max(height + 14, 18)}px`;
-        
         const valueLabel = document.createElement('div');
         valueLabel.className = 'bar-value';
         valueLabel.textContent = item.count;
         wrapper.appendChild(valueLabel);
-        
         const fill = document.createElement('div');
         fill.className = 'bar-fill';
         fill.style.height = `${height}px`;
         wrapper.appendChild(fill);
-        
         wrapper.title = `${item.date}: ${item.count} Lead(s)`;
         wrapper.addEventListener('click', () => alert(`Am ${item.date} wurden ${item.count} Leads erfasst.`));
         wrapper.addEventListener('mouseenter', () => {
@@ -790,24 +950,6 @@ async function handleImage(file) {
 }
 
 // ============================================================
-// BACKEND-VERBINDUNG
-// ============================================================
-async function checkConnection() {
-    try {
-        const response = await fetch('https://leadcapture-backend.onrender.com/api/health');
-        if (response.ok) {
-            connectionStatus.textContent = '✅ Verbunden';
-            connectionStatus.style.background = '#48bb78';
-            serverUrlDisplay.textContent = '🔗 Server: leadcapture-backend.onrender.com';
-        } else throw new Error('Server antwortet nicht korrekt');
-    } catch (error) {
-        connectionStatus.textContent = '⚠️ Offline';
-        connectionStatus.style.background = '#ed8936';
-        serverUrlDisplay.textContent = '🔗 Server: nicht erreichbar';
-    }
-}
-
-// ============================================================
 // EVENT LISTENER
 // ============================================================
 uploadArea.addEventListener('click', () => fileInput.click());
@@ -818,7 +960,6 @@ uploadArea.addEventListener('dragleave', () => { uploadArea.style.borderColor = 
 uploadArea.addEventListener('drop', (e) => { e.preventDefault(); uploadArea.style.borderColor = '#cbd5e0'; uploadArea.style.background = '#f7fafc'; if (e.dataTransfer.files.length > 0) handleImage(e.dataTransfer.files[0]); });
 clearBtn.addEventListener('click', clearForm);
 saveBtn.addEventListener('click', saveLeadManually);
-resetTokenBtn.addEventListener('click', resetToken);
 refreshLeadsBtn.addEventListener('click', loadLeads);
 exportCsvBtn.addEventListener('click', exportCSV);
 closeQuestionnaireBtn.addEventListener('click', closeQuestionnaire);
@@ -826,7 +967,6 @@ saveQuestionnaireBtn.addEventListener('click', saveQuestionnaire);
 toggleHistogramBtn.addEventListener('click', toggleHistogram);
 refreshHistogramBtn.addEventListener('click', () => loadHistogram(yearSelect.value));
 yearSelect.addEventListener('change', () => loadHistogram(yearSelect.value));
-connectionStatus.addEventListener('dblclick', resetToken);
 
 // ============================================================
 // INIT
@@ -834,11 +974,18 @@ connectionStatus.addEventListener('dblclick', resetToken);
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').then(() => console.log('✅ SW registriert')).catch(err => console.warn('⚠️ SW Fehler:', err));
 }
+
 document.addEventListener('DOMContentLoaded', () => {
     checkConnection();
-    loadLeads();
-    console.log('🚀 LeadCapture PWA mit Histogramm & Dropbox geladen');
+    const user = getUser();
+    if (user && getToken()) {
+        showApp(user);
+    } else {
+        showLogin();
+    }
+    console.log('🚀 LeadCapture PWA mit Login geladen');
 });
 </script>
+
 </body>
 </html>
