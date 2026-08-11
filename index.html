@@ -7,7 +7,6 @@
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
     <meta name="theme-color" content="#0066AA">
-    <!-- Leaflet für Karte -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         /* ===== RESET & GRUNDLAGEN ===== */
@@ -45,10 +44,14 @@
         .view-header h2 { font-size: 18px; color: #1a1a1a; }
 
         /* ===== SEARCH ===== */
-        .search-bar { display: flex; gap: 8px; margin-bottom: 12px; }
+        .search-bar { display: flex; gap: 8px; margin-bottom: 8px; }
         .search-bar input { flex: 1; padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; outline: none; }
         .search-bar input:focus { border-color: #0066AA; }
         .search-bar button { background: #0066AA; color: white; border: none; border-radius: 12px; padding: 10px 16px; font-weight: 600; cursor: pointer; }
+        .search-toolbar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+        .search-toolbar select { flex: 1; min-width: 150px; padding: 8px 10px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 13px; background: white; }
+        .search-toolbar button { padding: 8px 14px; border: none; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; background: #E8F4FD; color: #0066AA; }
+        .result-info { font-size: 12px; color: #6b7a8f; margin-bottom: 8px; }
 
         /* ===== LEAD LIST ===== */
         .lead-card { background: white; border-radius: 12px; padding: 12px; margin-bottom: 8px; border: 1px solid #eef2f7; cursor: pointer; transition: all 0.2s; }
@@ -65,24 +68,17 @@
         .lead-card mark { background: #E8F4FD; color: #0066AA; }
 
         /* ===== LEAD DETAIL MODAL ===== */
-        #leadDetailOverlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); z-index: 1000;
-            display: none; justify-content: center; align-items: center; padding: 16px;
-        }
+        #leadDetailOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: none; justify-content: center; align-items: center; padding: 16px; }
         #leadDetailOverlay.active { display: flex; }
-        #leadDetailModal {
-            background: white; max-width: 440px; width: 100%; max-height: 90vh;
-            border-radius: 20px; padding: 20px; overflow-y: auto; position: relative;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-        }
+        #leadDetailModal { background: white; max-width: 440px; width: 100%; max-height: 90vh; border-radius: 20px; padding: 20px; overflow-y: auto; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
         #leadDetailModal .close-btn { position: absolute; top: 12px; right: 16px; background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7a8f; }
-        #leadDetailModal .detail-name { font-size: 22px; font-weight: 700; color: #1a1a1a; }
+        #leadDetailModal .detail-name { font-size: 22px; font-weight: 700; color: #1a1a1a; padding-right: 28px; }
         #leadDetailModal .detail-company { font-size: 16px; color: #0066AA; font-weight: 500; margin-bottom: 4px; }
         #leadDetailModal .detail-position { font-size: 14px; color: #4a5568; margin-bottom: 8px; }
         #leadDetailModal .detail-section { margin: 12px 0; }
         #leadDetailModal .detail-section .label { font-size: 11px; text-transform: uppercase; color: #6b7a8f; font-weight: 600; letter-spacing: 0.5px; }
         #leadDetailModal .detail-section .value { font-size: 15px; color: #1a1a1a; margin-top: 2px; word-break: break-word; }
+        #leadDetailModal .detail-section .value a { color: #0066AA; }
         #leadDetailModal .detail-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; padding-top: 16px; border-top: 1px solid #eef2f7; }
         #leadDetailModal .detail-actions .btn { flex: 1; min-width: 60px; padding: 8px 0; border: none; border-radius: 10px; font-weight: 600; font-size: 12px; cursor: pointer; text-align: center; }
         #leadDetailModal .detail-actions .btn-phone { background: #22c55e; color: white; }
@@ -101,6 +97,7 @@
         .form-group input, .form-group select, .form-group textarea { padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 14px; background: white; width: 100%; }
         .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #0066AA; }
         .form-group textarea { resize: vertical; min-height: 50px; }
+        .form-section-title { font-size: 12px; font-weight: 700; color: #0066AA; text-transform: uppercase; letter-spacing: 0.5px; margin: 16px 0 4px 0; grid-column: span 2; border-top: 1px solid #eef2f7; padding-top: 12px; }
 
         .btn { padding: 10px 20px; border: none; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; flex: 1; min-width: 80px; }
         .btn-primary { background: #0066AA; color: white; }
@@ -108,7 +105,6 @@
         .btn-secondary { background: #E8F4FD; color: #0066AA; }
         .btn-success { background: #22c55e; color: white; }
         .btn-danger { background: #dc2626; color: white; }
-        .btn-outline { background: transparent; color: #0066AA; border: 2px solid #0066AA; }
         .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
 
         /* ===== FRAGEBOGEN ===== */
@@ -121,6 +117,13 @@
         .questionnaire-answer { margin-bottom: 10px; }
         .questionnaire-answer label { font-weight: 600; font-size: 13px; color: #1a1a1a; display: block; margin-bottom: 2px; }
         .questionnaire-answer textarea, .questionnaire-answer select, .questionnaire-answer input { width: 100%; padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 14px; }
+
+        /* Fragebogen-Block direkt in der Scan-Ansicht */
+        .scan-questionnaire { background: #f8fafc; border: 1px solid #eef2f7; border-radius: 12px; padding: 12px; margin: 12px 0; }
+        .scan-questionnaire .sq-head { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+        .scan-questionnaire .sq-head label { font-size: 12px; font-weight: 700; color: #0066AA; text-transform: uppercase; letter-spacing: 0.5px; }
+        .scan-questionnaire select.sq-select { flex: 1; min-width: 150px; padding: 8px 10px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 13px; background: white; }
+        .scan-questionnaire .sq-empty { font-size: 12px; color: #a0aec0; text-align: center; padding: 8px; }
 
         /* ===== HISTOGRAMM ===== */
         .histogram-controls { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
@@ -156,7 +159,8 @@
         .map-controls button { padding: 6px 14px; border: none; border-radius: 8px; font-size: 12px; cursor: pointer; background: #E8F4FD; color: #0066AA; }
         .map-controls select { padding: 6px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 12px; background: white; }
         .map-hint { margin-top: 8px; font-size: 12px; color: #6b7a8f; text-align: center; }
-        .map-warn { margin-top: 6px; font-size: 12px; color: #b45309; background: #fef3c7; padding: 6px 10px; border-radius: 8px; text-align: center; display: none; }
+        .map-warn { margin-top: 6px; font-size: 12px; color: #b45309; background: #fef3c7; padding: 8px 10px; border-radius: 8px; text-align: center; display: none; }
+        .map-warn button { margin-top: 6px; padding: 6px 14px; border: none; border-radius: 8px; background: #0066AA; color: white; font-size: 12px; cursor: pointer; }
 
         /* ===== RESPONSIVE ===== */
         @media (max-width: 400px) { .grid-card { padding: 12px; } .grid-card .icon { font-size: 28px; } .grid-card .label { font-size: 12px; } }
@@ -185,7 +189,7 @@
     <div id="loginContainer">
         <div id="loginFormContainer">
             <h2 style="font-size:20px; color:#1a1a1a; margin-bottom:16px;">🔐 Anmelden</h2>
-            <form class="login-form" id="loginForm" style="display:flex; flex-direction:column; gap:10px;">
+            <form id="loginForm" style="display:flex; flex-direction:column; gap:10px;">
                 <input type="email" id="loginEmail" placeholder="E-Mail" style="padding:12px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:15px;">
                 <input type="password" id="loginPassword" placeholder="Passwort" style="padding:12px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:15px;">
                 <div class="error" id="loginError"></div>
@@ -195,7 +199,7 @@
         </div>
         <div id="registerFormContainer" style="display:none;">
             <h2 style="font-size:20px; color:#1a1a1a; margin-bottom:16px;">📝 Registrieren</h2>
-            <form class="login-form" id="registerForm" style="display:flex; flex-direction:column; gap:10px;">
+            <form id="registerForm" style="display:flex; flex-direction:column; gap:10px;">
                 <input type="email" id="registerEmail" placeholder="E-Mail" style="padding:12px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:15px;">
                 <input type="password" id="registerPassword" placeholder="Passwort" style="padding:12px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:15px;">
                 <input type="text" id="registerFullName" placeholder="Vollständiger Name (optional)" style="padding:12px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:15px;">
@@ -231,17 +235,8 @@
             <div class="error" id="errorBox"></div>
             <form id="leadForm">
                 <div class="form-grid">
-                    <div class="form-group"><label for="firstName">Vorname</label><input type="text" id="firstName" placeholder="Max"></div>
-                    <div class="form-group"><label for="lastName">Nachname</label><input type="text" id="lastName" placeholder="Mustermann"></div>
-                    <div class="form-group full"><label for="company">Firma</label><input type="text" id="company" placeholder="Firma GmbH"></div>
-                    <div class="form-group full"><label for="position">Position</label><input type="text" id="position" placeholder="Geschäftsführer"></div>
-                    <div class="form-group"><label for="email">E-Mail</label><input type="email" id="email" placeholder="max@firma.de"></div>
-                    <div class="form-group"><label for="phone">Telefon</label><input type="tel" id="phone" placeholder="+49 123 456789"></div>
-                    <div class="form-group full"><label for="street">Straße</label><input type="text" id="street" placeholder="Musterstraße 1"></div>
-                    <div class="form-group"><label for="zip">PLZ</label><input type="text" id="zip" placeholder="12345"></div>
-                    <div class="form-group"><label for="city">Stadt</label><input type="text" id="city" placeholder="Berlin"></div>
-                    <div class="form-group full"><label for="interests">Interessensgebiete</label><input type="text" id="interests" placeholder="KI, Automatisierung, Cloud"></div>
-                    <div class="form-group full"><label for="visitorType">Besuchertyp</label>
+                    <div class="form-group"><label for="title">Titel</label><input type="text" id="title" placeholder="Dr."></div>
+                    <div class="form-group"><label for="visitorType">Besuchertyp</label>
                         <select id="visitorType">
                             <option value="">Bitte wählen...</option>
                             <option value="Entscheider">Entscheider</option>
@@ -251,7 +246,42 @@
                             <option value="Sonstiges">Sonstiges</option>
                         </select>
                     </div>
+                    <div class="form-group"><label for="firstName">Vorname</label><input type="text" id="firstName" placeholder="Max"></div>
+                    <div class="form-group"><label for="lastName">Nachname</label><input type="text" id="lastName" placeholder="Mustermann"></div>
+                    <div class="form-group full"><label for="company">Firma</label><input type="text" id="company" placeholder="Firma GmbH"></div>
+                    <div class="form-group full"><label for="position">Position</label><input type="text" id="position" placeholder="Geschäftsführer"></div>
+
+                    <div class="form-section-title">Kontakt</div>
+                    <div class="form-group"><label for="email">E-Mail</label><input type="email" id="email" placeholder="max@firma.de"></div>
+                    <div class="form-group"><label for="phone">Telefon</label><input type="tel" id="phone" placeholder="+49 123 456789"></div>
+                    <div class="form-group"><label for="fax">Fax</label><input type="tel" id="fax" placeholder="+49 123 456780"></div>
+                    <div class="form-group"><label for="website">Website</label><input type="url" id="website" placeholder="https://firma.de"></div>
+                    <div class="form-group full"><label for="linkedin">LinkedIn-Profil</label><input type="url" id="linkedin" placeholder="https://linkedin.com/in/..."></div>
+
+                    <div class="form-section-title">Adresse</div>
+                    <div class="form-group full"><label for="street">Straße</label><input type="text" id="street" placeholder="Musterstraße 1"></div>
+                    <div class="form-group"><label for="zip">PLZ</label><input type="text" id="zip" placeholder="12345"></div>
+                    <div class="form-group"><label for="city">Stadt</label><input type="text" id="city" placeholder="Berlin"></div>
+                    <div class="form-group"><label for="state">Bundesland</label><input type="text" id="state" placeholder="Thüringen"></div>
+                    <div class="form-group"><label for="country">Land</label><input type="text" id="country" placeholder="Deutschland"></div>
+
+                    <div class="form-section-title">Sonstiges</div>
+                    <div class="form-group full"><label for="vatId">USt-IdNr.</label><input type="text" id="vatId" placeholder="DE123456789"></div>
+                    <div class="form-group full"><label for="interests">Interessensgebiete</label><input type="text" id="interests" placeholder="KI, Automatisierung, Cloud"></div>
                 </div>
+
+                <!-- FRAGEBOGEN DIREKT BEIM SCAN -->
+                <div class="scan-questionnaire" id="scanQuestionnaire">
+                    <div class="sq-head">
+                        <label>📝 Fragebogen</label>
+                        <select class="sq-select" id="scanTemplateSelect">
+                            <option value="">Kein Fragebogen</option>
+                        </select>
+                    </div>
+                    <div id="scanQuestionnaireForm"></div>
+                    <div class="sq-empty" id="scanQuestionnaireEmpty">Wähle oben eine Vorlage, um sie direkt hier auszufüllen.</div>
+                </div>
+
                 <div class="actions">
                     <button type="button" class="btn btn-secondary" id="clearBtn">🗑️ Leeren</button>
                     <button type="button" class="btn btn-primary" id="uploadBtn">📤 Foto hochladen</button>
@@ -267,7 +297,19 @@
                 <input type="text" id="searchInput" placeholder="Name, Firma, Ort, E-Mail, Telefon...">
                 <button id="searchBtn">Suchen</button>
             </div>
-            <div id="searchResults"><div class="empty-leads">Gib einen Suchbegriff ein</div></div>
+            <div class="search-toolbar">
+                <button id="showAllBtn">📋 Alle anzeigen</button>
+                <select id="sortSelect">
+                    <option value="date_desc">🕐 Datum (neueste zuerst)</option>
+                    <option value="date_asc">🕐 Datum (älteste zuerst)</option>
+                    <option value="name_asc">🔤 Name (A → Z)</option>
+                    <option value="name_desc">🔤 Name (Z → A)</option>
+                    <option value="company_asc">🏢 Organisation (A → Z)</option>
+                    <option value="company_desc">🏢 Organisation (Z → A)</option>
+                </select>
+            </div>
+            <div class="result-info" id="searchResultInfo"></div>
+            <div id="searchResults"><div class="empty-leads">Gib einen Suchbegriff ein oder klicke „Alle anzeigen"</div></div>
         </div>
 
         <!-- VIEW: QUESTIONNAIRE -->
@@ -309,7 +351,6 @@
             <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
                 <button class="btn btn-primary" id="exportCsvBtn2">📊 CSV exportieren</button>
                 <button class="btn btn-secondary" id="importCsvBtn2">📥 CSV importieren</button>
-                <button class="btn btn-secondary" id="importDropboxBtn2" style="background:#0061FF; color:white;">☁️ Dropbox</button>
                 <input type="file" id="csvFileInput" accept=".csv" style="display:none;">
             </div>
             <div style="margin-top:12px;">
@@ -330,9 +371,14 @@
             <div class="map-warn" id="mapWarn"></div>
         </div>
 
-        <!-- VIEW: LEAD-QUESTIONNAIRE (wird bei Lead geöffnet) -->
+        <!-- VIEW: LEAD-QUESTIONNAIRE -->
         <div class="view" id="view-lead-questionnaire">
             <div class="view-header"><button class="back" data-view="main">←</button><h2>📝 Fragebogen für <span id="questionnaireLeadName"></span></h2></div>
+            <div style="display:flex; gap:8px; margin-bottom:12px; align-items:center; flex-wrap:wrap;">
+                <select id="leadTemplateSelect" style="flex:1; min-width:150px; padding:8px 10px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:13px; background:white;">
+                    <option value="">Aktive Fragen</option>
+                </select>
+            </div>
             <div id="questionnaireForm"></div>
             <div class="actions"><button class="btn btn-success" id="saveQuestionnaireBtn">💾 Antworten speichern</button></div>
         </div>
@@ -348,7 +394,9 @@
                 <div class="detail-company" id="detailCompany">—</div>
                 <div class="detail-position" id="detailPosition">—</div>
                 <div class="detail-section"><div class="label">Kontakt</div><div class="value" id="detailContact">—</div></div>
+                <div class="detail-section"><div class="label">Web</div><div class="value" id="detailWeb">—</div></div>
                 <div class="detail-section"><div class="label">Adresse</div><div class="value" id="detailAddress">—</div></div>
+                <div class="detail-section"><div class="label">USt-IdNr.</div><div class="value" id="detailVatId">—</div></div>
                 <div class="detail-section"><div class="label">Interessensgebiete</div><div class="value" id="detailInterests">—</div></div>
                 <div class="detail-section"><div class="label">Besuchertyp</div><div class="value" id="detailVisitorType">—</div></div>
                 <div class="detail-section"><div class="label">Erfasst am</div><div class="value" id="detailCreated">—</div></div>
@@ -361,17 +409,8 @@
                 <div id="detailEditMode" style="display:none; margin-top:16px; border-top:1px solid #eef2f7; padding-top:16px;">
                     <h4 style="font-size:14px; margin-bottom:8px;">✏️ Lead bearbeiten</h4>
                     <div class="form-grid">
-                        <div class="form-group"><label>Vorname</label><input type="text" id="editFirstName"></div>
-                        <div class="form-group"><label>Nachname</label><input type="text" id="editLastName"></div>
-                        <div class="form-group full"><label>Firma</label><input type="text" id="editCompany"></div>
-                        <div class="form-group full"><label>Position</label><input type="text" id="editPosition"></div>
-                        <div class="form-group"><label>E-Mail</label><input type="email" id="editEmail"></div>
-                        <div class="form-group"><label>Telefon</label><input type="tel" id="editPhone"></div>
-                        <div class="form-group full"><label>Straße</label><input type="text" id="editStreet"></div>
-                        <div class="form-group"><label>PLZ</label><input type="text" id="editZip"></div>
-                        <div class="form-group"><label>Stadt</label><input type="text" id="editCity"></div>
-                        <div class="form-group full"><label>Interessensgebiete</label><input type="text" id="editInterests"></div>
-                        <div class="form-group full"><label>Besuchertyp</label>
+                        <div class="form-group"><label>Titel</label><input type="text" id="editTitle"></div>
+                        <div class="form-group"><label>Besuchertyp</label>
                             <select id="editVisitorType">
                                 <option value="">Bitte wählen...</option>
                                 <option value="Entscheider">Entscheider</option>
@@ -381,6 +420,22 @@
                                 <option value="Sonstiges">Sonstiges</option>
                             </select>
                         </div>
+                        <div class="form-group"><label>Vorname</label><input type="text" id="editFirstName"></div>
+                        <div class="form-group"><label>Nachname</label><input type="text" id="editLastName"></div>
+                        <div class="form-group full"><label>Firma</label><input type="text" id="editCompany"></div>
+                        <div class="form-group full"><label>Position</label><input type="text" id="editPosition"></div>
+                        <div class="form-group"><label>E-Mail</label><input type="email" id="editEmail"></div>
+                        <div class="form-group"><label>Telefon</label><input type="tel" id="editPhone"></div>
+                        <div class="form-group"><label>Fax</label><input type="tel" id="editFax"></div>
+                        <div class="form-group"><label>Website</label><input type="url" id="editWebsite"></div>
+                        <div class="form-group full"><label>LinkedIn</label><input type="url" id="editLinkedin"></div>
+                        <div class="form-group full"><label>Straße</label><input type="text" id="editStreet"></div>
+                        <div class="form-group"><label>PLZ</label><input type="text" id="editZip"></div>
+                        <div class="form-group"><label>Stadt</label><input type="text" id="editCity"></div>
+                        <div class="form-group"><label>Bundesland</label><input type="text" id="editState"></div>
+                        <div class="form-group"><label>Land</label><input type="text" id="editCountry"></div>
+                        <div class="form-group full"><label>USt-IdNr.</label><input type="text" id="editVatId"></div>
+                        <div class="form-group full"><label>Interessensgebiete</label><input type="text" id="editInterests"></div>
                     </div>
                     <div class="actions"><button class="btn btn-success" id="saveEditBtn">💾 Speichern</button><button class="btn btn-secondary" id="cancelEditBtn">Abbrechen</button></div>
                 </div>
@@ -417,36 +472,26 @@ function getUser() { const u = localStorage.getItem(USER_KEY); return u ? JSON.p
 function setUser(u) { localStorage.setItem(USER_KEY, JSON.stringify(u)); }
 
 // ============================================================
-// 3. API HELPER (MIT AUTOMATISCHEM TOKEN-REFRESH)  [FIX 1]
+// 3. API HELPER (MIT AUTOMATISCHEM TOKEN-REFRESH)
 // ============================================================
-// Läuft ein Access-Token ab, wird EINMAL automatisch über
-// /auth/refresh erneuert und der Request wiederholt. Erst wenn
-// auch das fehlschlägt, wird der Nutzer ausgeloggt.
 let refreshPromise = null;
 
 async function refreshAccessToken() {
     const rt = getRefreshToken();
     if (!rt) return null;
-
-    // Parallele Requests teilen sich EINEN Refresh-Vorgang
     if (refreshPromise) return refreshPromise;
 
     refreshPromise = (async () => {
         try {
-            console.log('🔄 Access-Token abgelaufen – erneuere...');
             const res = await fetch(`${API_URL}/auth/refresh`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ refresh_token: rt })
             });
             const result = await res.json();
-            if (!res.ok || !result.success) {
-                console.warn('⚠️ Refresh fehlgeschlagen:', result.error);
-                return null;
-            }
+            if (!res.ok || !result.success) return null;
             setToken(result.data.token);
             setRefreshToken(result.data.refreshToken);
-            console.log('✅ Token erneuert');
             return result.data.token;
         } catch (err) {
             console.error('❌ Refresh-Fehler:', err);
@@ -508,7 +553,6 @@ async function register(email, password, fullName, tenantName) {
     });
     const result = await response.json();
     if (!result.success) throw new Error(result.error || 'Registrierung fehlgeschlagen');
-    // Nach erfolgreicher Registrierung ebenfalls Session speichern
     setToken(result.data.token);
     setRefreshToken(result.data.refreshToken);
     setUser(result.data.user);
@@ -516,7 +560,23 @@ async function register(email, password, fullName, tenantName) {
 }
 
 // ============================================================
-// 5. DOM-REFERENZEN
+// 5. HILFSFUNKTIONEN
+// ============================================================
+function escapeRegex(str) { return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+function escapeHtml(str) {
+    return String(str == null ? '' : str)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function normalizeUrl(url) {
+    if (!url) return '';
+    const u = String(url).trim();
+    if (!u) return '';
+    return /^https?:\/\//i.test(u) ? u : `https://${u}`;
+}
+
+// ============================================================
+// 6. DOM-REFERENZEN (Login)
 // ============================================================
 const loginContainer = document.getElementById('loginContainer');
 const appContainer = document.getElementById('appContainer');
@@ -581,7 +641,7 @@ registerForm.addEventListener('submit', async (e) => {
 });
 
 // ============================================================
-// 6. NAVIGATION
+// 7. NAVIGATION
 // ============================================================
 function showView(viewId) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -591,6 +651,7 @@ function showView(viewId) {
     if (viewId === 'map') { initMap(); loadMapData(); }
     if (viewId === 'stats') { loadHistogram(); loadLeads(); }
     if (viewId === 'questionnaire') { loadTemplates(); loadActiveTemplate(); }
+    if (viewId === 'scan') { loadTemplates(); updateScanTemplateSelect(); }
 }
 document.querySelectorAll('.grid-card').forEach(card => {
     card.addEventListener('click', () => showView(card.dataset.view));
@@ -600,7 +661,7 @@ document.querySelectorAll('.back').forEach(btn => {
 });
 
 // ============================================================
-// 7. APP ANZEIGEN / LOGOUT
+// 8. APP ANZEIGEN / LOGOUT
 // ============================================================
 function showApp(user) {
     loginContainer.style.display = 'none';
@@ -624,30 +685,26 @@ logoutBtn.addEventListener('click', () => { removeToken(); showLogin(); });
 logoutBtn2.addEventListener('click', () => { removeToken(); showLogin(); });
 
 // ============================================================
-// 8. LEADS + SUCHFUNKTION (ALLE FELDER)
+// 9. LEADS: FILTERN, SORTIEREN, ANZEIGEN
 // ============================================================
 const leadsList = document.getElementById('leadsList');
 const leadsCount = document.getElementById('leadsCount');
 const searchInput = document.getElementById('searchInput');
 const searchBtn = document.getElementById('searchBtn');
+const showAllBtn = document.getElementById('showAllBtn');
+const sortSelect = document.getElementById('sortSelect');
 const searchResults = document.getElementById('searchResults');
-
-// Verhindert, dass Sonderzeichen im Suchbegriff die Highlight-Regex zerschießen
-function escapeRegex(str) { return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
-function escapeHtml(str) {
-    return String(str == null ? '' : str)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
+const searchResultInfo = document.getElementById('searchResultInfo');
 
 function filterLeads(leads, term) {
     if (!term || term.trim() === '') return leads;
     const t = term.toLowerCase().trim();
     return leads.filter(lead => {
         const fields = [
-            lead.first_name || '', lead.last_name || '', lead.company || '',
-            lead.position || '', lead.email || '', lead.phone || '',
-            lead.street || '', lead.zip || '', lead.city || '',
+            lead.title || '', lead.first_name || '', lead.last_name || '', lead.company || '',
+            lead.position || '', lead.email || '', lead.phone || '', lead.fax || '',
+            lead.website || '', lead.linkedin || '', lead.vat_id || '',
+            lead.street || '', lead.zip || '', lead.city || '', lead.state || '', lead.country || '',
             lead.visitor_type || '',
             Array.isArray(lead.interests) ? lead.interests.join(' ') : '',
             ...Object.values(lead.questionnaire || {}).map(v => String(v))
@@ -656,7 +713,41 @@ function filterLeads(leads, term) {
     });
 }
 
-// [FIX 4] Aktionsbuttons (inkl. Löschen) direkt in der Lead-Liste
+// Sortierung: Nachname → Vorname, deutsche Umlaute korrekt (localeCompare)
+const collator = new Intl.Collator('de', { sensitivity: 'base', numeric: true });
+
+function personName(lead) {
+    return `${lead.last_name || ''} ${lead.first_name || ''}`.trim() || lead.company || '';
+}
+
+function sortLeads(leads, mode) {
+    const sorted = [...leads];
+    // Leere Werte immer ans Ende, egal ob auf- oder absteigend
+    const cmpText = (a, b, getter) => {
+        const av = (getter(a) || '').trim(), bv = (getter(b) || '').trim();
+        if (!av && !bv) return 0;
+        if (!av) return 1;
+        if (!bv) return -1;
+        return collator.compare(av, bv);
+    };
+    const cmpDate = (a, b) => {
+        const av = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const bv = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return av - bv;
+    };
+
+    switch (mode) {
+        case 'name_asc':     sorted.sort((a, b) => cmpText(a, b, personName)); break;
+        case 'name_desc':    sorted.sort((a, b) => cmpText(b, a, personName)); break;
+        case 'company_asc':  sorted.sort((a, b) => cmpText(a, b, l => l.company)); break;
+        case 'company_desc': sorted.sort((a, b) => cmpText(b, a, l => l.company)); break;
+        case 'date_asc':     sorted.sort(cmpDate); break;
+        case 'date_desc':
+        default:             sorted.sort((a, b) => cmpDate(b, a)); break;
+    }
+    return sorted;
+}
+
 function leadActionsHtml(leadId) {
     return `
         <div class="actions">
@@ -666,65 +757,110 @@ function leadActionsHtml(leadId) {
         </div>`;
 }
 
-function displayLeads(leads, searchTerm = '') {
-    const filtered = searchTerm ? filterLeads(leads, searchTerm) : leads;
-    leadsCount.textContent = searchTerm
-        ? `${filtered.length} / ${leads.length} Einträge`
-        : `${leads.length} Einträge`;
+function leadCardHtml(lead, highlight) {
+    const name = `${lead.title ? highlight(lead.title) + ' ' : ''}${highlight(lead.first_name)} ${highlight(lead.last_name)}`.trim();
+    return `
+        <div class="lead-card" onclick="openLeadDetail('${lead.id}')">
+            <div><span class="name">${name || 'Unbekannt'}</span> · <span class="company">${lead.company ? highlight(lead.company) : 'Keine Firma'}</span></div>
+            <div class="details">${lead.position ? highlight(lead.position) : 'Keine Position'} ${lead.email ? '· ✉️ ' + highlight(lead.email) : ''} ${lead.phone ? '· 📞 ' + highlight(lead.phone) : ''}</div>
+            ${lead.city ? `<div class="details">📍 ${highlight(lead.city)}${lead.country ? ', ' + highlight(lead.country) : ''}</div>` : ''}
+            <div class="meta">🕐 ${lead.created_at ? new Date(lead.created_at).toLocaleString() : ''}</div>
+            ${leadActionsHtml(lead.id)}
+        </div>`;
+}
 
+function makeHighlighter(searchTerm) {
+    return (text) => {
+        const safe = escapeHtml(text);
+        if (!searchTerm || !text) return safe;
+        const regex = new RegExp(`(${escapeRegex(searchTerm)})`, 'gi');
+        return safe.replace(regex, '<mark>$1</mark>');
+    };
+}
+
+// Liste in der Statistik-Ansicht
+function displayLeads(leads) {
+    leadsCount.textContent = `${leads.length} Einträge`;
     if (leads.length === 0) {
         leadsList.innerHTML = '<div class="empty-leads">📭 Noch keine Leads</div>';
         return;
     }
-    const highlight = (text) => {
-        const safe = escapeHtml(text);
-        if (!searchTerm || !text) return safe || '—';
-        const regex = new RegExp(`(${escapeRegex(searchTerm)})`, 'gi');
-        return safe.replace(regex, '<mark>$1</mark>');
-    };
-    leadsList.innerHTML = filtered.map(lead => `
-        <div class="lead-card" onclick="openLeadDetail('${lead.id}')">
-            <div><span class="name">${highlight(lead.first_name)} ${highlight(lead.last_name)}</span> · <span class="company">${lead.company ? highlight(lead.company) : 'Keine Firma'}</span></div>
-            <div class="details">${lead.position ? highlight(lead.position) : 'Keine Position'} ${lead.email ? '· ✉️ ' + highlight(lead.email) : ''} ${lead.phone ? '· 📞 ' + highlight(lead.phone) : ''}</div>
-            ${lead.city ? `<div class="details">📍 ${highlight(lead.city)}</div>` : ''}
-            <div class="meta">🕐 ${lead.created_at ? new Date(lead.created_at).toLocaleString() : ''}</div>
-            ${leadActionsHtml(lead.id)}
-        </div>
-    `).join('');
+    const highlight = makeHighlighter('');
+    const sorted = sortLeads(leads, 'date_desc');
+    leadsList.innerHTML = sorted.map(lead => leadCardHtml(lead, highlight)).join('');
+}
 
-    if (searchTerm) {
-        searchResults.innerHTML = filtered.length === 0
-            ? `<div class="empty-leads">🔍 Keine Leads für "${escapeHtml(searchTerm)}"</div>`
-            : filtered.map(lead => `
-                <div class="lead-card" onclick="openLeadDetail('${lead.id}')">
-                    <div><span class="name">${highlight(lead.first_name)} ${highlight(lead.last_name)}</span> · <span class="company">${lead.company ? highlight(lead.company) : 'Keine Firma'}</span></div>
-                    <div class="details">${lead.position ? highlight(lead.position) : 'Keine Position'} ${lead.email ? '· ✉️ ' + highlight(lead.email) : ''}</div>
-                    ${leadActionsHtml(lead.id)}
-                </div>
-            `).join('');
-    }
+// Ergebnisliste in der Such-Ansicht (mit Sortierung)
+let currentSearchTerm = '';
+let searchActive = false;
+
+function renderSearchResults() {
+    if (!searchActive) return;
+    const term = currentSearchTerm;
+    const filtered = term ? filterLeads(allLeads, term) : allLeads;
+    const sorted = sortLeads(filtered, sortSelect.value);
+    const highlight = makeHighlighter(term);
+
+    searchResultInfo.textContent = term
+        ? `${sorted.length} von ${allLeads.length} Leads für „${term}"`
+        : `Alle ${sorted.length} Leads`;
+
+    searchResults.innerHTML = sorted.length === 0
+        ? `<div class="empty-leads">🔍 Keine Leads gefunden</div>`
+        : sorted.map(lead => leadCardHtml(lead, highlight)).join('');
 }
 
 async function loadLeads() {
     try {
         const response = await apiRequest('/leads');
         const result = await response.json();
-        if (result.success) { allLeads = result.data; displayLeads(allLeads); }
-    } catch (error) { if (error.message.includes('Nicht eingeloggt')) showLogin(); else console.error(error); }
+        if (result.success) {
+            allLeads = result.data;
+            displayLeads(allLeads);
+            renderSearchResults();
+        }
+    } catch (error) {
+        if (error.message.includes('Nicht eingeloggt')) showLogin();
+        else console.error(error);
+    }
 }
-searchBtn.addEventListener('click', async () => {
-    const term = searchInput.value.trim();
-    if (!term) { searchResults.innerHTML = '<div class="empty-leads">🔍 Gib einen Suchbegriff ein</div>'; return; }
+
+async function runSearch(term) {
+    currentSearchTerm = term;
+    searchActive = true;
     try {
         const response = await apiRequest('/leads');
         const result = await response.json();
-        if (result.success) { allLeads = result.data; displayLeads(result.data, term); }
+        if (result.success) {
+            allLeads = result.data;
+            renderSearchResults();
+        }
     } catch (error) { console.error(error); }
+}
+
+searchBtn.addEventListener('click', () => {
+    const term = searchInput.value.trim();
+    if (!term) {
+        searchResults.innerHTML = '<div class="empty-leads">🔍 Gib einen Suchbegriff ein oder klicke „Alle anzeigen"</div>';
+        searchResultInfo.textContent = '';
+        searchActive = false;
+        return;
+    }
+    runSearch(term);
 });
 searchInput.addEventListener('keyup', (e) => { if (e.key === 'Enter') searchBtn.click(); });
 
+// „Alle anzeigen": leert das Suchfeld und listet den gesamten Bestand
+showAllBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    runSearch('');
+});
+
+// Sortierung ändert nur die Darstellung – kein neuer Request nötig
+sortSelect.addEventListener('change', renderSearchResults);
+
 // ============================================================
-// 9. LEAD DETAIL
+// 10. LEAD DETAIL
 // ============================================================
 const detailOverlay = document.getElementById('leadDetailOverlay');
 
@@ -732,11 +868,30 @@ function openLeadDetail(leadId) {
     const lead = allLeads.find(l => l.id === leadId);
     if (!lead) return;
     currentLeadDetail = lead;
-    document.getElementById('detailName').textContent = `${lead.first_name || ''} ${lead.last_name || ''}`.trim() || 'Unbekannt';
+
+    const fullName = `${lead.title || ''} ${lead.first_name || ''} ${lead.last_name || ''}`.replace(/\s+/g, ' ').trim();
+    document.getElementById('detailName').textContent = fullName || 'Unbekannt';
     document.getElementById('detailCompany').textContent = lead.company || 'Keine Firma';
     document.getElementById('detailPosition').textContent = lead.position || 'Keine Position';
-    document.getElementById('detailContact').textContent = `${lead.email ? '✉️ ' + lead.email : ''}${lead.email && lead.phone ? ' · ' : ''}${lead.phone ? '📞 ' + lead.phone : ''}` || '—';
-    document.getElementById('detailAddress').textContent = `${lead.street || ''}${lead.street ? ', ' : ''}${lead.zip || ''}${lead.zip ? ' ' : ''}${lead.city || ''}`.trim() || '—';
+
+    const contactParts = [];
+    if (lead.email) contactParts.push(`✉️ ${escapeHtml(lead.email)}`);
+    if (lead.phone) contactParts.push(`📞 ${escapeHtml(lead.phone)}`);
+    if (lead.fax) contactParts.push(`📠 ${escapeHtml(lead.fax)}`);
+    document.getElementById('detailContact').innerHTML = contactParts.join(' · ') || '—';
+
+    const webParts = [];
+    if (lead.website) webParts.push(`🌐 <a href="${escapeHtml(normalizeUrl(lead.website))}" target="_blank" rel="noopener">${escapeHtml(lead.website)}</a>`);
+    if (lead.linkedin) webParts.push(`💼 <a href="${escapeHtml(normalizeUrl(lead.linkedin))}" target="_blank" rel="noopener">LinkedIn-Profil</a>`);
+    document.getElementById('detailWeb').innerHTML = webParts.join('<br>') || '—';
+
+    const addrLine1 = lead.street || '';
+    const addrLine2 = [lead.zip, lead.city].filter(Boolean).join(' ');
+    const addrLine3 = [lead.state, lead.country].filter(Boolean).join(', ');
+    const addrHtml = [addrLine1, addrLine2, addrLine3].filter(Boolean).map(escapeHtml).join('<br>');
+    document.getElementById('detailAddress').innerHTML = addrHtml || '—';
+
+    document.getElementById('detailVatId').textContent = lead.vat_id || '—';
     document.getElementById('detailInterests').textContent = lead.interests?.length ? lead.interests.join(', ') : '—';
     document.getElementById('detailVisitorType').textContent = lead.visitor_type || '—';
     document.getElementById('detailCreated').textContent = lead.created_at ? new Date(lead.created_at).toLocaleString() : '—';
@@ -755,43 +910,64 @@ function openLeadDetail(leadId) {
     document.getElementById('detailEditBtn').onclick = () => {
         document.getElementById('detailEditMode').style.display = 'block';
         document.getElementById('detailEditBtn').style.display = 'none';
-        document.getElementById('editFirstName').value = lead.first_name || '';
-        document.getElementById('editLastName').value = lead.last_name || '';
-        document.getElementById('editCompany').value = lead.company || '';
-        document.getElementById('editPosition').value = lead.position || '';
-        document.getElementById('editEmail').value = lead.email || '';
-        document.getElementById('editPhone').value = lead.phone || '';
-        document.getElementById('editStreet').value = lead.street || '';
-        document.getElementById('editZip').value = lead.zip || '';
-        document.getElementById('editCity').value = lead.city || '';
-        document.getElementById('editInterests').value = lead.interests?.join(', ') || '';
-        document.getElementById('editVisitorType').value = lead.visitor_type || '';
+        const set = (id, val) => { document.getElementById(id).value = val || ''; };
+        set('editTitle', lead.title);
+        set('editFirstName', lead.first_name);
+        set('editLastName', lead.last_name);
+        set('editCompany', lead.company);
+        set('editPosition', lead.position);
+        set('editEmail', lead.email);
+        set('editPhone', lead.phone);
+        set('editFax', lead.fax);
+        set('editWebsite', lead.website);
+        set('editLinkedin', lead.linkedin);
+        set('editStreet', lead.street);
+        set('editZip', lead.zip);
+        set('editCity', lead.city);
+        set('editState', lead.state);
+        set('editCountry', lead.country);
+        set('editVatId', lead.vat_id);
+        set('editInterests', lead.interests?.join(', '));
+        set('editVisitorType', lead.visitor_type);
     };
+
     document.getElementById('saveEditBtn').onclick = async () => {
+        const val = (id) => document.getElementById(id).value.trim();
         const updated = {
-            firstName: document.getElementById('editFirstName').value,
-            lastName: document.getElementById('editLastName').value,
-            company: document.getElementById('editCompany').value,
-            position: document.getElementById('editPosition').value,
-            email: document.getElementById('editEmail').value,
-            phone: document.getElementById('editPhone').value,
+            title: val('editTitle'),
+            firstName: val('editFirstName'),
+            lastName: val('editLastName'),
+            company: val('editCompany'),
+            position: val('editPosition'),
+            email: val('editEmail'),
+            phone: val('editPhone'),
+            fax: val('editFax'),
+            website: val('editWebsite'),
+            linkedin: val('editLinkedin'),
+            vatId: val('editVatId'),
             address: {
-                street: document.getElementById('editStreet').value,
-                zip: document.getElementById('editZip').value,
-                city: document.getElementById('editCity').value
+                street: val('editStreet'),
+                zip: val('editZip'),
+                city: val('editCity'),
+                state: val('editState'),
+                country: val('editCountry')
             },
-            interests: document.getElementById('editInterests').value.split(',').map(s => s.trim()).filter(Boolean),
-            visitorType: document.getElementById('editVisitorType').value
+            interests: val('editInterests').split(',').map(s => s.trim()).filter(Boolean),
+            visitorType: val('editVisitorType')
         };
         try {
-            await apiRequest(`/leads/${lead.id}`, { method: 'PUT', body: JSON.stringify({ lead: updated }) });
+            const res = await apiRequest(`/leads/${lead.id}`, { method: 'PUT', body: JSON.stringify({ lead: updated }) });
+            const result = await res.json();
             await loadLeads();
             document.getElementById('detailEditMode').style.display = 'none';
             document.getElementById('detailEditBtn').style.display = 'block';
             openLeadDetail(lead.id);
-            alert('✅ Lead aktualisiert!');
+            alert(result.geocoding
+                ? '✅ Lead aktualisiert! Die neue Adresse wird im Hintergrund verortet.'
+                : '✅ Lead aktualisiert!');
         } catch (error) { alert('❌ Fehler: ' + error.message); }
     };
+
     document.getElementById('cancelEditBtn').onclick = () => {
         document.getElementById('detailEditMode').style.display = 'none';
         document.getElementById('detailEditBtn').style.display = 'block';
@@ -812,16 +988,12 @@ async function deleteLead(id) {
         await apiRequest(`/leads/${id}`, { method: 'DELETE' });
         detailOverlay.classList.remove('active');
         await loadLeads();
-        // Suchergebnisse mit aktuellem Suchbegriff neu rendern
-        const term = searchInput.value.trim();
-        if (term) displayLeads(allLeads, term);
         if (mapInstance) loadMapData();
-    }
-    catch (error) { alert('❌ Fehler: ' + error.message); }
+    } catch (error) { alert('❌ Fehler: ' + error.message); }
 }
 
 // ============================================================
-// 10. BILDVERARBEITUNG (SCAN)
+// 11. SCAN: FORMULARFELDER
 // ============================================================
 const fileInput = document.getElementById('fileInput');
 const uploadArea = document.getElementById('uploadArea');
@@ -831,41 +1003,123 @@ const statusDiv = document.getElementById('status');
 const statusText = document.getElementById('statusText');
 const errorBox = document.getElementById('errorBox');
 
-function showError(msg) { errorBox.textContent = msg; errorBox.style.display = 'block'; setTimeout(() => errorBox.style.display = 'none', 5000); }
+function showError(msg) { errorBox.textContent = msg; errorBox.style.display = 'block'; setTimeout(() => errorBox.style.display = 'none', 6000); }
 function setStatus(msg, show) { statusText.textContent = msg; statusDiv.style.display = show ? 'flex' : 'none'; }
 
+const fields = {
+    title: document.getElementById('title'),
+    firstName: document.getElementById('firstName'),
+    lastName: document.getElementById('lastName'),
+    company: document.getElementById('company'),
+    position: document.getElementById('position'),
+    email: document.getElementById('email'),
+    phone: document.getElementById('phone'),
+    fax: document.getElementById('fax'),
+    website: document.getElementById('website'),
+    linkedin: document.getElementById('linkedin'),
+    street: document.getElementById('street'),
+    zip: document.getElementById('zip'),
+    city: document.getElementById('city'),
+    state: document.getElementById('state'),
+    country: document.getElementById('country'),
+    vatId: document.getElementById('vatId'),
+    interests: document.getElementById('interests'),
+    visitorType: document.getElementById('visitorType')
+};
+
+function fillForm(data) {
+    fields.title.value = data.title || '';
+    fields.firstName.value = data.first_name || data.firstName || '';
+    fields.lastName.value = data.last_name || data.lastName || '';
+    fields.company.value = data.company || '';
+    fields.position.value = data.position || '';
+    fields.email.value = data.email || '';
+    fields.phone.value = data.phone || '';
+    fields.fax.value = data.fax || '';
+    fields.website.value = data.website || '';
+    fields.linkedin.value = data.linkedin || '';
+    fields.street.value = data.street || data.address?.street || '';
+    fields.zip.value = data.zip || data.address?.zip || '';
+    fields.city.value = data.city || data.address?.city || '';
+    fields.state.value = data.state || data.address?.state || '';
+    fields.country.value = data.country || data.address?.country || '';
+    fields.vatId.value = data.vat_id || data.vatId || '';
+    fields.interests.value = Array.isArray(data.interests) ? data.interests.join(', ') : '';
+    fields.visitorType.value = data.visitor_type || data.visitorType || '';
+}
+
+function collectFormLead() {
+    return {
+        title: fields.title.value.trim(),
+        firstName: fields.firstName.value.trim(),
+        lastName: fields.lastName.value.trim(),
+        company: fields.company.value.trim(),
+        position: fields.position.value.trim(),
+        email: fields.email.value.trim(),
+        phone: fields.phone.value.trim(),
+        fax: fields.fax.value.trim(),
+        website: fields.website.value.trim(),
+        linkedin: fields.linkedin.value.trim(),
+        vatId: fields.vatId.value.trim(),
+        address: {
+            street: fields.street.value.trim(),
+            zip: fields.zip.value.trim(),
+            city: fields.city.value.trim(),
+            state: fields.state.value.trim(),
+            country: fields.country.value.trim()
+        },
+        interests: fields.interests.value.split(',').map(s => s.trim()).filter(Boolean),
+        visitorType: fields.visitorType.value
+    };
+}
+
+function clearForm() {
+    Object.values(fields).forEach(f => f.value = '');
+    previewContainer.style.display = 'none';
+    previewImage.src = '';
+    fileInput.value = '';
+    statusDiv.style.display = 'none';
+    errorBox.style.display = 'none';
+    document.getElementById('scanTemplateSelect').value = '';
+    renderScanQuestionnaire();
+}
+document.getElementById('clearBtn').addEventListener('click', clearForm);
+
+// ============================================================
+// 12. SCAN: BILDVERARBEITUNG
+// ============================================================
+// WICHTIG: process-image wird mit save:false aufgerufen. Der Lead
+// wird erst beim Klick auf "Speichern" angelegt – zusammen mit den
+// Fragebogen-Antworten. Das verhindert doppelte Leads.
 async function handleImage(file) {
     if (!file) return;
-    // PDF wird vom Backend ebenfalls unterstützt
     const isImage = file.type.startsWith('image/');
     const isPdf = file.type === 'application/pdf';
     if (!isImage && !isPdf) { showError('Bitte wähle ein Bild (JPG, PNG) oder ein PDF.'); return; }
     if (file.size > 10 * 1024 * 1024) { showError('Datei zu groß (max 10MB).'); return; }
+
     const reader = new FileReader();
     reader.onload = async (e) => {
         const base64Image = e.target.result;
         if (isImage) { previewImage.src = base64Image; previewContainer.style.display = 'block'; }
-        else { previewContainer.style.display = 'none'; }
+        else previewContainer.style.display = 'none';
+
         setStatus('OCR läuft, danach DeepSeek-Analyse...', true);
         try {
-            const response = await apiRequest('/process-image', { method: 'POST', body: JSON.stringify({ image: base64Image }) });
+            const response = await apiRequest('/process-image', {
+                method: 'POST',
+                body: JSON.stringify({ image: base64Image, save: false })
+            });
             const result = await response.json();
-            if (result.success) {
-                const leadId = result.saved.id;
-                fillForm(result.data);
-                setStatus('✅ Lead erfasst!', true);
-                setTimeout(() => setStatus('', false), 2000);
-                await loadLeads();
-                if (getActiveQuestions().length > 0) {
-                    setTimeout(() => {
-                        if (confirm('📝 Möchtest du den Fragebogen für diesen Lead ausfüllen?')) {
-                            openLeadQuestionnaire(leadId);
-                        }
-                    }, 500);
-                }
-            } else throw new Error(result.error || 'Unbekannter Fehler');
-        } catch (error) { showError('Parsing fehlgeschlagen: ' + error.message); setStatus('', false); }
-        finally { setStatus('', false); }
+            if (!result.success) throw new Error(result.error || 'Unbekannter Fehler');
+
+            fillForm(result.data);
+            setStatus('✅ Karte ausgelesen – bitte prüfen und speichern.', true);
+            setTimeout(() => setStatus('', false), 2500);
+        } catch (error) {
+            showError('Parsing fehlgeschlagen: ' + error.message);
+            setStatus('', false);
+        }
     };
     reader.onerror = () => showError('Fehler beim Lesen der Datei.');
     reader.readAsDataURL(file);
@@ -874,78 +1128,145 @@ uploadArea.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', (e) => { if (e.target.files.length > 0) handleImage(e.target.files[0]); });
 document.getElementById('uploadBtn').addEventListener('click', () => fileInput.click());
 
-const fields = {
-    firstName: document.getElementById('firstName'),
-    lastName: document.getElementById('lastName'),
-    company: document.getElementById('company'),
-    position: document.getElementById('position'),
-    email: document.getElementById('email'),
-    phone: document.getElementById('phone'),
-    street: document.getElementById('street'),
-    zip: document.getElementById('zip'),
-    city: document.getElementById('city'),
-    interests: document.getElementById('interests'),
-    visitorType: document.getElementById('visitorType')
-};
-function fillForm(data) {
-    fields.firstName.value = data.first_name || data.firstName || '';
-    fields.lastName.value = data.last_name || data.lastName || '';
-    fields.company.value = data.company || '';
-    fields.position.value = data.position || '';
-    fields.email.value = data.email || '';
-    fields.phone.value = data.phone || '';
-    fields.street.value = data.street || data.address?.street || '';
-    fields.zip.value = data.zip || data.address?.zip || '';
-    fields.city.value = data.city || data.address?.city || '';
-    fields.interests.value = Array.isArray(data.interests) ? data.interests.join(', ') : '';
-    fields.visitorType.value = data.visitor_type || data.visitorType || '';
-}
-function clearForm() {
-    Object.values(fields).forEach(f => f.value = '');
-    previewContainer.style.display = 'none';
-    previewImage.src = '';
-    fileInput.value = '';
-    statusDiv.style.display = 'none';
-    errorBox.style.display = 'none';
-}
-document.getElementById('clearBtn').addEventListener('click', clearForm);
+// ============================================================
+// 13. SCAN: FRAGEBOGEN DIREKT AUSFÜLLEN
+// ============================================================
+const scanTemplateSelect = document.getElementById('scanTemplateSelect');
+const scanQuestionnaireForm = document.getElementById('scanQuestionnaireForm');
+const scanQuestionnaireEmpty = document.getElementById('scanQuestionnaireEmpty');
 
+// Welche Fragen gerade in der Scan-Ansicht angezeigt werden
+let scanQuestions = [];
+
+function updateScanTemplateSelect() {
+    const current = scanTemplateSelect.value;
+    scanTemplateSelect.innerHTML = '<option value="">Kein Fragebogen</option>';
+
+    const names = Object.keys(templates);
+    names.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = `📋 ${name} (${templates[name].length} Fragen)`;
+        scanTemplateSelect.appendChild(opt);
+    });
+
+    // Aktuell aktive Fragen (ohne gespeicherte Vorlage) ebenfalls anbieten
+    const active = getActiveQuestions();
+    if (active.length > 0) {
+        const opt = document.createElement('option');
+        opt.value = '__active__';
+        opt.textContent = `✏️ Aktuelle Fragen (${active.length})`;
+        scanTemplateSelect.appendChild(opt);
+    }
+
+    if (current && Array.from(scanTemplateSelect.options).some(o => o.value === current)) {
+        scanTemplateSelect.value = current;
+    }
+    renderScanQuestionnaire();
+}
+
+function renderScanQuestionnaire() {
+    const choice = scanTemplateSelect.value;
+
+    if (!choice) {
+        scanQuestions = [];
+        scanQuestionnaireForm.innerHTML = '';
+        scanQuestionnaireEmpty.style.display = 'block';
+        scanQuestionnaireEmpty.textContent = Object.keys(templates).length || getActiveQuestions().length
+            ? 'Wähle oben eine Vorlage, um sie direkt hier auszufüllen.'
+            : 'Noch keine Fragebögen angelegt – das geht unter 📝 Fragebogen.';
+        return;
+    }
+
+    scanQuestions = choice === '__active__' ? getActiveQuestions() : (templates[choice] || []);
+
+    if (scanQuestions.length === 0) {
+        scanQuestionnaireForm.innerHTML = '';
+        scanQuestionnaireEmpty.style.display = 'block';
+        scanQuestionnaireEmpty.textContent = 'Diese Vorlage enthält keine Fragen.';
+        return;
+    }
+
+    scanQuestionnaireEmpty.style.display = 'none';
+    scanQuestionnaireForm.innerHTML = scanQuestions.map(q => {
+        const fieldId = `scanq_${escapeHtml(q.id)}`;
+        let field;
+        if (q.type === 'textarea') {
+            field = `<textarea id="${fieldId}" rows="2"></textarea>`;
+        } else if (q.type === 'select') {
+            const opts = (q.options || []).map(o => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('');
+            field = `<select id="${fieldId}"><option value="">Bitte wählen...</option>${opts}</select>`;
+        } else {
+            field = `<input type="text" id="${fieldId}">`;
+        }
+        return `<div class="questionnaire-answer"><label>${escapeHtml(q.label)}</label>${field}</div>`;
+    }).join('');
+}
+
+function collectScanAnswers() {
+    const answers = {};
+    scanQuestions.forEach(q => {
+        const el = document.getElementById(`scanq_${q.id}`);
+        if (el && el.value.trim() !== '') answers[q.id] = el.value;
+    });
+    return answers;
+}
+
+scanTemplateSelect.addEventListener('change', renderScanQuestionnaire);
+
+// ============================================================
+// 14. SCAN: SPEICHERN (Lead + Fragebogen in einem Rutsch)
+// ============================================================
 document.getElementById('saveBtn').addEventListener('click', async () => {
-    const leadData = {
-        firstName: fields.firstName.value,
-        lastName: fields.lastName.value,
-        company: fields.company.value,
-        position: fields.position.value,
-        email: fields.email.value,
-        phone: fields.phone.value,
-        address: { street: fields.street.value, zip: fields.zip.value, city: fields.city.value },
-        interests: fields.interests.value.split(',').map(s => s.trim()).filter(Boolean),
-        visitorType: fields.visitorType.value
-    };
+    const leadData = collectFormLead();
+
+    if (!leadData.firstName && !leadData.lastName && !leadData.company) {
+        showError('Bitte mindestens Name oder Firma ausfüllen.');
+        return;
+    }
+
+    const answers = collectScanAnswers();
+    const saveBtn = document.getElementById('saveBtn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = '⏳ Speichere...';
+
     try {
         const response = await apiRequest('/leads', { method: 'POST', body: JSON.stringify({ lead: leadData }) });
         const result = await response.json();
-        if (result.success) {
-            const leadId = result.data.id;
-            await loadLeads();
-            clearForm();
-            alert('✅ Lead gespeichert!');
-            if (getActiveQuestions().length > 0) {
-                if (confirm('📝 Möchtest du den Fragebogen für diesen Lead ausfüllen?')) {
-                    openLeadQuestionnaire(leadId);
-                }
+        if (!result.success) throw new Error(result.error || 'Speichern fehlgeschlagen');
+
+        const leadId = result.data.id;
+
+        // Fragebogen-Antworten direkt mitschicken, falls ausgefüllt
+        let questionnaireSaved = false;
+        if (Object.keys(answers).length > 0) {
+            try {
+                await apiRequest(`/questionnaire/${leadId}`, { method: 'POST', body: JSON.stringify({ answers }) });
+                questionnaireSaved = true;
+            } catch (qErr) {
+                console.error('Fragebogen konnte nicht gespeichert werden:', qErr);
             }
         }
-    } catch (error) { alert('❌ Fehler: ' + error.message); }
+
+        await loadLeads();
+        const hadAddress = !!(leadData.address.city || leadData.address.zip);
+        clearForm();
+
+        alert('✅ Lead gespeichert!'
+            + (questionnaireSaved ? ` Fragebogen mit ${Object.keys(answers).length} Antwort(en) übernommen.` : '')
+            + (hadAddress ? ' Die Adresse wird im Hintergrund verortet.' : ''));
+
+    } catch (error) {
+        alert('❌ Fehler: ' + error.message);
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = '💾 Speichern';
+    }
 });
 
 // ============================================================
-// 11. FRAGEBOGEN-MANAGEMENT (MEHRERE VORLAGEN)  [FIX 2]
+// 15. FRAGEBOGEN-VORLAGEN
 // ============================================================
-// WICHTIG: 'leadcapture_questions' ist die EINE Quelle der Wahrheit
-// für den Lead-Fragebogen. Jede Änderung an questionTemplate muss
-// über persistActiveQuestions() dorthin geschrieben werden – sonst
-// sieht der Lead-Fragebogen die geladene Vorlage nicht.
 const TEMPLATE_STORAGE_KEY = 'leadcapture_questionnaire_templates';
 const ACTIVE_TEMPLATE_KEY = 'leadcapture_active_template';
 const ACTIVE_QUESTIONS_KEY = 'leadcapture_questions';
@@ -970,7 +1291,6 @@ function loadActiveTemplate() {
     if (activeTemplateName && templates[activeTemplateName]) {
         questionTemplate = JSON.parse(JSON.stringify(templates[activeTemplateName]));
     } else {
-        // Kein aktives Template: bereits gespeicherte Einzelfragen weiterverwenden
         questionTemplate = getActiveQuestions();
     }
     persistActiveQuestions();
@@ -987,6 +1307,8 @@ function updateTemplateSelect() {
         if (name === activeTemplateName) opt.selected = true;
         select.appendChild(opt);
     });
+    updateScanTemplateSelect();
+    updateLeadTemplateSelect();
 }
 function saveTemplate(name) {
     if (!name || !name.trim()) { alert('❌ Bitte gib einen Namen ein.'); return; }
@@ -1004,7 +1326,7 @@ function loadTemplate(name) {
     questionTemplate = JSON.parse(JSON.stringify(templates[name]));
     activeTemplateName = name;
     localStorage.setItem(ACTIVE_TEMPLATE_KEY, name);
-    persistActiveQuestions();   // [FIX 2] fehlte vorher komplett
+    persistActiveQuestions();
     renderQuestionnaireEditor();
     updateTemplateSelect();
     alert(`📂 Vorlage "${name}" geladen (${questionTemplate.length} Fragen).`);
@@ -1028,7 +1350,7 @@ document.getElementById('loadTemplateBtn').addEventListener('click', () => { con
 document.getElementById('deleteTemplateBtn').addEventListener('click', () => { const name = document.getElementById('questionnaireTemplateSelect').value; if (name) deleteTemplate(name); });
 
 // ============================================================
-// 12. FRAGEBOGEN EDITOR  [FIX 5: Select-Typ mit Optionen]
+// 16. FRAGEBOGEN EDITOR
 // ============================================================
 const questionEditor = document.getElementById('questionnaireEditor');
 const emptyQuestions = document.getElementById('emptyQuestions');
@@ -1079,30 +1401,32 @@ function addQuestion() {
     questionTemplate.push(question);
     persistActiveQuestions();
     renderQuestionnaireEditor();
+    updateScanTemplateSelect();
 }
 function removeQuestion(index) {
     if (!confirm('Frage löschen?')) return;
     questionTemplate.splice(index, 1);
     persistActiveQuestions();
     renderQuestionnaireEditor();
+    updateScanTemplateSelect();
 }
 function editQuestion(index) {
     const q = questionTemplate[index];
     const newLabel = prompt('Fragen-Text:', q.label)?.trim(); if (newLabel) q.label = newLabel;
     const newType = prompt('Typ (text/textarea/select):', q.type)?.trim().toLowerCase();
     if (newType) {
-        if (!VALID_TYPES.includes(newType)) { alert(`❌ Unbekannter Typ "${newType}". Typ bleibt "${q.type}".`); }
+        if (!VALID_TYPES.includes(newType)) alert(`❌ Unbekannter Typ "${newType}". Typ bleibt "${q.type}".`);
         else q.type = newType;
     }
     if (q.type === 'select') {
         const opts = askForOptions(q.options);
         if (opts) q.options = opts;
         else if (!q.options?.length) { alert('❌ Select ohne Optionen – Typ auf "text" gesetzt.'); q.type = 'text'; }
-    } else {
-        delete q.options;
-    }
+    } else delete q.options;
+
     persistActiveQuestions();
     renderQuestionnaireEditor();
+    updateScanTemplateSelect();
 }
 document.getElementById('addQuestionBtn').addEventListener('click', addQuestion);
 document.getElementById('saveQuestionnaireTemplateBtn').addEventListener('click', () => {
@@ -1122,49 +1446,82 @@ document.getElementById('resetQuestionnaireBtn').addEventListener('click', () =>
 });
 
 // ============================================================
-// 13. FRAGEBOGEN BEI LEAD
+// 17. FRAGEBOGEN BEI BESTEHENDEM LEAD
 // ============================================================
 let currentLeadId = null;
+let currentLeadAnswers = {};
+const leadTemplateSelect = document.getElementById('leadTemplateSelect');
+
+function updateLeadTemplateSelect() {
+    if (!leadTemplateSelect) return;
+    const current = leadTemplateSelect.value;
+    leadTemplateSelect.innerHTML = '<option value="__active__">✏️ Aktuelle Fragen</option>';
+    Object.keys(templates).forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = `📋 ${name} (${templates[name].length} Fragen)`;
+        leadTemplateSelect.appendChild(opt);
+    });
+    if (current && Array.from(leadTemplateSelect.options).some(o => o.value === current)) {
+        leadTemplateSelect.value = current;
+    }
+}
+
+function questionsForLeadView() {
+    const choice = leadTemplateSelect?.value || '__active__';
+    return choice === '__active__' ? getActiveQuestions() : (templates[choice] || []);
+}
+
 async function openLeadQuestionnaire(leadId) {
     currentLeadId = leadId;
+    loadTemplates();
+    updateLeadTemplateSelect();
     showView('lead-questionnaire');
     try {
         const response = await apiRequest(`/questionnaire/${leadId}`);
         const result = await response.json();
         if (result.success) {
             document.getElementById('questionnaireLeadName').textContent = result.data.leadName || 'Unbekannt';
-            renderLeadQuestionnaire(result.data.answers || {});
+            currentLeadAnswers = result.data.answers || {};
+            renderLeadQuestionnaire();
         }
     } catch (error) { alert('Fehler: ' + error.message); }
 }
-function renderLeadQuestionnaire(answers) {
+
+function renderLeadQuestionnaire() {
     const container = document.getElementById('questionnaireForm');
-    const questions = getActiveQuestions();
+    const questions = questionsForLeadView();
+    const answers = currentLeadAnswers || {};
+
     if (questions.length === 0) {
-        container.innerHTML = '<div style="color:#a0aec0; text-align:center; padding:20px;">Keine Fragen definiert. Lege sie unter 📝 Fragebogen an oder lade eine Vorlage.</div>';
+        container.innerHTML = '<div style="color:#a0aec0; text-align:center; padding:20px;">Keine Fragen definiert. Lege sie unter 📝 Fragebogen an oder wähle oben eine Vorlage.</div>';
         return;
     }
     container.innerHTML = questions.map(q => {
         const val = answers[q.id] || '';
+        const fieldId = `q_${escapeHtml(q.id)}`;
         let field;
         if (q.type === 'textarea') {
-            field = `<textarea id="q_${escapeHtml(q.id)}" rows="2">${escapeHtml(val)}</textarea>`;
+            field = `<textarea id="${fieldId}" rows="2">${escapeHtml(val)}</textarea>`;
         } else if (q.type === 'select') {
-            // [FIX 5] Select wird jetzt wirklich als Dropdown gerendert
             const opts = (q.options || []).map(o =>
                 `<option value="${escapeHtml(o)}"${o === val ? ' selected' : ''}>${escapeHtml(o)}</option>`
             ).join('');
-            field = `<select id="q_${escapeHtml(q.id)}"><option value="">Bitte wählen...</option>${opts}</select>`;
+            field = `<select id="${fieldId}"><option value="">Bitte wählen...</option>${opts}</select>`;
         } else {
-            field = `<input type="text" id="q_${escapeHtml(q.id)}" value="${escapeHtml(val)}">`;
+            field = `<input type="text" id="${fieldId}" value="${escapeHtml(val)}">`;
         }
         return `<div class="questionnaire-answer"><label>${escapeHtml(q.label)}</label>${field}</div>`;
     }).join('');
 }
+
+leadTemplateSelect?.addEventListener('change', renderLeadQuestionnaire);
+
 document.getElementById('saveQuestionnaireBtn').addEventListener('click', async () => {
     if (!currentLeadId) { alert('❌ Kein Lead.'); return; }
-    const questions = getActiveQuestions();
-    const answers = {};
+    const questions = questionsForLeadView();
+    // Bestehende Antworten erhalten, auch wenn eine andere Vorlage gewählt wurde
+    const answers = { ...currentLeadAnswers };
     questions.forEach(q => {
         const el = document.getElementById(`q_${q.id}`);
         if (el) answers[q.id] = el.value;
@@ -1178,20 +1535,18 @@ document.getElementById('saveQuestionnaireBtn').addEventListener('click', async 
 });
 
 // ============================================================
-// 14. HISTOGRAMM  [FIX 3: Jahresfilter bleibt erhalten]
+// 18. HISTOGRAMM
 // ============================================================
 const histogram = document.getElementById('histogram');
 const histogramEmpty = document.getElementById('histogramEmpty');
 const histogramYear = document.getElementById('histogramYear');
 const histogramView = document.getElementById('histogramView');
 
-// Baut das Jahres-Dropdown NUR neu, wenn sich die verfügbaren Jahre
-// tatsächlich geändert haben – und behält dabei die Auswahl des Nutzers.
 function syncYearOptions(availableYears) {
     if (!availableYears) return;
     const desired = ['alle', ...availableYears.map(String)];
     const existing = Array.from(histogramYear.options).map(o => o.value);
-    if (existing.join(',') === desired.join(',')) return;   // nichts zu tun
+    if (existing.join(',') === desired.join(',')) return;
 
     const current = histogramYear.value;
     histogramYear.innerHTML = '<option value="alle">Alle Jahre</option>';
@@ -1201,7 +1556,6 @@ function syncYearOptions(availableYears) {
         opt.textContent = y;
         histogramYear.appendChild(opt);
     });
-    // Auswahl des Nutzers wiederherstellen, sonst "Alle Jahre"
     histogramYear.value = desired.includes(current) ? current : 'alle';
 }
 
@@ -1248,16 +1602,13 @@ function renderHistogram(data, view) {
         bar.className = 'bar';
         bar.style.height = `${Math.max(height + 18, 20)}px`;
         const v = document.createElement('div');
-        v.className = 'value';
-        v.textContent = item.count;
+        v.className = 'value'; v.textContent = item.count;
         bar.appendChild(v);
         const f = document.createElement('div');
-        f.className = 'fill';
-        f.style.height = `${Math.max(height, 4)}px`;
+        f.className = 'fill'; f.style.height = `${Math.max(height, 4)}px`;
         bar.appendChild(f);
         const l = document.createElement('div');
-        l.className = 'date-label';
-        l.textContent = item.date;
+        l.className = 'date-label'; l.textContent = item.date;
         bar.appendChild(l);
         bar.title = `${item.date}: ${item.count} Leads`;
         bar.addEventListener('click', () => alert(`${item.date}: ${item.count} Leads`));
@@ -1269,43 +1620,10 @@ histogramView.addEventListener('change', loadHistogram);
 document.getElementById('refreshHistogramBtn').addEventListener('click', loadHistogram);
 
 // ============================================================
-// 15. KARTE  [FIX 6: keine Zufallskoordinaten mehr]
+// 19. KARTE (echte Koordinaten aus dem Geocoding)
 // ============================================================
-// Ohne echtes Geocoding werden nur Leads angezeigt, deren Stadt in
-// der Referenzliste steht. Alles andere würde erfundene Positionen
-// erzeugen – siehe Roadmap Phase 7 "Geocoding".
-const CITY_COORDS = {
-    'berlin': [52.52, 13.405], 'münchen': [48.135, 11.582], 'muenchen': [48.135, 11.582],
-    'hamburg': [53.551, 9.994], 'köln': [50.938, 6.960], 'koeln': [50.938, 6.960],
-    'frankfurt': [50.111, 8.682], 'frankfurt am main': [50.111, 8.682],
-    'stuttgart': [48.776, 9.183], 'düsseldorf': [51.228, 6.773], 'duesseldorf': [51.228, 6.773],
-    'leipzig': [51.340, 12.373], 'dortmund': [51.514, 7.465], 'essen': [51.456, 7.012],
-    'bremen': [53.079, 8.802], 'dresden': [51.050, 13.737], 'hannover': [52.371, 9.733],
-    'nürnberg': [49.454, 11.078], 'nuernberg': [49.454, 11.078], 'duisburg': [51.434, 6.762],
-    'bochum': [51.482, 7.216], 'wuppertal': [51.256, 7.151], 'bielefeld': [52.030, 8.533],
-    'bonn': [50.737, 7.098], 'münster': [51.961, 7.626], 'muenster': [51.961, 7.626],
-    'karlsruhe': [49.007, 8.404], 'mannheim': [49.488, 8.466], 'augsburg': [48.371, 10.898],
-    'wiesbaden': [50.083, 8.241], 'gelsenkirchen': [51.505, 7.101],
-    'mönchengladbach': [51.181, 6.443], 'moenchengladbach': [51.181, 6.443],
-    'braunschweig': [52.269, 10.527], 'chemnitz': [50.828, 12.921], 'kiel': [54.323, 10.123],
-    'aachen': [50.775, 6.084], 'halle': [51.482, 11.970], 'magdeburg': [52.121, 11.627],
-    'freiburg': [47.999, 7.842], 'krefeld': [51.334, 6.564], 'lübeck': [53.866, 10.685],
-    'luebeck': [53.866, 10.685], 'erfurt': [50.978, 11.029], 'rostock': [54.093, 12.099],
-    'kassel': [51.312, 9.480], 'mainz': [49.993, 8.247], 'saarbrücken': [49.240, 6.997],
-    'saarbruecken': [49.240, 6.997], 'potsdam': [52.396, 13.059], 'suhl': [50.610, 10.693],
-    'jena': [50.927, 11.589], 'gera': [50.881, 12.082], 'ilmenau': [50.683, 10.918],
-    'wien': [48.208, 16.373], 'zürich': [47.377, 8.542], 'zuerich': [47.377, 8.542]
-};
-
-function lookupCoords(city) {
-    if (!city) return null;
-    const key = city.toLowerCase().trim();
-    if (CITY_COORDS[key]) return CITY_COORDS[key];
-    // "12345 Berlin" oder "Berlin-Mitte" tolerieren
-    const cleaned = key.replace(/^\d{4,5}\s+/, '').split(/[-,/]/)[0].trim();
-    return CITY_COORDS[cleaned] || null;
-}
-
+// Die Positionen kommen jetzt aus latitude/longitude der Datenbank.
+// Leads ohne Koordinaten werden NICHT geraten, sondern gemeldet.
 function initMap() {
     if (mapInstance) return;
     mapInstance = L.map('map').setView([51.1657, 10.4515], 6);
@@ -1313,19 +1631,25 @@ function initMap() {
         attribution: '© OpenStreetMap'
     }).addTo(mapInstance);
 }
+
 async function loadMapData() {
     if (!mapInstance) initMap();
     try {
         const response = await apiRequest('/leads');
         const result = await response.json();
-        if (result.success) { allLeads = result.data; displayMapMarkers(result.data); }
+        if (result.success) { allLeads = result.data; displayMapMarkers(allLeads); }
     } catch (error) { console.error('Kartenfehler:', error); }
+}
+
+function hasCoords(lead) {
+    return Number.isFinite(parseFloat(lead.latitude)) && Number.isFinite(parseFloat(lead.longitude));
 }
 
 function updateCityFilterOptions(leads) {
     const select = document.getElementById('mapCityFilter');
     const current = select.value;
-    const cities = [...new Set(leads.map(l => l.city).filter(c => c && lookupCoords(c)))].sort();
+    const cities = [...new Set(leads.filter(hasCoords).map(l => l.city).filter(Boolean))]
+        .sort((a, b) => collator.compare(a, b));
     const desired = ['', ...cities];
     const existing = Array.from(select.options).map(o => o.value);
     if (existing.join('|') === desired.join('|')) return;
@@ -1345,74 +1669,92 @@ function displayMapMarkers(leads) {
 
     updateCityFilterOptions(leads);
     const cityFilter = document.getElementById('mapCityFilter').value;
-
     const warnBox = document.getElementById('mapWarn');
-    const mapCount = document.getElementById('mapCount');
 
-    // Nur Leads mit AUFLÖSBARER Stadt bekommen einen Marker
-    const locatable = [];
-    let unlocatable = 0;
-    leads.forEach(lead => {
-        const coords = lookupCoords(lead.city);
-        if (coords) {
-            if (!cityFilter || lead.city === cityFilter) locatable.push({ lead, coords });
-        } else if (lead.street || lead.city) {
-            unlocatable++;
-        }
-    });
+    const located = leads.filter(hasCoords).filter(l => !cityFilter || l.city === cityFilter);
+    const pending = leads.filter(l => !hasCoords(l) && (l.city || l.zip));
 
-    mapCount.textContent = locatable.length;
+    document.getElementById('mapCount').textContent = located.length;
 
-    if (unlocatable > 0) {
+    if (pending.length > 0) {
         warnBox.style.display = 'block';
-        warnBox.textContent = `⚠️ ${unlocatable} Lead(s) mit Adresse konnten keiner Position zugeordnet werden (Stadt nicht in der Referenzliste). Echtes Geocoding steht noch aus.`;
+        warnBox.innerHTML = `⚠️ ${pending.length} Lead(s) mit Adresse haben noch keine Koordinaten.<br>
+            <button onclick="runGeocodeBackfill()">🌍 Jetzt verorten</button>`;
     } else {
         warnBox.style.display = 'none';
     }
 
-    if (locatable.length === 0) {
+    if (located.length === 0) {
         mapInstance.setView([51.1657, 10.4515], 6);
         return;
     }
 
-    // Mehrere Leads in derselben Stadt leicht versetzen, damit sie
-    // nicht exakt übereinander liegen (deterministisch, nicht zufällig)
-    const cityUsage = {};
-    locatable.forEach(({ lead, coords }) => {
-        const key = (lead.city || '').toLowerCase();
-        const n = cityUsage[key] = (cityUsage[key] || 0);
-        cityUsage[key]++;
-        let pos = coords;
+    // Leads an identischer Position leicht versetzen (deterministisch)
+    const posUsage = {};
+    located.forEach(lead => {
+        const lat = parseFloat(lead.latitude), lon = parseFloat(lead.longitude);
+        const key = `${lat.toFixed(4)},${lon.toFixed(4)}`;
+        const n = posUsage[key] || 0;
+        posUsage[key] = n + 1;
+
+        let pos = [lat, lon];
         if (n > 0) {
-            const angle = (n * 137.5) * Math.PI / 180;   // goldener Winkel
-            const radius = 0.012 * Math.ceil(n / 8);
-            pos = [coords[0] + radius * Math.cos(angle), coords[1] + radius * Math.sin(angle)];
+            const angle = (n * 137.5) * Math.PI / 180;
+            const radius = 0.0008 * Math.ceil(n / 8);
+            pos = [lat + radius * Math.cos(angle), lon + radius * Math.sin(angle)];
         }
+
+        const addrLine = [lead.street, [lead.zip, lead.city].filter(Boolean).join(' ')].filter(Boolean).join(', ');
         const marker = L.marker(pos).addTo(mapInstance)
             .bindPopup(`
-                <div style="min-width:160px;">
-                    <strong>${escapeHtml(lead.first_name || '')} ${escapeHtml(lead.last_name || '')}</strong><br>
+                <div style="min-width:170px;">
+                    <strong>${escapeHtml(`${lead.title || ''} ${lead.first_name || ''} ${lead.last_name || ''}`.replace(/\s+/g,' ').trim())}</strong><br>
                     ${lead.company ? escapeHtml(lead.company) + '<br>' : ''}
                     ${lead.position ? escapeHtml(lead.position) + '<br>' : ''}
                     ${lead.email ? '✉️ ' + escapeHtml(lead.email) + '<br>' : ''}
                     ${lead.phone ? '📞 ' + escapeHtml(lead.phone) + '<br>' : ''}
-                    ${lead.street || lead.city ? '📍 ' + escapeHtml(lead.street || '') + (lead.city ? ', ' + escapeHtml(lead.city) : '') : ''}
-                    <br><button onclick="openLeadDetail('${lead.id}')" style="margin-top:4px; padding:4px 12px; background:#0066AA; color:white; border:none; border-radius:6px; cursor:pointer;">Details</button>
+                    ${addrLine ? '📍 ' + escapeHtml(addrLine) : ''}
+                    <br><button onclick="openLeadDetail('${lead.id}')" style="margin-top:6px; padding:4px 12px; background:#0066AA; color:white; border:none; border-radius:6px; cursor:pointer;">Details</button>
                 </div>
             `);
         mapMarkers.push(marker);
     });
 
-    if (mapMarkers.length > 0) {
-        const group = L.featureGroup(mapMarkers);
-        mapInstance.fitBounds(group.getBounds().pad(0.15));
+    const group = L.featureGroup(mapMarkers);
+    mapInstance.fitBounds(group.getBounds().pad(0.15));
+}
+
+// Stößt das Nachverorten offener Adressen an.
+// Nominatim erlaubt 1 Anfrage/Sekunde – daher in Blöcken.
+async function runGeocodeBackfill() {
+    const warnBox = document.getElementById('mapWarn');
+    warnBox.innerHTML = '🌍 Verorte Adressen... (ca. 1 Sekunde pro Adresse)';
+    try {
+        const response = await apiRequest('/geocode/backfill', {
+            method: 'POST',
+            body: JSON.stringify({ limit: 25 })
+        });
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error);
+
+        await loadMapData();
+        if (result.notFound > 0) {
+            alert(`${result.message}\n\nNicht gefundene Adressen sind meist unvollständig – prüfe Straße, PLZ und Stadt im Lead.`);
+        } else if (result.processed > 0) {
+            alert('✅ ' + result.message);
+        } else {
+            alert(result.message || 'Nichts zu tun.');
+        }
+    } catch (error) {
+        warnBox.innerHTML = `❌ Fehler: ${escapeHtml(error.message)}`;
     }
 }
+
 document.getElementById('mapRefreshBtn').addEventListener('click', loadMapData);
 document.getElementById('mapCityFilter').addEventListener('change', () => displayMapMarkers(allLeads));
 
 // ============================================================
-// 16. CSV EXPORT / IMPORT
+// 20. CSV EXPORT / IMPORT
 // ============================================================
 document.getElementById('exportCsvBtn2').addEventListener('click', async () => {
     try {
@@ -1427,6 +1769,7 @@ document.getElementById('exportCsvBtn2').addEventListener('click', async () => {
         URL.revokeObjectURL(url);
     } catch (error) { alert('❌ Fehler: ' + error.message); }
 });
+
 document.getElementById('importCsvBtn2').addEventListener('click', () => document.getElementById('csvFileInput').click());
 document.getElementById('csvFileInput').addEventListener('change', async (e) => {
     const file = e.target.files[0];
@@ -1434,8 +1777,6 @@ document.getElementById('csvFileInput').addEventListener('change', async (e) => 
     const formData = new FormData();
     formData.append('file', file);
 
-    // Multipart-Upload: eigener fetch (kein JSON-Content-Type!), aber
-    // mit demselben Refresh-Verhalten wie apiRequest.
     async function uploadCsv(isRetry = false) {
         const token = getToken();
         const response = await fetch(`${API_URL}/import/csv`, {
@@ -1457,25 +1798,14 @@ document.getElementById('csvFileInput').addEventListener('change', async (e) => 
         const result = await response.json();
         if (result.success) {
             await loadLeads();
-            alert(`✅ Import: ${result.imported} neu, ${result.updated} aktualisiert`);
+            alert('✅ ' + result.message);
         } else throw new Error(result.error);
     } catch (error) { alert('❌ Fehler: ' + error.message); }
     e.target.value = '';
 });
-document.getElementById('importDropboxBtn2').addEventListener('click', async () => {
-    if (!confirm('☁️ Neueste CSV aus Dropbox importieren?')) return;
-    try {
-        const response = await apiRequest('/import/dropbox', { method: 'POST' });
-        const result = await response.json();
-        if (result.success) {
-            await loadLeads();
-            alert(`☁️ Import: ${result.imported} neu, ${result.updated} aktualisiert`);
-        } else throw new Error(result.error);
-    } catch (error) { alert('❌ Fehler: ' + error.message); }
-});
 
 // ============================================================
-// 17. INIT
+// 21. INIT
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
     loadTemplates();
@@ -1483,7 +1813,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = getUser();
     if (user && getToken()) showApp(user);
     else showLogin();
-    console.log('🚀 LeadCapture PWA geladen (mit Token-Refresh, Vorlagen-Sync, Jahresfilter-Fix, Listen-Löschen, Select-Fragen, Karte ohne Zufallskoordinaten)');
+    console.log('🚀 LeadCapture PWA v8.0.0 geladen');
 });
 </script>
 </body>
