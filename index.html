@@ -1087,68 +1087,88 @@ document.getElementById('saveQuestionnaireBtn').addEventListener('click', async 
 });
 
 // ============================================================
-// 14. HISTOGRAMM
+// HISTOGRAMM (KORRIGIERT)
 // ============================================================
-const histogram = document.getElementById('histogram');
-const histogramEmpty = document.getElementById('histogramEmpty');
-const histogramYear = document.getElementById('histogramYear');
-const histogramView = document.getElementById('histogramView');
-
 async function loadHistogram() {
     try {
         const year = histogramYear.value || 'alle';
+        
+        console.log('📊 Lade Histogramm für Jahr:', year);
+        
         const response = await apiRequest(`/stats/daily?year=${year}`);
         const result = await response.json();
-        if (!result.success) throw new Error(result.error || 'Unbekannter Fehler');
         
+        console.log('📊 Histogramm-Antwort:', result);
+        
+        if (!result.success) {
+            throw new Error(result.error || 'Unbekannter Fehler');
+        }
+        
+        // Jahre-Dropdown füllen
+        const currentYear = new Date().getFullYear();
         histogramYear.innerHTML = '<option value="alle">Alle Jahre</option>';
-        if (result.availableYears) {
+        
+        if (result.availableYears && result.availableYears.length > 0) {
             result.availableYears.forEach(y => {
                 const opt = document.createElement('option');
                 opt.value = y;
                 opt.textContent = y;
                 histogramYear.appendChild(opt);
             });
-        }
-        if (result.availableYears && result.availableYears.length > 0) {
+            // Aktuellstes Jahr auswählen
             histogramYear.value = result.availableYears[result.availableYears.length - 1];
         }
         
+        // Histogramm rendern
         renderHistogram(result.data, histogramView.value);
+        
     } catch (error) {
+        console.error('❌ Histogramm-Fehler:', error);
         histogramEmpty.style.display = 'block';
-        histogramEmpty.textContent = '❌ Fehler: ' + error.message;
+        histogramEmpty.textContent = '❌ Fehler beim Laden: ' + (error.message || 'Unbekannter Fehler');
         histogram.style.display = 'none';
     }
 }
 
+// ============================================================
+// HISTOGRAMM RENDERN (KORRIGIERT)
+// ============================================================
 function renderHistogram(data, view) {
     histogram.innerHTML = '';
     histogramEmpty.style.display = 'none';
     histogram.style.display = 'flex';
+    
     if (!data || data.length === 0) {
         histogramEmpty.style.display = 'block';
-        histogramEmpty.textContent = '📭 Keine Daten für diesen Zeitraum.';
+        histogramEmpty.textContent = '📭 Keine Leads für diesen Zeitraum.';
         histogram.style.display = 'none';
         return;
     }
     
+    // Gruppierung je nach Ansicht
     let grouped = data;
     if (view === 'month') {
         const months = {};
         data.forEach(d => {
-            const month = d.date.substring(0, 7);
+            const month = d.date.substring(0, 7); // YYYY-MM
             months[month] = (months[month] || 0) + d.count;
         });
-        grouped = Object.keys(months).map(m => ({ date: m, count: months[m] }));
+        grouped = Object.keys(months).sort().map(m => ({ 
+            date: m, 
+            count: months[m] 
+        }));
     } else if (view === 'year') {
         const years = {};
         data.forEach(d => {
             const year = d.date.substring(0, 4);
             years[year] = (years[year] || 0) + d.count;
         });
-        grouped = Object.keys(years).map(y => ({ date: y, count: years[y] }));
+        grouped = Object.keys(years).sort().map(y => ({ 
+            date: y, 
+            count: years[y] 
+        }));
     }
+    // 'day' → keine Gruppierung, einzelne Tage
     
     const maxCount = Math.max(...grouped.map(d => d.count), 1);
     const maxHeight = 160;
@@ -1158,24 +1178,28 @@ function renderHistogram(data, view) {
         const bar = document.createElement('div');
         bar.className = 'bar';
         bar.style.height = `${Math.max(height + 18, 20)}px`;
+        
         const value = document.createElement('div');
         value.className = 'value';
         value.textContent = item.count;
         bar.appendChild(value);
+        
         const fill = document.createElement('div');
         fill.className = 'fill';
         fill.style.height = `${Math.max(height, 4)}px`;
         bar.appendChild(fill);
+        
+        const label = document.createElement('div');
+        label.style.cssText = 'font-size:8px; color:#a0aec0; margin-top:2px; text-align:center; max-width:100%; overflow:hidden; text-overflow:ellipsis;';
+        label.textContent = item.date;
+        bar.appendChild(label);
+        
         bar.title = `${item.date}: ${item.count} Leads`;
         bar.addEventListener('click', () => alert(`${item.date}: ${item.count} Leads`));
+        
         histogram.appendChild(bar);
     });
 }
-
-histogramYear.addEventListener('change', loadHistogram);
-histogramView.addEventListener('change', loadHistogram);
-document.getElementById('refreshHistogramBtn2').addEventListener('click', loadHistogram);
-
 // ============================================================
 // 15. KARTE (Leaflet)
 // ============================================================
