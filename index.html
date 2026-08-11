@@ -6,404 +6,516 @@
     <title>LeadCapture PWA</title>
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <meta name="theme-color" content="#4A90E2">
+    <meta name="theme-color" content="#0066AA">
+    
+    <!-- Leaflet CSS für Karte -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         /* ===== RESET & GRUNDLAGEN ===== */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
-        body { background: #f0f4f8; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 16px; }
-        .container { background: white; max-width: 700px; width: 100%; border-radius: 28px; padding: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.08); }
-        
+        body { background: #f5f7fa; min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; padding: 12px; }
+        .container { background: white; max-width: 480px; width: 100%; border-radius: 24px; padding: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+
         /* ===== HEADER ===== */
-        h1 { font-size: 28px; font-weight: 700; color: #1a202c; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-        h1 small { font-size: 16px; font-weight: 400; color: #4A90E2; }
-        .status-badge { display: inline-block; background: #48bb78; color: white; font-size: 11px; padding: 2px 10px; border-radius: 20px; cursor: pointer; }
-        .status-badge.offline { background: #ed8936; }
-        .subtitle { color: #718096; font-size: 14px; margin-bottom: 24px; border-left: 3px solid #4A90E2; padding-left: 12px; }
-        .server-url { font-size: 11px; color: #a0aec0; margin-top: 4px; word-break: break-all; display: block; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 8px 0 16px 0; border-bottom: 1px solid #eef2f7; }
+        .header h1 { font-size: 22px; font-weight: 700; color: #1a1a1a; }
+        .header h1 span { color: #0066AA; }
+        .header-actions { display: flex; gap: 12px; align-items: center; }
+        .user-badge { background: #E8F4FD; color: #0066AA; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .header-btn { background: none; border: none; font-size: 20px; cursor: pointer; padding: 4px; }
 
-        /* ===== LOGIN / REGISTER ===== */
-        #loginContainer h2 { font-size: 20px; color: #2d3748; margin-bottom: 16px; }
-        .login-form { display: flex; flex-direction: column; gap: 12px; }
-        .login-form input { padding: 12px 16px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 15px; }
-        .login-form input:focus { outline: none; border-color: #4A90E2; box-shadow: 0 0 0 3px rgba(74,144,226,0.12); }
-        .login-form .error { color: #e53e3e; font-size: 14px; display: none; }
-        .login-form .hint { color: #718096; font-size: 13px; text-align: center; }
-        .login-form .hint a { color: #4A90E2; text-decoration: underline; cursor: pointer; }
-        .login-form .hint a:hover { color: #357abd; }
+        /* ===== USER INFO ===== */
+        .user-info { display: flex; justify-content: space-between; align-items: center; background: #E8F4FD; padding: 8px 14px; border-radius: 12px; margin: 12px 0; font-size: 13px; color: #1a1a1a; }
+        .user-info .tenant { font-weight: 600; color: #0066AA; }
+        .btn-logout { background: #0066AA; color: white; border: none; border-radius: 8px; padding: 4px 14px; font-size: 12px; cursor: pointer; }
 
-        /* ===== APP-BEREICH ===== */
-        #appContainer { display: none; }
-        .user-info { display: flex; justify-content: space-between; align-items: center; background: #edf2f7; padding: 8px 16px; border-radius: 10px; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
-        .user-info span { font-size: 14px; color: #2d3748; }
-        .user-info .tenant { font-weight: 600; color: #4A90E2; }
-        .btn-logout { background: #e53e3e; color: white; border: none; border-radius: 8px; padding: 6px 16px; font-size: 13px; cursor: pointer; }
-        .btn-logout:hover { background: #c53030; }
+        /* ===== KACHEL-GRID ===== */
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
+        .grid-card { background: white; border-radius: 16px; padding: 16px; text-align: center; box-shadow: 0 2px 8px rgba(0,102,170,0.08); border: 1px solid #eef2f7; cursor: pointer; transition: all 0.2s; }
+        .grid-card:active { transform: scale(0.96); background: #E8F4FD; }
+        .grid-card .icon { font-size: 32px; margin-bottom: 6px; display: block; }
+        .grid-card .label { font-size: 13px; font-weight: 600; color: #1a1a1a; }
+        .grid-card .sub { font-size: 11px; color: #6b7a8f; margin-top: 2px; }
+        .grid-card.map-card { grid-column: span 2; background: #E8F4FD; border-color: #0066AA; }
 
-        /* ===== UPLOAD ===== */
-        .upload-area { background: #f7fafc; border: 2px dashed #cbd5e0; border-radius: 16px; padding: 40px 20px; text-align: center; cursor: pointer; transition: all 0.2s; margin-bottom: 24px; }
-        .upload-area:hover { border-color: #4A90E2; background: #edf2f7; }
-        .upload-area .icon { font-size: 48px; margin-bottom: 8px; }
-        .upload-area p { color: #4a5568; font-weight: 500; }
-        .upload-area small { color: #a0aec0; font-size: 13px; }
-        #fileInput { display: none; }
-        #previewContainer { display: none; margin-bottom: 20px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        #previewContainer img { width: 100%; height: auto; display: block; }
+        /* ===== VIEWS ===== */
+        .view { display: none; margin-top: 12px; }
+        .view.active { display: block; }
+        .view-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .view-header .back { background: none; border: none; font-size: 20px; cursor: pointer; color: #0066AA; padding: 4px; }
+        .view-header h2 { font-size: 18px; color: #1a1a1a; }
 
-        /* ===== STATUS ===== */
-        #status { display: none; background: #edf2f7; padding: 14px 18px; border-radius: 12px; margin: 16px 0; font-weight: 500; color: #2d3748; gap: 12px; align-items: center; }
-        #status .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid #cbd5e0; border-top: 3px solid #4A90E2; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 10px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        /* ===== SEARCH ===== */
+        .search-bar { display: flex; gap: 8px; margin-bottom: 12px; }
+        .search-bar input { flex: 1; padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; outline: none; }
+        .search-bar input:focus { border-color: #0066AA; }
+        .search-bar button { background: #0066AA; color: white; border: none; border-radius: 12px; padding: 10px 16px; font-weight: 600; cursor: pointer; }
+
+        /* ===== LEAD KARTEN (Liste) ===== */
+        .lead-card { background: white; border-radius: 12px; padding: 12px; margin-bottom: 8px; border: 1px solid #eef2f7; cursor: pointer; transition: all 0.2s; }
+        .lead-card:active { background: #E8F4FD; }
+        .lead-card .name { font-weight: 600; color: #1a1a1a; }
+        .lead-card .company { color: #0066AA; font-weight: 500; font-size: 13px; }
+        .lead-card .details { font-size: 13px; color: #4a5568; margin-top: 2px; }
+        .lead-card .meta { font-size: 11px; color: #a0aec0; margin-top: 4px; }
+        .lead-card .actions { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+        .lead-card .actions button { padding: 4px 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; }
+        .lead-card .actions .edit { background: #E8F4FD; color: #0066AA; }
+        .lead-card .actions .questionnaire { background: #e8f0fe; color: #4a6fa5; }
+        .lead-card .actions .delete { background: #fee2e2; color: #dc2626; }
+
+        /* ===== LEAD DETAIL (Modal) ===== */
+        #leadDetailOverlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+        #leadDetailOverlay.active { display: flex; }
+        #leadDetailModal {
+            background: white;
+            max-width: 440px;
+            width: 100%;
+            max-height: 90vh;
+            border-radius: 20px;
+            padding: 20px;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        #leadDetailModal .close-btn {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #6b7a8f;
+        }
+        #leadDetailModal .detail-name { font-size: 22px; font-weight: 700; color: #1a1a1a; }
+        #leadDetailModal .detail-company { font-size: 16px; color: #0066AA; font-weight: 500; margin-bottom: 4px; }
+        #leadDetailModal .detail-position { font-size: 14px; color: #4a5568; margin-bottom: 8px; }
+        #leadDetailModal .detail-section { margin: 12px 0; }
+        #leadDetailModal .detail-section .label { font-size: 11px; text-transform: uppercase; color: #6b7a8f; font-weight: 600; letter-spacing: 0.5px; }
+        #leadDetailModal .detail-section .value { font-size: 15px; color: #1a1a1a; margin-top: 2px; }
+        #leadDetailModal .detail-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; padding-top: 16px; border-top: 1px solid #eef2f7; }
+        #leadDetailModal .detail-actions .btn { flex: 1; min-width: 60px; padding: 10px; border: none; border-radius: 10px; font-weight: 600; font-size: 13px; cursor: pointer; text-align: center; }
+        #leadDetailModal .detail-actions .btn-phone { background: #22c55e; color: white; }
+        #leadDetailModal .detail-actions .btn-email { background: #0066AA; color: white; }
+        #leadDetailModal .detail-actions .btn-edit { background: #E8F4FD; color: #0066AA; }
+        #leadDetailModal .detail-actions .btn-delete { background: #fee2e2; color: #dc2626; }
+
+        /* Edit-Modus in Detail */
+        #leadDetailModal .edit-mode .detail-value input,
+        #leadDetailModal .edit-mode .detail-value select {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1.5px solid #0066AA;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+        }
+        #leadDetailModal .edit-mode .detail-value .current-value { display: none; }
+        #leadDetailModal .detail-value .current-value { display: block; }
+        #leadDetailModal .edit-mode .detail-value .current-value { display: none; }
+
+        /* ===== KARTE (Leaflet) ===== */
+        #map { height: 400px; border-radius: 12px; margin-top: 12px; border: 1px solid #eef2f7; }
+        .map-controls { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+        .map-controls select { padding: 6px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13px; background: white; }
+        .map-controls button { background: #0066AA; color: white; border: none; border-radius: 8px; padding: 6px 14px; font-size: 12px; cursor: pointer; }
 
         /* ===== FORMULAR ===== */
-        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 20px 0; }
-        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+        .form-group { display: flex; flex-direction: column; gap: 2px; }
         .form-group.full { grid-column: span 2; }
-        .form-group label { font-size: 13px; font-weight: 600; color: #4a5568; letter-spacing: 0.3px; }
-        .form-group input, .form-group select, .form-group textarea { padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 15px; transition: border 0.2s; background: white; width: 100%; }
-        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #4A90E2; box-shadow: 0 0 0 3px rgba(74,144,226,0.12); }
-        .form-group textarea { resize: vertical; min-height: 60px; }
+        .form-group label { font-size: 12px; font-weight: 600; color: #4a5568; }
+        .form-group input, .form-group select, .form-group textarea { padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 14px; background: white; width: 100%; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #0066AA; }
+        .form-group textarea { resize: vertical; min-height: 50px; }
 
-        /* ===== BUTTONS ===== */
-        .actions { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
-        .btn { padding: 12px 24px; border: none; border-radius: 12px; font-weight: 600; font-size: 15px; cursor: pointer; transition: all 0.2s; flex: 1; min-width: 120px; }
-        .btn-primary { background: #4A90E2; color: white; }
-        .btn-primary:hover { background: #357abd; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(74,144,226,0.25); }
-        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-        .btn-secondary { background: #edf2f7; color: #4a5568; }
-        .btn-secondary:hover { background: #e2e8f0; }
-        .btn-success { background: #48bb78; color: white; }
-        .btn-success:hover { background: #38a169; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(72,187,120,0.25); }
-        .btn-danger { background: #fc8181; color: white; }
-        .btn-danger:hover { background: #f56565; }
-        .btn-outline { background: transparent; color: #4A90E2; border: 2px solid #4A90E2; }
-        .btn-outline:hover { background: #ebf4ff; }
-        .btn-purple { background: #9F7AEA; color: white; }
-        .btn-purple:hover { background: #805AD5; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(159,122,234,0.25); }
-        .btn-dropbox { background: #0061FF; color: white; }
-        .btn-dropbox:hover { background: #0050D0; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,97,255,0.25); }
+        .btn { padding: 10px 20px; border: none; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; flex: 1; min-width: 80px; }
+        .btn-primary { background: #0066AA; color: white; }
+        .btn-primary:active { transform: scale(0.96); }
+        .btn-secondary { background: #E8F4FD; color: #0066AA; }
+        .btn-success { background: #22c55e; color: white; }
+        .btn-danger { background: #dc2626; color: white; }
+        .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
 
-        /* ===== FEHLER ===== */
-        .error { background: #fed7d7; color: #c53030; padding: 12px 16px; border-radius: 10px; margin: 12px 0; display: none; font-weight: 500; border-left: 4px solid #fc8181; }
-
-        /* ===== LEAD-KARTEN ===== */
-        .lead-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 8px; background: #f7fafc; }
-        .lead-card .header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
-        .lead-card .name { font-weight: 600; color: #2d3748; }
-        .lead-card .company { color: #4A90E2; font-weight: 600; }
-        .lead-card .details { font-size: 13px; color: #4a5568; margin-top: 2px; }
-        .lead-card .meta { font-size: 12px; color: #a0aec0; margin-top: 4px; }
-        .lead-card .actions { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
-        .lead-card .actions button { padding: 4px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
-        .lead-card .actions .edit { background: #4A90E2; color: white; }
-        .lead-card .actions .questionnaire { background: #9F7AEA; color: white; }
-        .lead-card .actions .delete { background: #fc8181; color: white; }
-
-        /* ===== LEADS, FRAGEBOGEN, HISTOGRAMM ===== */
-        #leadsContainer, #questionnaireContainer, #histogramContainer { display: none; margin-top: 20px; border-top: 2px solid #e2e8f0; padding-top: 16px; }
-        .leads-header, .questionnaire-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
-        .leads-header h3, .questionnaire-header h3 { font-size: 18px; color: #2d3748; }
-        .leads-list { max-height: 400px; overflow-y: auto; }
-        .empty-leads { color: #718096; text-align: center; padding: 20px; }
-
-        /* ===== FRAGEBOGEN ===== */
-        .questionnaire-answer { margin-bottom: 12px; }
-        .questionnaire-answer label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 14px; color: #2d3748; }
-        .questionnaire-answer textarea, .questionnaire-answer select { width: 100%; padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 14px; }
-        .questionnaire-answer select { background: white; }
-        .questionnaire-answer textarea { resize: vertical; min-height: 50px; }
-        .questionnaire-actions { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
-
-        /* ===== EXPORT / IMPORT ===== */
-        .export-actions { display: flex; gap: 12px; margin: 16px 0; flex-wrap: wrap; }
+        /* ===== FRAGEBOGEN EDITOR ===== */
+        .question-item { background: #f8fafc; border-radius: 10px; padding: 10px; margin-bottom: 8px; border: 1px solid #eef2f7; }
+        .question-item .q-header { display: flex; justify-content: space-between; align-items: center; }
+        .question-item .q-label { font-weight: 500; font-size: 14px; }
+        .question-item .q-type { font-size: 12px; color: #6b7a8f; }
+        .question-item .q-actions button { background: none; border: none; cursor: pointer; font-size: 16px; padding: 2px; }
 
         /* ===== HISTOGRAMM ===== */
-        #histogramWrapper { background: #f7fafc; border-radius: 12px; padding: 20px; overflow-x: auto; min-height: 200px; }
-        #histogram { display: flex; align-items: flex-end; height: 200px; gap: 4px; min-width: 100%; }
-        #histogram .bar-wrapper { flex: 1; min-width: 18px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; cursor: pointer; transition: all 0.2s ease; }
-        #histogram .bar-wrapper:hover { transform: scaleY(1.02); transform-origin: bottom; }
-        #histogram .bar-fill { width: 100%; border-radius: 2px 2px 0 0; min-height: 4px; background: linear-gradient(180deg, #4A90E2 0%, #357ABD 100%); transition: height 0.3s ease; }
-        #histogram .bar-value { font-size: 9px; color: #2d3748; margin-bottom: 2px; font-weight: 600; opacity: 0.7; }
-        #histogramEmpty { display: none; text-align: center; padding: 40px; color: #a0aec0; }
+        .histogram-controls { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+        .histogram-controls select { padding: 6px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13px; background: white; }
+        .histogram-wrapper { background: #f8fafc; border-radius: 12px; padding: 16px; overflow-x: auto; min-height: 200px; }
+        .histogram { display: flex; align-items: flex-end; height: 180px; gap: 3px; min-width: 100%; }
+        .histogram .bar { flex: 1; min-width: 12px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; cursor: pointer; }
+        .histogram .bar .fill { width: 100%; border-radius: 2px 2px 0 0; min-height: 3px; background: #0066AA; transition: height 0.3s; }
+        .histogram .bar .value { font-size: 8px; color: #4a5568; margin-bottom: 2px; }
+        .histogram-empty { text-align: center; padding: 30px; color: #a0aec0; font-size: 14px; }
+
+        /* ===== UPLOAD ===== */
+        .upload-area { background: #f8fafc; border: 2px dashed #e2e8f0; border-radius: 12px; padding: 24px; text-align: center; cursor: pointer; transition: all 0.2s; margin-bottom: 12px; }
+        .upload-area:active { background: #E8F4FD; border-color: #0066AA; }
+        .upload-area .icon { font-size: 32px; margin-bottom: 4px; }
+        .upload-area p { font-size: 13px; color: #4a5568; }
+        .upload-area small { font-size: 11px; color: #a0aec0; }
+        #fileInput { display: none; }
+        #previewContainer { display: none; margin-bottom: 12px; border-radius: 10px; overflow: hidden; }
+        #previewContainer img { width: 100%; height: auto; display: block; max-height: 200px; object-fit: contain; }
+
+        /* ===== STATUS ===== */
+        #status { display: none; background: #E8F4FD; padding: 10px 14px; border-radius: 10px; margin: 8px 0; font-size: 13px; color: #1a1a1a; }
+        #status .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #cbd5e0; border-top: 2px solid #0066AA; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 8px; vertical-align: middle; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .error { background: #fee2e2; color: #dc2626; padding: 10px 14px; border-radius: 10px; margin: 8px 0; display: none; font-size: 13px; }
+        .empty-leads { color: #a0aec0; text-align: center; padding: 12px; }
 
         /* ===== RESPONSIVE ===== */
-        @media (max-width: 480px) { .form-grid { grid-template-columns: 1fr; } .form-group.full { grid-column: span 1; } .container { padding: 16px; } }
+        @media (max-width: 400px) { .grid-card { padding: 12px; } .grid-card .icon { font-size: 28px; } .grid-card .label { font-size: 12px; } }
+        @media (min-width: 481px) { .container { padding: 24px; } }
     </style>
 </head>
 <body>
 
-<div class="container">
+<div class="container" id="app">
     <!-- ===== HEADER ===== -->
-    <h1>📇 LeadCapture <small>v6</small> <span class="status-badge" id="connectionStatus">🔗 Verbunden</span></h1>
-    <div class="subtitle">
-        KI-gestützte Lead-Erfassung mit Multi-Tenancy
-        <span class="server-url" id="serverUrlDisplay">🔗 Server: wird geladen...</span>
+    <div class="header">
+        <h1>📇 Lead<span>Capture</span></h1>
+        <div class="header-actions">
+            <span class="user-badge" id="userBadge">👤</span>
+            <button class="header-btn" id="logoutBtn" title="Logout">🚪</button>
+        </div>
+    </div>
+
+    <!-- ===== USER INFO ===== -->
+    <div id="userInfo" class="user-info" style="display:none;">
+        <span>👤 <span id="userName"></span> · <span class="tenant" id="tenantName"></span></span>
+        <button class="btn-logout" id="logoutBtn2">Logout</button>
     </div>
 
     <!-- ============================================================ -->
-    <!-- LOGIN + REGISTRIERUNG -->
+    <!-- LOGIN / REGISTER -->
     <!-- ============================================================ -->
     <div id="loginContainer">
-        <!-- LOGIN -->
         <div id="loginFormContainer">
-            <h2>🔐 Anmelden</h2>
-            <form class="login-form" id="loginForm">
-                <input type="email" id="loginEmail" placeholder="E-Mail" required>
-                <input type="password" id="loginPassword" placeholder="Passwort" required>
+            <h2 style="font-size:20px; color:#1a1a1a; margin-bottom:16px;">🔐 Anmelden</h2>
+            <form class="login-form" id="loginForm" style="display:flex; flex-direction:column; gap:10px;">
+                <input type="email" id="loginEmail" placeholder="E-Mail" style="padding:12px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:15px;">
+                <input type="password" id="loginPassword" placeholder="Passwort" style="padding:12px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:15px;">
                 <div class="error" id="loginError"></div>
                 <button type="submit" class="btn btn-primary" id="loginBtn">Anmelden</button>
-                <div class="hint">
-                    Noch keinen Account? <a href="#" id="showRegisterLink">Jetzt registrieren</a>
-                </div>
+                <div style="text-align:center; font-size:13px; color:#6b7a8f;">Noch keinen Account? <a href="#" id="showRegisterLink" style="color:#0066AA; text-decoration:underline;">Registrieren</a></div>
             </form>
         </div>
-
-        <!-- REGISTRIERUNG -->
         <div id="registerFormContainer" style="display:none;">
-            <h2>📝 Registrieren</h2>
-            <form class="login-form" id="registerForm">
-                <input type="email" id="registerEmail" placeholder="E-Mail" required>
-                <input type="password" id="registerPassword" placeholder="Passwort" required>
-                <input type="text" id="registerFullName" placeholder="Vollständiger Name (optional)">
-                <input type="text" id="registerTenantName" placeholder="Firmenname (Mandant)" required>
+            <h2 style="font-size:20px; color:#1a1a1a; margin-bottom:16px;">📝 Registrieren</h2>
+            <form class="login-form" id="registerForm" style="display:flex; flex-direction:column; gap:10px;">
+                <input type="email" id="registerEmail" placeholder="E-Mail" style="padding:12px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:15px;">
+                <input type="password" id="registerPassword" placeholder="Passwort" style="padding:12px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:15px;">
+                <input type="text" id="registerFullName" placeholder="Vollständiger Name (optional)" style="padding:12px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:15px;">
+                <input type="text" id="registerTenantName" placeholder="Firmenname (Mandant)" style="padding:12px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:15px;">
                 <div class="error" id="registerError"></div>
                 <button type="submit" class="btn btn-success" id="registerBtn">Registrieren</button>
-                <div class="hint">
-                    Bereits registriert? <a href="#" id="showLoginLink">Zum Login</a>
-                </div>
+                <div style="text-align:center; font-size:13px; color:#6b7a8f;">Bereits registriert? <a href="#" id="showLoginLink" style="color:#0066AA; text-decoration:underline;">Zum Login</a></div>
             </form>
         </div>
     </div>
 
     <!-- ============================================================ -->
-    <!-- APP-BEREICH (nach Login) -->
+    <!-- APP (nach Login) -->
     <!-- ============================================================ -->
-    <div id="appContainer">
-        <!-- User Info -->
-        <div class="user-info">
-            <span>👤 <span id="userName"></span> · <span class="tenant" id="tenantName"></span></span>
-            <button class="btn-logout" id="logoutBtn">🚪 Logout</button>
+    <div id="appContainer" style="display:none;">
+
+        <!-- ===== KACHEL-GRID ===== -->
+        <div class="grid" id="mainGrid">
+            <div class="grid-card" data-view="scan">
+                <span class="icon">📸</span>
+                <div class="label">Visitenkarte</div>
+                <div class="sub">scannen & erfassen</div>
+            </div>
+            <div class="grid-card" data-view="search">
+                <span class="icon">🔍</span>
+                <div class="label">Suche</div>
+                <div class="sub">Leads finden</div>
+            </div>
+            <div class="grid-card" data-view="questionnaire">
+                <span class="icon">📝</span>
+                <div class="label">Fragebogen</div>
+                <div class="sub">erstellen & verwalten</div>
+            </div>
+            <div class="grid-card" data-view="stats">
+                <span class="icon">📊</span>
+                <div class="label">Statistik</div>
+                <div class="sub">Histogramm</div>
+            </div>
+            <div class="grid-card map-card" data-view="map">
+                <span class="icon">🗺️</span>
+                <div class="label">Karte</div>
+                <div class="sub">alle Leads auf einer Karte</div>
+            </div>
         </div>
 
-        <!-- UPLOAD -->
-        <div class="upload-area" id="uploadArea">
-            <div class="icon">📸</div>
-            <p>Foto hochladen oder aufnehmen</p>
-            <small>Unterstützt JPG, PNG, PDF (max. 10MB)</small>
-            <input type="file" id="fileInput" accept="image/*,application/pdf" capture="environment">
-        </div>
-
-        <!-- PREVIEW -->
-        <div id="previewContainer"><img id="previewImage" alt="Vorschau"></div>
-
-        <!-- STATUS -->
-        <div id="status"><span class="spinner"></span><span id="statusText">DeepSeek analysiert...</span></div>
-
-        <!-- FEHLER -->
-        <div class="error" id="errorBox"></div>
-
-        <!-- FORMULAR -->
-        <form id="leadForm">
-            <div class="form-grid">
-                <div class="form-group"><label for="firstName">Vorname</label><input type="text" id="firstName" placeholder="Max"></div>
-                <div class="form-group"><label for="lastName">Nachname</label><input type="text" id="lastName" placeholder="Mustermann"></div>
-                <div class="form-group full"><label for="company">Firma</label><input type="text" id="company" placeholder="Firma GmbH"></div>
-                <div class="form-group full"><label for="position">Position</label><input type="text" id="position" placeholder="Geschäftsführer"></div>
-                <div class="form-group"><label for="email">E-Mail</label><input type="email" id="email" placeholder="max@firma.de"></div>
-                <div class="form-group"><label for="phone">Telefon</label><input type="tel" id="phone" placeholder="+49 123 456789"></div>
-                <div class="form-group full"><label for="street">Straße</label><input type="text" id="street" placeholder="Musterstraße 1"></div>
-                <div class="form-group"><label for="zip">PLZ</label><input type="text" id="zip" placeholder="12345"></div>
-                <div class="form-group"><label for="city">Stadt</label><input type="text" id="city" placeholder="Berlin"></div>
-                <div class="form-group full"><label for="interests">Interessensgebiete</label><input type="text" id="interests" placeholder="KI, Automatisierung, Cloud"></div>
-                <div class="form-group full"><label for="visitorType">Besuchertyp</label>
-                    <select id="visitorType">
-                        <option value="">Bitte wählen...</option>
-                        <option value="Entscheider">Entscheider</option>
-                        <option value="Fachbesucher">Fachbesucher</option>
-                        <option value="Student">Student</option>
-                        <option value="Presse">Presse</option>
-                        <option value="Sonstiges">Sonstiges</option>
-                    </select>
+        <!-- ===== VIEW: SCAN ===== -->
+        <div class="view" id="view-scan">
+            <div class="view-header">
+                <button class="back" data-view="main">←</button>
+                <h2>📸 Visitenkarte scannen</h2>
+            </div>
+            <div class="upload-area" id="uploadArea">
+                <div class="icon">📸</div>
+                <p>Foto hochladen oder aufnehmen</p>
+                <small>JPG, PNG, PDF (max. 10MB)</small>
+                <input type="file" id="fileInput" accept="image/*,application/pdf" capture="environment">
+            </div>
+            <div id="previewContainer"><img id="previewImage" alt="Vorschau"></div>
+            <div id="status"><span class="spinner"></span><span id="statusText">Verarbeite...</span></div>
+            <div class="error" id="errorBox"></div>
+            <form id="leadForm">
+                <div class="form-grid">
+                    <div class="form-group"><label for="firstName">Vorname</label><input type="text" id="firstName" placeholder="Max"></div>
+                    <div class="form-group"><label for="lastName">Nachname</label><input type="text" id="lastName" placeholder="Mustermann"></div>
+                    <div class="form-group full"><label for="company">Firma</label><input type="text" id="company" placeholder="Firma GmbH"></div>
+                    <div class="form-group full"><label for="position">Position</label><input type="text" id="position" placeholder="Geschäftsführer"></div>
+                    <div class="form-group"><label for="email">E-Mail</label><input type="email" id="email" placeholder="max@firma.de"></div>
+                    <div class="form-group"><label for="phone">Telefon</label><input type="tel" id="phone" placeholder="+49 123 456789"></div>
+                    <div class="form-group full"><label for="street">Straße</label><input type="text" id="street" placeholder="Musterstraße 1"></div>
+                    <div class="form-group"><label for="zip">PLZ</label><input type="text" id="zip" placeholder="12345"></div>
+                    <div class="form-group"><label for="city">Stadt</label><input type="text" id="city" placeholder="Berlin"></div>
+                    <div class="form-group full"><label for="interests">Interessensgebiete</label><input type="text" id="interests" placeholder="KI, Automatisierung, Cloud"></div>
+                    <div class="form-group full"><label for="visitorType">Besuchertyp</label>
+                        <select id="visitorType">
+                            <option value="">Bitte wählen...</option>
+                            <option value="Entscheider">Entscheider</option>
+                            <option value="Fachbesucher">Fachbesucher</option>
+                            <option value="Student">Student</option>
+                            <option value="Presse">Presse</option>
+                            <option value="Sonstiges">Sonstiges</option>
+                        </select>
+                    </div>
                 </div>
-            </div>
-            <div class="actions">
-                <button type="button" class="btn btn-secondary" id="clearBtn">🗑️ Leeren</button>
-                <button type="button" class="btn btn-primary" id="uploadBtn">📤 Foto hochladen</button>
-                <button type="button" class="btn btn-success" id="saveBtn">💾 Lead speichern</button>
-            </div>
-        </form>
-
-        <!-- EXPORT / IMPORT -->
-        <div class="export-actions">
-            <button type="button" class="btn btn-purple" id="exportCsvBtn">📊 CSV exportieren</button>
-            <button type="button" class="btn btn-success" id="importCsvBtn">📥 CSV importieren</button>
-            <button type="button" class="btn btn-dropbox" id="importDropboxBtn">☁️ Dropbox import</button>
-            <input type="file" id="csvFileInput" accept=".csv" style="display:none;">
-        </div>
-        <div class="export-actions">
-            <button type="button" class="btn btn-secondary" id="refreshLeadsBtn">🔄 Aktualisieren</button>
-            <button type="button" class="btn btn-outline" id="toggleHistogramBtn" style="flex:1;">📊 Histogramm anzeigen</button>
-        </div>
-
-        <!-- LEADS -->
-        <div id="leadsContainer">
-            <div class="leads-header"><h3>📋 Gespeicherte Leads</h3><span id="leadsCount">0</span></div>
-            <div class="leads-list" id="leadsList"><div class="empty-leads">📭 Noch keine Leads gespeichert.</div></div>
-        </div>
-
-        <!-- FRAGEBOGEN -->
-        <div id="questionnaireContainer">
-            <div class="questionnaire-header">
-                <h3>📝 Fragebogen für <span id="questionnaireLeadName"></span></h3>
-                <button type="button" class="btn btn-secondary" id="closeQuestionnaireBtn" style="padding:4px 12px; font-size:12px;">✕ Schließen</button>
-            </div>
-            <div id="questionnaireForm"></div>
-            <div class="questionnaire-actions">
-                <button type="button" class="btn btn-success" id="saveQuestionnaireBtn">💾 Antworten speichern</button>
-            </div>
-        </div>
-
-        <!-- HISTOGRAMM -->
-        <div id="histogramContainer">
-            <div class="leads-header">
-                <h3>📊 Leads pro Tag <small style="font-weight:400; font-size:14px; color:#718096;">(Histogramm)</small></h3>
-                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                    <label style="font-size:13px; color:#4a5568;">Jahr:</label>
-                    <select id="yearSelect" style="padding:4px 8px; border-radius:6px; border:1px solid #e2e8f0; font-size:14px;">
-                        <option value="alle">Alle Jahre</option>
-                    </select>
-                    <button id="refreshHistogramBtn" class="btn btn-outline" style="padding:4px 12px; font-size:12px;">🔄</button>
-                    <span id="histogramTotal" style="font-size:13px; color:#718096;"></span>
+                <div class="actions">
+                    <button type="button" class="btn btn-secondary" id="clearBtn">🗑️ Leeren</button>
+                    <button type="button" class="btn btn-primary" id="uploadBtn">📤 Foto hochladen</button>
+                    <button type="button" class="btn btn-success" id="saveBtn">💾 Speichern</button>
                 </div>
+            </form>
+        </div>
+
+        <!-- ===== VIEW: SEARCH ===== -->
+        <div class="view" id="view-search">
+            <div class="view-header">
+                <button class="back" data-view="main">←</button>
+                <h2>🔍 Suche</h2>
             </div>
-            <div id="histogramWrapper">
-                <div id="histogram" style="display:flex; align-items:flex-end; height:200px; gap:4px; min-width:100%;"></div>
-                <div id="histogramEmpty" style="display:none; text-align:center; padding:40px; color:#a0aec0;">📭 Keine Leads für diesen Zeitraum.</div>
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="Name, Firma, E-Mail...">
+                <button id="searchBtn">Suchen</button>
+            </div>
+            <div id="searchResults">
+                <div class="empty-leads">Gib einen Suchbegriff ein</div>
+            </div>
+        </div>
+
+        <!-- ===== VIEW: QUESTIONNAIRE ===== -->
+        <div class="view" id="view-questionnaire">
+            <div class="view-header">
+                <button class="back" data-view="main">←</button>
+                <h2>📝 Fragebogen</h2>
+            </div>
+            <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+                <button class="btn btn-primary" id="addQuestionBtn">➕ Frage hinzufügen</button>
+                <button class="btn btn-success" id="saveQuestionnaireTemplateBtn">💾 Vorlage speichern</button>
+            </div>
+            <div id="questionnaireEditor"></div>
+            <div class="empty-leads" id="emptyQuestions">Keine Fragen definiert. Klicke auf "Frage hinzufügen".</div>
+        </div>
+
+        <!-- ===== VIEW: STATS ===== -->
+        <div class="view" id="view-stats">
+            <div class="view-header">
+                <button class="back" data-view="main">←</button>
+                <h2>📊 Statistik</h2>
+            </div>
+            <div class="histogram-controls">
+                <select id="histogramYear"></select>
+                <select id="histogramView">
+                    <option value="year">Jahresansicht</option>
+                    <option value="month">Monatsansicht</option>
+                    <option value="day">Tagesansicht</option>
+                </select>
+                <button class="btn btn-secondary" id="refreshHistogramBtn2" style="padding:6px 12px; font-size:12px;">🔄</button>
+            </div>
+            <div class="histogram-wrapper">
+                <div class="histogram" id="histogram"></div>
+                <div class="histogram-empty" id="histogramEmpty">📭 Keine Daten</div>
+            </div>
+            <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="btn btn-primary" id="exportCsvBtn2">📊 CSV exportieren</button>
+                <button class="btn btn-secondary" id="importCsvBtn2">📥 CSV importieren</button>
+                <button class="btn btn-secondary" id="importDropboxBtn2" style="background:#0061FF; color:white;">☁️ Dropbox</button>
+                <input type="file" id="csvFileInput" accept=".csv" style="display:none;">
+            </div>
+            <div id="leadsContainer" style="margin-top:12px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><h3 style="font-size:16px;">📋 Alle Leads</h3><span id="leadsCount">0</span></div>
+                <div id="leadsList"><div class="empty-leads">📭 Noch keine Leads</div></div>
+            </div>
+        </div>
+
+        <!-- ===== VIEW: MAP ===== -->
+        <div class="view" id="view-map">
+            <div class="view-header">
+                <button class="back" data-view="main">←</button>
+                <h2>🗺️ Lead-Karte</h2>
+            </div>
+            <div class="map-controls">
+                <button class="btn btn-secondary" id="mapFilterBtn" style="flex:1; padding:8px;">📍 Alle anzeigen</button>
+                <button class="btn btn-secondary" id="mapRefreshBtn" style="flex:1; padding:8px;">🔄 Aktualisieren</button>
+            </div>
+            <div id="map"></div>
+            <div style="margin-top:8px; font-size:12px; color:#6b7a8f; text-align:center;">
+                <span id="mapCount">0</span> Leads auf der Karte · Klicke auf einen Punkt für Details
             </div>
         </div>
     </div>
+
+    <!-- ============================================================ -->
+    <!-- LEAD DETAIL MODAL -->
+    <!-- ============================================================ -->
+    <div id="leadDetailOverlay">
+        <div id="leadDetailModal">
+            <button class="close-btn" id="closeLeadDetail">×</button>
+            <div id="leadDetailContent">
+                <div class="detail-name" id="detailName">—</div>
+                <div class="detail-company" id="detailCompany">—</div>
+                <div class="detail-position" id="detailPosition">—</div>
+
+                <div class="detail-section">
+                    <div class="label">Kontakt</div>
+                    <div class="value" id="detailContact">—</div>
+                </div>
+
+                <div class="detail-section">
+                    <div class="label">Adresse</div>
+                    <div class="value" id="detailAddress">—</div>
+                </div>
+
+                <div class="detail-section">
+                    <div class="label">Interessensgebiete</div>
+                    <div class="value" id="detailInterests">—</div>
+                </div>
+
+                <div class="detail-section">
+                    <div class="label">Besuchertyp</div>
+                    <div class="value" id="detailVisitorType">—</div>
+                </div>
+
+                <div class="detail-section">
+                    <div class="label">Erfasst am</div>
+                    <div class="value" id="detailCreated">—</div>
+                </div>
+
+                <div class="detail-actions">
+                    <button class="btn btn-phone" id="detailPhoneBtn">📞 Anrufen</button>
+                    <button class="btn btn-email" id="detailEmailBtn">✉️ E-Mail</button>
+                    <button class="btn btn-edit" id="detailEditBtn">✏️ Bearbeiten</button>
+                    <button class="btn btn-delete" id="detailDeleteBtn">🗑️ Löschen</button>
+                </div>
+
+                <!-- Edit-Modus (wird bei Klick auf Bearbeiten eingeblendet) -->
+                <div id="detailEditMode" style="display:none; margin-top:16px; border-top:1px solid #eef2f7; padding-top:16px;">
+                    <h4 style="font-size:14px; margin-bottom:8px;">✏️ Lead bearbeiten</h4>
+                    <div class="form-grid" style="margin:0;">
+                        <div class="form-group"><label>Vorname</label><input type="text" id="editFirstName" style="padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;"></div>
+                        <div class="form-group"><label>Nachname</label><input type="text" id="editLastName" style="padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;"></div>
+                        <div class="form-group full"><label>Firma</label><input type="text" id="editCompany" style="padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;"></div>
+                        <div class="form-group full"><label>Position</label><input type="text" id="editPosition" style="padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;"></div>
+                        <div class="form-group"><label>E-Mail</label><input type="email" id="editEmail" style="padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;"></div>
+                        <div class="form-group"><label>Telefon</label><input type="tel" id="editPhone" style="padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;"></div>
+                        <div class="form-group full"><label>Straße</label><input type="text" id="editStreet" style="padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;"></div>
+                        <div class="form-group"><label>PLZ</label><input type="text" id="editZip" style="padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;"></div>
+                        <div class="form-group"><label>Stadt</label><input type="text" id="editCity" style="padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;"></div>
+                        <div class="form-group full"><label>Interessensgebiete</label><input type="text" id="editInterests" style="padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;"></div>
+                        <div class="form-group full"><label>Besuchertyp</label>
+                            <select id="editVisitorType" style="padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px; background:white;">
+                                <option value="">Bitte wählen...</option>
+                                <option value="Entscheider">Entscheider</option>
+                                <option value="Fachbesucher">Fachbesucher</option>
+                                <option value="Student">Student</option>
+                                <option value="Presse">Presse</option>
+                                <option value="Sonstiges">Sonstiges</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="actions" style="margin-top:8px;">
+                        <button class="btn btn-success" id="saveEditBtn">💾 Speichern</button>
+                        <button class="btn btn-secondary" id="cancelEditBtn">Abbrechen</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 // ============================================================
 // 1. KONFIGURATION
 // ============================================================
 const API_URL = 'https://leadcapture-backend.onrender.com/api';
+let mapInstance = null;
+let mapMarkers = [];
+let currentLeadDetail = null;
 
 // ============================================================
 // 2. TOKEN-VERWALTUNG
 // ============================================================
-function getToken() {
-    return localStorage.getItem('leadcapture_token');
-}
-
-function setToken(token) {
-    localStorage.setItem('leadcapture_token', token);
-}
-
-function removeToken() {
-    localStorage.removeItem('leadcapture_token');
-    localStorage.removeItem('leadcapture_user');
-}
-
-function getUser() {
-    const user = localStorage.getItem('leadcapture_user');
-    return user ? JSON.parse(user) : null;
-}
-
-function setUser(user) {
-    localStorage.setItem('leadcapture_user', JSON.stringify(user));
-}
-
-function isLoggedIn() {
-    return !!getToken();
-}
+function getToken() { return localStorage.getItem('leadcapture_token'); }
+function setToken(t) { localStorage.setItem('leadcapture_token', t); }
+function removeToken() { localStorage.removeItem('leadcapture_token'); localStorage.removeItem('leadcapture_user'); }
+function getUser() { const u = localStorage.getItem('leadcapture_user'); return u ? JSON.parse(u) : null; }
+function setUser(u) { localStorage.setItem('leadcapture_user', JSON.stringify(u)); }
 
 // ============================================================
-// 3. API HELPER (mit Token-Erneuerung)
+// 3. API HELPER
 // ============================================================
 async function apiRequest(endpoint, options = {}) {
-    let token = getToken();
-    if (!token) {
-        throw new Error('Nicht eingeloggt');
-    }
-    
+    const token = getToken();
+    if (!token) throw new Error('Nicht eingeloggt');
     const response = await fetch(`${API_URL}${endpoint}`, {
         ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-            ...(options.headers || {})
-        }
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, ...(options.headers || {}) }
     });
-    
-    // Wenn Token abgelaufen ist (401)
-    if (response.status === 401) {
-        console.warn('⚠️ Token abgelaufen – versuche Refresh...');
-        
-        // Hole den Refresh-Token aus dem localStorage (der beim Login gespeichert wurde)
-        const refreshToken = localStorage.getItem('leadcapture_refresh_token');
-        if (refreshToken) {
-            try {
-                // Token erneuern
-                const refreshResponse = await fetch(`${API_URL}/auth/refresh`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ refresh_token: refreshToken })
-                });
-                
-                const refreshResult = await refreshResponse.json();
-                if (refreshResult.success) {
-                    console.log('✅ Token erfolgreich erneuert');
-                    localStorage.setItem('leadcapture_token', refreshResult.data.token);
-                    localStorage.setItem('leadcapture_refresh_token', refreshResult.data.refreshToken);
-                    
-                    // Original-Anfrage mit neuem Token wiederholen
-                    const newResponse = await fetch(`${API_URL}${endpoint}`, {
-                        ...options,
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${refreshResult.data.token}`,
-                            ...(options.headers || {})
-                        }
-                    });
-                    return newResponse;
-                }
-            } catch (refreshError) {
-                console.error('❌ Token-Erneuerung fehlgeschlagen:', refreshError);
-            }
-        }
-        
-        // Wenn Refresh nicht möglich ist → Logout
-        removeToken();
-        showLogin();
-        throw new Error('Session abgelaufen. Bitte erneut einloggen.');
-    }
-    
+    if (response.status === 401) { removeToken(); showLogin(); throw new Error('Session abgelaufen'); }
     return response;
 }
+
 // ============================================================
 // 4. LOGIN / REGISTER
 // ============================================================
-// ============================================================
-// LOGIN-FUNKTION (KORRIGIERT)
-// ============================================================
 async function login(email, password) {
-    console.log('📤 Login-Versuch für:', email);
-    
     const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
     });
-    
     const result = await response.json();
     if (!result.success) throw new Error(result.error || 'Login fehlgeschlagen');
-    
-    // 🔥 NEU: Refresh-Token ebenfalls speichern
     localStorage.setItem('leadcapture_token', result.data.token);
     localStorage.setItem('leadcapture_refresh_token', result.data.refreshToken);
     localStorage.setItem('leadcapture_user', JSON.stringify(result.data.user));
-    
     return result.data;
 }
 
@@ -419,162 +531,405 @@ async function register(email, password, fullName, tenantName) {
 }
 
 // ============================================================
-// 5. DOM-REFERENZEN (Login/Register)
+// 5. DOM-REFERENZEN
 // ============================================================
 const loginContainer = document.getElementById('loginContainer');
 const appContainer = document.getElementById('appContainer');
-const loginFormContainer = document.getElementById('loginFormContainer');
-const registerFormContainer = document.getElementById('registerFormContainer');
-
 const loginForm = document.getElementById('loginForm');
 const registerForm = document.getElementById('registerForm');
-
 const loginEmail = document.getElementById('loginEmail');
 const loginPassword = document.getElementById('loginPassword');
 const loginError = document.getElementById('loginError');
 const loginBtn = document.getElementById('loginBtn');
-
 const registerEmail = document.getElementById('registerEmail');
 const registerPassword = document.getElementById('registerPassword');
 const registerFullName = document.getElementById('registerFullName');
 const registerTenantName = document.getElementById('registerTenantName');
 const registerError = document.getElementById('registerError');
 const registerBtn = document.getElementById('registerBtn');
-
 const showRegisterLink = document.getElementById('showRegisterLink');
 const showLoginLink = document.getElementById('showLoginLink');
-
 const userName = document.getElementById('userName');
 const tenantName = document.getElementById('tenantName');
 const logoutBtn = document.getElementById('logoutBtn');
-const connectionStatus = document.getElementById('connectionStatus');
-const serverUrlDisplay = document.getElementById('serverUrlDisplay');
+const logoutBtn2 = document.getElementById('logoutBtn2');
+const userBadge = document.getElementById('userBadge');
+const userInfo = document.getElementById('userInfo');
 
 // ============================================================
-// 6. LOGIN / REGISTER UMSCHALTEN
+// 6. LOGIN / REGISTER EVENTS
 // ============================================================
 showRegisterLink.addEventListener('click', (e) => {
     e.preventDefault();
-    loginFormContainer.style.display = 'none';
-    registerFormContainer.style.display = 'block';
+    document.getElementById('loginFormContainer').style.display = 'none';
+    document.getElementById('registerFormContainer').style.display = 'block';
     registerError.style.display = 'none';
 });
-
 showLoginLink.addEventListener('click', (e) => {
     e.preventDefault();
-    loginFormContainer.style.display = 'block';
-    registerFormContainer.style.display = 'none';
+    document.getElementById('loginFormContainer').style.display = 'block';
+    document.getElementById('registerFormContainer').style.display = 'none';
     loginError.style.display = 'none';
 });
 
-// ============================================================
-// 7. LOGIN
-// ============================================================
 loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     loginError.style.display = 'none';
-    loginBtn.disabled = true;
-    loginBtn.textContent = '⏳ ...';
-    
+    loginBtn.disabled = true; loginBtn.textContent = '⏳ ...';
     try {
         const data = await login(loginEmail.value, loginPassword.value);
-        setToken(data.token);
-        setUser(data.user);
         showApp(data.user);
     } catch (error) {
         loginError.textContent = error.message || 'Login fehlgeschlagen';
         loginError.style.display = 'block';
-    } finally {
-        loginBtn.disabled = false;
-        loginBtn.textContent = 'Anmelden';
-    }
+    } finally { loginBtn.disabled = false; loginBtn.textContent = 'Anmelden'; }
 });
 
-// ============================================================
-// 8. REGISTRIERUNG
-// ============================================================
 registerForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     registerError.style.display = 'none';
-    registerBtn.disabled = true;
-    registerBtn.textContent = '⏳ ...';
-    
+    registerBtn.disabled = true; registerBtn.textContent = '⏳ ...';
     try {
-        const data = await register(
-            registerEmail.value,
-            registerPassword.value,
-            registerFullName.value,
-            registerTenantName.value
-        );
-        setToken(data.token);
-        setUser(data.user);
+        const data = await register(registerEmail.value, registerPassword.value, registerFullName.value, registerTenantName.value);
         showApp(data.user);
     } catch (error) {
         registerError.textContent = error.message || 'Registrierung fehlgeschlagen';
         registerError.style.display = 'block';
-    } finally {
-        registerBtn.disabled = false;
-        registerBtn.textContent = 'Registrieren';
-    }
+    } finally { registerBtn.disabled = false; registerBtn.textContent = 'Registrieren'; }
 });
 
 // ============================================================
-// 9. APP ANZEIGEN / LOGOUT
+// 7. NAVIGATION (Kacheln)
+// ============================================================
+function showView(viewId) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    const view = document.getElementById(`view-${viewId}`);
+    if (view) view.classList.add('active');
+    document.getElementById('mainGrid').style.display = viewId === 'main' ? 'grid' : 'none';
+    
+    if (viewId === 'map') { initMap(); }
+}
+
+document.querySelectorAll('.grid-card').forEach(card => {
+    card.addEventListener('click', () => {
+        const view = card.dataset.view;
+        showView(view);
+        if (view === 'search') { /* Suchfeld fokussieren */ }
+        if (view === 'stats') { loadHistogram(); loadLeads(); }
+        if (view === 'questionnaire') { loadQuestionnaireTemplate(); }
+        if (view === 'map') { loadMapData(); }
+    });
+});
+
+document.querySelectorAll('.back').forEach(btn => {
+    btn.addEventListener('click', () => { showView('main'); });
+});
+
+// ============================================================
+// 8. APP ANZEIGEN / LOGOUT
 // ============================================================
 function showApp(user) {
     loginContainer.style.display = 'none';
     appContainer.style.display = 'block';
+    userInfo.style.display = 'flex';
     userName.textContent = user.fullName || user.email;
-    tenantName.textContent = user.tenant?.name || 'Unbekannter Mandant';
+    tenantName.textContent = user.tenant?.name || 'Unbekannt';
+    userBadge.textContent = user.fullName ? user.fullName.charAt(0).toUpperCase() : '👤';
+    showView('main');
     loadLeads();
-    loadHistogram('alle');
 }
 
 function showLogin() {
     loginContainer.style.display = 'block';
     appContainer.style.display = 'none';
-    loginFormContainer.style.display = 'block';
-    registerFormContainer.style.display = 'none';
-    loginError.style.display = 'none';
+    userInfo.style.display = 'none';
+    document.getElementById('loginFormContainer').style.display = 'block';
+    document.getElementById('registerFormContainer').style.display = 'none';
     loginEmail.value = '';
     loginPassword.value = '';
 }
 
-logoutBtn.addEventListener('click', () => {
-    removeToken();
-    showLogin();
-});
+logoutBtn.addEventListener('click', () => { removeToken(); showLogin(); });
+logoutBtn2.addEventListener('click', () => { removeToken(); showLogin(); });
 
 // ============================================================
-// 10. BACKEND-VERBINDUNG PRÜFEN
+// 9. LEADS (mit API)
 // ============================================================
-async function checkConnection() {
+const leadsList = document.getElementById('leadsList');
+const leadsCount = document.getElementById('leadsCount');
+const searchInput = document.getElementById('searchInput');
+const searchBtn = document.getElementById('searchBtn');
+const searchResults = document.getElementById('searchResults');
+
+let allLeads = [];
+
+async function loadLeads() {
     try {
-        const response = await fetch(`${API_URL}/health`);
-        if (response.ok) {
-            connectionStatus.textContent = '✅ Verbunden';
-            connectionStatus.className = 'status-badge';
-            serverUrlDisplay.textContent = `🔗 Server: ${API_URL}`;
-        } else {
-            throw new Error('Server antwortet nicht korrekt');
+        const response = await apiRequest('/leads');
+        const result = await response.json();
+        if (result.success) {
+            allLeads = result.data;
+            displayLeads(allLeads);
         }
     } catch (error) {
-        connectionStatus.textContent = '⚠️ Offline';
-        connectionStatus.className = 'status-badge offline';
-        serverUrlDisplay.textContent = '🔗 Server: nicht erreichbar';
+        if (error.message.includes('Nicht eingeloggt')) showLogin();
+        else console.error(error);
     }
 }
 
+function displayLeads(leads, searchTerm = '') {
+    const filtered = searchTerm ? leads.filter(l => 
+        (l.first_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (l.last_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (l.company || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (l.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (l.phone || '').includes(searchTerm)
+    ) : leads;
+    
+    leadsCount.textContent = `${leads.length} Einträge`;
+    if (leads.length === 0) {
+        leadsList.innerHTML = '<div class="empty-leads">📭 Noch keine Leads</div>';
+    } else {
+        leadsList.innerHTML = leads.map(lead => `
+            <div class="lead-card" onclick="openLeadDetail('${lead.id}')">
+                <div><span class="name">${lead.first_name || ''} ${lead.last_name || ''}</span> · <span class="company">${lead.company || 'Keine Firma'}</span></div>
+                <div class="details">${lead.position || 'Keine Position'} ${lead.email ? '· ✉️ ' + lead.email : ''} ${lead.phone ? '· 📞 ' + lead.phone : ''}</div>
+                <div class="meta">🕐 ${lead.created_at ? new Date(lead.created_at).toLocaleString() : ''}</div>
+            </div>
+        `).join('');
+    }
+    
+    if (searchTerm) {
+        searchResults.innerHTML = filtered.length === 0 ? 
+            '<div class="empty-leads">🔍 Keine Leads gefunden</div>' :
+            filtered.map(lead => `
+                <div class="lead-card" onclick="openLeadDetail('${lead.id}')">
+                    <div><span class="name">${lead.first_name || ''} ${lead.last_name || ''}</span> · <span class="company">${lead.company || 'Keine Firma'}</span></div>
+                    <div class="details">${lead.position || 'Keine Position'} ${lead.email ? '· ✉️ ' + lead.email : ''}</div>
+                </div>
+            `).join('');
+    }
+}
+
+searchBtn.addEventListener('click', async () => {
+    const term = searchInput.value.trim();
+    if (!term) { searchResults.innerHTML = '<div class="empty-leads">Gib einen Suchbegriff ein</div>'; return; }
+    try {
+        const response = await apiRequest('/leads');
+        const result = await response.json();
+        if (result.success) {
+            displayLeads(result.data, term);
+        }
+    } catch (error) { console.error(error); }
+});
+searchInput.addEventListener('keyup', (e) => { if (e.key === 'Enter') searchBtn.click(); });
+
 // ============================================================
-// 11. DOM-REFERENZEN (App)
+// 10. LEAD DETAIL
+// ============================================================
+const detailOverlay = document.getElementById('leadDetailOverlay');
+const detailModal = document.getElementById('leadDetailModal');
+
+function openLeadDetail(leadId) {
+    const lead = allLeads.find(l => l.id === leadId);
+    if (!lead) return;
+    currentLeadDetail = lead;
+    
+    document.getElementById('detailName').textContent = `${lead.first_name || ''} ${lead.last_name || ''}`.trim() || 'Unbekannt';
+    document.getElementById('detailCompany').textContent = lead.company || 'Keine Firma';
+    document.getElementById('detailPosition').textContent = lead.position || 'Keine Position';
+    document.getElementById('detailContact').textContent = 
+        `${lead.email ? '✉️ ' + lead.email : ''}${lead.email && lead.phone ? ' · ' : ''}${lead.phone ? '📞 ' + lead.phone : ''}` || '—';
+    document.getElementById('detailAddress').textContent = 
+        `${lead.street || ''}${lead.street ? ', ' : ''}${lead.zip || ''}${lead.zip ? ' ' : ''}${lead.city || ''}`.trim() || '—';
+    document.getElementById('detailInterests').textContent = lead.interests?.length ? lead.interests.join(', ') : '—';
+    document.getElementById('detailVisitorType').textContent = lead.visitor_type || '—';
+    document.getElementById('detailCreated').textContent = lead.created_at ? new Date(lead.created_at).toLocaleString() : '—';
+    
+    // Telefon-Button
+    const phoneBtn = document.getElementById('detailPhoneBtn');
+    if (lead.phone) {
+        phoneBtn.style.display = 'block';
+        phoneBtn.onclick = () => window.location.href = `tel:${lead.phone.replace(/\s/g, '')}`;
+    } else {
+        phoneBtn.style.display = 'none';
+    }
+    
+    // E-Mail-Button
+    const emailBtn = document.getElementById('detailEmailBtn');
+    if (lead.email) {
+        emailBtn.style.display = 'block';
+        emailBtn.onclick = () => window.location.href = `mailto:${lead.email}`;
+    } else {
+        emailBtn.style.display = 'none';
+    }
+    
+    // Edit-Modus zurücksetzen
+    document.getElementById('detailEditMode').style.display = 'none';
+    document.getElementById('detailEditBtn').style.display = 'block';
+    
+    // Löschen-Button
+    document.getElementById('detailDeleteBtn').onclick = () => {
+        if (confirm('Lead wirklich löschen?')) {
+            deleteLead(lead.id);
+        }
+    };
+    
+    // Bearbeiten-Button
+    document.getElementById('detailEditBtn').onclick = () => {
+        document.getElementById('detailEditMode').style.display = 'block';
+        document.getElementById('detailEditBtn').style.display = 'none';
+        // Felder füllen
+        document.getElementById('editFirstName').value = lead.first_name || '';
+        document.getElementById('editLastName').value = lead.last_name || '';
+        document.getElementById('editCompany').value = lead.company || '';
+        document.getElementById('editPosition').value = lead.position || '';
+        document.getElementById('editEmail').value = lead.email || '';
+        document.getElementById('editPhone').value = lead.phone || '';
+        document.getElementById('editStreet').value = lead.street || '';
+        document.getElementById('editZip').value = lead.zip || '';
+        document.getElementById('editCity').value = lead.city || '';
+        document.getElementById('editInterests').value = lead.interests?.join(', ') || '';
+        document.getElementById('editVisitorType').value = lead.visitor_type || '';
+    };
+    
+    // Speichern-Button (Edit)
+    document.getElementById('saveEditBtn').onclick = async () => {
+        const updatedLead = {
+            firstName: document.getElementById('editFirstName').value,
+            lastName: document.getElementById('editLastName').value,
+            company: document.getElementById('editCompany').value,
+            position: document.getElementById('editPosition').value,
+            email: document.getElementById('editEmail').value,
+            phone: document.getElementById('editPhone').value,
+            address: {
+                street: document.getElementById('editStreet').value,
+                zip: document.getElementById('editZip').value,
+                city: document.getElementById('editCity').value
+            },
+            interests: document.getElementById('editInterests').value.split(',').map(s => s.trim()).filter(Boolean),
+            visitorType: document.getElementById('editVisitorType').value
+        };
+        try {
+            await apiRequest(`/leads/${lead.id}`, {
+                method: 'PUT',
+                body: JSON.stringify({ lead: updatedLead })
+            });
+            alert('✅ Lead aktualisiert!');
+            loadLeads();
+            document.getElementById('detailEditMode').style.display = 'none';
+            document.getElementById('detailEditBtn').style.display = 'block';
+            openLeadDetail(lead.id);
+        } catch (error) {
+            alert('❌ Fehler: ' + error.message);
+        }
+    };
+    
+    document.getElementById('cancelEditBtn').onclick = () => {
+        document.getElementById('detailEditMode').style.display = 'none';
+        document.getElementById('detailEditBtn').style.display = 'block';
+    };
+    
+    detailOverlay.classList.add('active');
+}
+
+document.getElementById('closeLeadDetail').addEventListener('click', () => {
+    detailOverlay.classList.remove('active');
+});
+detailOverlay.addEventListener('click', (e) => {
+    if (e.target === detailOverlay) detailOverlay.classList.remove('active');
+});
+
+// PUT-Endpunkt für Lead-Update (Backend)
+// Füge diesen Endpunkt in deine api-proxy.js ein:
+// app.put('/api/leads/:id', authenticate, async (req, res) => {
+//     const { id } = req.params;
+//     const { lead } = req.body;
+//     const { data, error } = await supabase
+//         .from('leads')
+//         .update({
+//             first_name: lead.firstName,
+//             last_name: lead.lastName,
+//             company: lead.company,
+//             position: lead.position,
+//             email: lead.email,
+//             phone: lead.phone,
+//             street: lead.address?.street,
+//             zip: lead.address?.zip,
+//             city: lead.address?.city,
+//             interests: lead.interests,
+//             visitor_type: lead.visitorType
+//         })
+//         .eq('id', id)
+//         .eq('tenant_id', req.tenantId)
+//         .select()
+//         .single();
+//     if (error) throw error;
+//     res.json({ success: true, data });
+// });
+
+async function deleteLead(id) {
+    try {
+        await apiRequest(`/leads/${id}`, { method: 'DELETE' });
+        detailOverlay.classList.remove('active');
+        loadLeads();
+    } catch (error) { alert('Fehler: ' + error.message); }
+}
+
+// ============================================================
+// 11. BILDVERARBEITUNG (Scan)
 // ============================================================
 const fileInput = document.getElementById('fileInput');
 const uploadArea = document.getElementById('uploadArea');
-const previewContainer = document.getElementById('previewContainer');
 const previewImage = document.getElementById('previewImage');
+const previewContainer = document.getElementById('previewContainer');
 const statusDiv = document.getElementById('status');
 const statusText = document.getElementById('statusText');
 const errorBox = document.getElementById('errorBox');
+
+function showError(msg) {
+    errorBox.textContent = msg;
+    errorBox.style.display = 'block';
+    setTimeout(() => errorBox.style.display = 'none', 5000);
+}
+function setStatus(msg, show) {
+    statusText.textContent = msg;
+    statusDiv.style.display = show ? 'flex' : 'none';
+}
+
+async function handleImage(file) {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { showError('Bitte wähle ein Bild aus (JPG, PNG).'); return; }
+    if (file.size > 10 * 1024 * 1024) { showError('Bild zu groß (max 10MB).'); return; }
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        const base64Image = e.target.result;
+        previewImage.src = base64Image;
+        previewContainer.style.display = 'block';
+        setStatus('DeepSeek analysiert...', true);
+        try {
+            const response = await apiRequest('/process-image', { method: 'POST', body: JSON.stringify({ image: base64Image }) });
+            const result = await response.json();
+            if (result.success) {
+                fillForm(result.data);
+                setStatus('✅ Lead erfasst!', true);
+                setTimeout(() => setStatus('', false), 2000);
+                loadLeads();
+            } else {
+                throw new Error(result.error || 'Unbekannter Fehler');
+            }
+        } catch (error) {
+            showError('Parsing fehlgeschlagen: ' + error.message);
+            setStatus('', false);
+        } finally { setStatus('', false); }
+    };
+    reader.onerror = () => { showError('Fehler beim Lesen der Datei.'); };
+    reader.readAsDataURL(file);
+}
+
+uploadArea.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', (e) => { if (e.target.files.length > 0) handleImage(e.target.files[0]); });
+document.getElementById('uploadBtn').addEventListener('click', () => fileInput.click());
 
 const fields = {
     firstName: document.getElementById('firstName'),
@@ -589,66 +944,6 @@ const fields = {
     interests: document.getElementById('interests'),
     visitorType: document.getElementById('visitorType')
 };
-
-const uploadBtn = document.getElementById('uploadBtn');
-const clearBtn = document.getElementById('clearBtn');
-const saveBtn = document.getElementById('saveBtn');
-const refreshLeadsBtn = document.getElementById('refreshLeadsBtn');
-const exportCsvBtn = document.getElementById('exportCsvBtn');
-const importCsvBtn = document.getElementById('importCsvBtn');
-const importDropboxBtn = document.getElementById('importDropboxBtn');
-const csvFileInput = document.getElementById('csvFileInput');
-
-const leadsContainer = document.getElementById('leadsContainer');
-const leadsList = document.getElementById('leadsList');
-const leadsCount = document.getElementById('leadsCount');
-
-const questionnaireContainer = document.getElementById('questionnaireContainer');
-const questionnaireForm = document.getElementById('questionnaireForm');
-const questionnaireLeadName = document.getElementById('questionnaireLeadName');
-const closeQuestionnaireBtn = document.getElementById('closeQuestionnaireBtn');
-const saveQuestionnaireBtn = document.getElementById('saveQuestionnaireBtn');
-
-const histogramContainer = document.getElementById('histogramContainer');
-const histogram = document.getElementById('histogram');
-const histogramEmpty = document.getElementById('histogramEmpty');
-const yearSelect = document.getElementById('yearSelect');
-const refreshHistogramBtn = document.getElementById('refreshHistogramBtn');
-const toggleHistogramBtn = document.getElementById('toggleHistogramBtn');
-const histogramTotal = document.getElementById('histogramTotal');
-
-let currentLeadId = null;
-let histogramVisible = false;
-
-const DEFAULT_QUESTIONS = [
-    { id: 'needs', label: 'Welche konkreten Anforderungen/Probleme hat der Lead?', type: 'textarea' },
-    { id: 'budget', label: 'Budgetrahmen / Investitionsbereitschaft?', type: 'text' },
-    { id: 'timeline', label: 'Zeitplan / Entscheidungszeitraum?', type: 'text' },
-    { id: 'competition', label: 'Welche Wettbewerber werden aktuell geprüft?', type: 'text' },
-    { id: 'decision_maker', label: 'Wer ist der Entscheider / mit wem haben wir gesprochen?', type: 'text' },
-    { id: 'next_steps', label: 'Nächste Schritte / vereinbarte Termine?', type: 'textarea' },
-    { id: 'interest_rating', label: 'Interesse / Priorität (1-10)', type: 'select', options: ['', '1 - Sehr niedrig', '2', '3', '4', '5 - Mittel', '6', '7', '8', '9', '10 - Sehr hoch'] },
-    { id: 'notes', label: 'Weitere Notizen / Beobachtungen', type: 'textarea' }
-];
-
-// ============================================================
-// 12. HILFSFUNKTIONEN
-// ============================================================
-function showError(message) {
-    errorBox.textContent = message;
-    errorBox.style.display = 'block';
-    setTimeout(() => { errorBox.style.display = 'none'; }, 6000);
-}
-
-function setStatus(message, show = true) {
-    statusText.textContent = message;
-    statusDiv.style.display = show ? 'flex' : 'none';
-}
-
-function setLoading(loading) {
-    if (loading) { setStatus('DeepSeek analysiert...', true); uploadBtn.disabled = true; }
-    else { setStatus('', false); uploadBtn.disabled = false; }
-}
 
 function fillForm(data) {
     fields.firstName.value = data.first_name || data.firstName || '';
@@ -666,293 +961,160 @@ function fillForm(data) {
 
 function clearForm() {
     Object.values(fields).forEach(f => f.value = '');
-    previewContainer.style.display = 'none';
-    previewImage.src = '';
-    fileInput.value = '';
-    setStatus('', false);
-    errorBox.style.display = 'none';
+    document.getElementById('previewContainer').style.display = 'none';
+    document.getElementById('previewImage').src = '';
+    document.getElementById('fileInput').value = '';
+    document.getElementById('status').style.display = 'none';
+    document.getElementById('errorBox').style.display = 'none';
 }
 
-function getFormData() {
-    return {
+document.getElementById('clearBtn').addEventListener('click', clearForm);
+document.getElementById('saveBtn').addEventListener('click', async () => {
+    const leadData = {
         firstName: fields.firstName.value,
         lastName: fields.lastName.value,
         company: fields.company.value,
         position: fields.position.value,
         email: fields.email.value,
         phone: fields.phone.value,
-        address: {
-            street: fields.street.value,
-            zip: fields.zip.value,
-            city: fields.city.value
-        },
+        address: { street: fields.street.value, zip: fields.zip.value, city: fields.city.value },
         interests: fields.interests.value.split(',').map(s => s.trim()).filter(Boolean),
-        visitorType: fields.visitorType.value,
-        questionnaire: {}
+        visitorType: fields.visitorType.value
     };
-}
-
-// ============================================================
-// 13. LEADS (mit API)
-// ============================================================
-async function processWithDeepSeek(base64Image) {
-    const response = await apiRequest('/process-image', {
-        method: 'POST',
-        body: JSON.stringify({ image: base64Image })
-    });
-    const result = await response.json();
-    if (!result.success) throw new Error(result.error || 'Unbekannter Fehler');
-    return result;
-}
-
-async function loadLeads() {
     try {
-        const response = await apiRequest('/leads');
-        const result = await response.json();
-        if (result.success) {
-            displayLeads(result.data);
-        } else {
-            leadsList.innerHTML = `<div class="empty-leads">❌ Fehler: ${result.error}</div>`;
-        }
-    } catch (error) {
-        if (error.message.includes('Nicht eingeloggt')) {
-            showLogin();
-        } else {
-            leadsList.innerHTML = `<div class="empty-leads">❌ Fehler: ${error.message}</div>`;
-        }
-    }
+        await apiRequest('/leads', { method: 'POST', body: JSON.stringify({ lead: leadData }) });
+        alert('✅ Lead gespeichert!');
+        loadLeads();
+        clearForm();
+    } catch (error) { alert('❌ Fehler: ' + error.message); }
+});
+
+// ============================================================
+// 12. FRAGEBOGEN EDITOR
+// ============================================================
+let questionTemplate = [];
+const questionEditor = document.getElementById('questionnaireEditor');
+const emptyQuestions = document.getElementById('emptyQuestions');
+
+function loadQuestionnaireTemplate() {
+    const saved = localStorage.getItem('leadcapture_questions');
+    questionTemplate = saved ? JSON.parse(saved) : [
+        { id: 'needs', label: 'Welche konkreten Anforderungen/Probleme hat der Lead?', type: 'textarea' },
+        { id: 'budget', label: 'Budgetrahmen / Investitionsbereitschaft?', type: 'text' },
+        { id: 'timeline', label: 'Zeitplan / Entscheidungszeitraum?', type: 'text' }
+    ];
+    renderQuestionnaireEditor();
 }
 
-function displayLeads(leads) {
-    leadsContainer.style.display = 'block';
-    leadsCount.textContent = `${leads.length} Einträge`;
-    if (leads.length === 0) {
-        leadsList.innerHTML = '<div class="empty-leads">📭 Noch keine Leads gespeichert.</div>';
+function renderQuestionnaireEditor() {
+    if (questionTemplate.length === 0) {
+        questionEditor.innerHTML = '';
+        emptyQuestions.style.display = 'block';
         return;
     }
-    let html = '';
-    leads.forEach(lead => {
-        const hasQuestionnaire = lead.questionnaire && Object.keys(lead.questionnaire).length > 0;
-        html += `
-            <div class="lead-card">
-                <div class="header">
-                    <span class="name">${lead.first_name || ''} ${lead.last_name || ''}</span>
-                    <span class="company">${lead.company || 'Keine Firma'}</span>
+    emptyQuestions.style.display = 'none';
+    questionEditor.innerHTML = questionTemplate.map((q, index) => `
+        <div class="question-item">
+            <div class="q-header">
+                <div>
+                    <div class="q-label">${q.label}</div>
+                    <div class="q-type">${q.type} · ID: ${q.id}</div>
                 </div>
-                <div class="details">${lead.position || 'Keine Position'} ${lead.email ? '· ✉️ ' + lead.email : ''} ${lead.phone ? '· 📞 ' + lead.phone : ''}</div>
-                ${lead.street || lead.zip || lead.city ? `<div class="details">📍 ${lead.street || ''}${lead.zip ? ', ' + lead.zip : ''}${lead.city ? ' ' + lead.city : ''}</div>` : ''}
-                ${lead.interests?.length ? `<div class="details">🏷️ ${lead.interests.join(', ')}</div>` : ''}
-                <div class="meta">🕐 ${lead.created_at ? new Date(lead.created_at).toLocaleString() : ''} ${hasQuestionnaire ? ' 📝 Fragebogen ausgefüllt' : ''}</div>
-                <div class="actions">
-                    <button class="edit" onclick="editLead('${lead.id}')">✏️ Bearbeiten</button>
-                    <button class="questionnaire" onclick="openQuestionnaire('${lead.id}')">📝 Fragebogen</button>
-                    <button class="delete" onclick="deleteLead('${lead.id}')">🗑️ Löschen</button>
+                <div class="q-actions">
+                    <button onclick="removeQuestion(${index})">🗑️</button>
+                    <button onclick="editQuestion(${index})">✏️</button>
                 </div>
             </div>
-        `;
-    });
-    leadsList.innerHTML = html;
+        </div>
+    `).join('');
 }
 
-async function deleteLead(id) {
-    if (!confirm('Lead wirklich löschen?')) return;
-    try {
-        const response = await apiRequest(`/leads/${id}`, { method: 'DELETE' });
-        const result = await response.json();
-        if (result.success) loadLeads();
-        else alert('Fehler beim Löschen: ' + result.error);
-    } catch (error) { alert('Fehler: ' + error.message); }
+function addQuestion() {
+    const id = prompt('Frage-ID (z.B. "needs"):')?.trim();
+    if (!id) return;
+    const label = prompt('Fragen-Text:')?.trim();
+    if (!label) return;
+    const type = prompt('Typ: text / textarea / select')?.trim() || 'text';
+    questionTemplate.push({ id, label, type });
+    localStorage.setItem('leadcapture_questions', JSON.stringify(questionTemplate));
+    renderQuestionnaireEditor();
 }
 
-async function editLead(id) {
-    try {
-        const response = await apiRequest('/leads');
-        const result = await response.json();
-        if (result.success) {
-            const lead = result.data.find(l => l.id === id);
-            if (lead) { fillForm(lead); alert('✅ Lead in Formular geladen'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
-        }
-    } catch (error) { alert('Fehler: ' + error.message); }
+function removeQuestion(index) {
+    if (!confirm('Frage löschen?')) return;
+    questionTemplate.splice(index, 1);
+    localStorage.setItem('leadcapture_questions', JSON.stringify(questionTemplate));
+    renderQuestionnaireEditor();
 }
 
-async function saveLeadManually() {
-    const leadData = getFormData();
-    if (!leadData.firstName && !leadData.lastName && !leadData.company) {
-        alert('❌ Bitte mindestens einen Namen oder Firma eingeben.');
-        return;
-    }
-    try {
-        const response = await apiRequest('/leads', {
-            method: 'POST',
-            body: JSON.stringify({ lead: leadData })
-        });
-        const result = await response.json();
-        if (result.success) { alert('✅ Lead gespeichert!'); loadLeads(); clearForm(); }
-        else alert('❌ Fehler: ' + result.error);
-    } catch (error) { alert('❌ Fehler: ' + error.message); }
+function editQuestion(index) {
+    const q = questionTemplate[index];
+    const newLabel = prompt('Fragen-Text:', q.label)?.trim();
+    if (newLabel) q.label = newLabel;
+    const newType = prompt('Typ (text/textarea/select):', q.type)?.trim();
+    if (newType) q.type = newType;
+    localStorage.setItem('leadcapture_questions', JSON.stringify(questionTemplate));
+    renderQuestionnaireEditor();
 }
+
+document.getElementById('addQuestionBtn').addEventListener('click', addQuestion);
+document.getElementById('saveQuestionnaireTemplateBtn').addEventListener('click', () => {
+    localStorage.setItem('leadcapture_questions', JSON.stringify(questionTemplate));
+    alert('✅ Vorlage gespeichert!');
+});
 
 // ============================================================
-// 14. FRAGEBOGEN
+// 13. FRAGEBOGEN BEI LEAD
 // ============================================================
-async function openQuestionnaire(leadId) {
-    currentLeadId = leadId;
-    questionnaireContainer.style.display = 'block';
-    try {
-        const response = await apiRequest(`/questionnaire/${leadId}`);
-        const result = await response.json();
-        if (result.success) {
-            questionnaireLeadName.textContent = result.data.leadName || 'Unbekannt';
-            renderQuestionnaire(result.data.answers || {});
-        } else {
-            alert('Fehler beim Laden des Fragebogens: ' + result.error);
-        }
-    } catch (error) { alert('Fehler: ' + error.message); }
-    window.scrollTo({ top: document.getElementById('questionnaireContainer').offsetTop - 100, behavior: 'smooth' });
-}
-
-function renderQuestionnaire(answers) {
-    let html = '';
-    DEFAULT_QUESTIONS.forEach(q => {
-        const value = answers[q.id] || '';
-        if (q.type === 'select') {
-            html += `<div class="questionnaire-answer"><label for="q_${q.id}">${q.label}</label><select id="q_${q.id}">${q.options.map(opt => `<option value="${opt}" ${opt === value ? 'selected' : ''}>${opt}</option>`).join('')}</select></div>`;
-        } else {
-            html += `<div class="questionnaire-answer"><label for="q_${q.id}">${q.label}</label><textarea id="q_${q.id}" rows="2">${value}</textarea></div>`;
-        }
-    });
-    questionnaireForm.innerHTML = html;
-}
-
-async function saveQuestionnaire() {
+let currentLeadId = null;
+document.getElementById('saveQuestionnaireBtn').addEventListener('click', async () => {
     if (!currentLeadId) { alert('❌ Kein Lead ausgewählt.'); return; }
+    const questions = JSON.parse(localStorage.getItem('leadcapture_questions')) || [];
     const answers = {};
-    DEFAULT_QUESTIONS.forEach(q => {
+    questions.forEach(q => {
         const el = document.getElementById(`q_${q.id}`);
         if (el) answers[q.id] = el.value;
     });
     try {
-        const response = await apiRequest(`/questionnaire/${currentLeadId}`, {
+        await apiRequest(`/questionnaire/${currentLeadId}`, {
             method: 'POST',
             body: JSON.stringify({ answers })
         });
-        const result = await response.json();
-        if (result.success) { alert('✅ Fragebogen gespeichert!'); loadLeads(); questionnaireContainer.style.display = 'none'; }
-        else alert('❌ Fehler: ' + result.error);
+        alert('✅ Fragebogen gespeichert!');
+        loadLeads();
+        showView('main');
     } catch (error) { alert('❌ Fehler: ' + error.message); }
-}
-
-function closeQuestionnaire() {
-    questionnaireContainer.style.display = 'none';
-    currentLeadId = null;
-}
-
-// ============================================================
-// 15. CSV-EXPORT & IMPORT
-// ============================================================
-async function exportCSV() {
-    try {
-        const response = await apiRequest('/export/csv');
-        if (!response.ok) {
-            const error = await response.json();
-            alert('❌ Fehler beim Export: ' + (error.error || response.status));
-            return;
-        }
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `leads_${new Date().toISOString().slice(0,10)}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-    } catch (error) { alert('❌ Fehler beim Export: ' + error.message); }
-}
-
-importCsvBtn.addEventListener('click', () => { csvFileInput.click(); });
-
-csvFileInput.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (!file.name.endsWith('.csv')) {
-        alert('❌ Bitte wähle eine CSV-Datei aus.');
-        csvFileInput.value = '';
-        return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-        alert('❌ Datei zu groß (max 10 MB).');
-        csvFileInput.value = '';
-        return;
-    }
-    if (!confirm(`📥 Möchtest du die Datei "${file.name}" wirklich importieren?`)) {
-        csvFileInput.value = '';
-        return;
-    }
-    try {
-        const formData = new FormData();
-        formData.append('file', file);
-        setStatus('📥 Importiere CSV...', true);
-        importCsvBtn.disabled = true;
-        
-        const token = getToken();
-        const response = await fetch(`${API_URL}/import/csv`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` },
-            body: formData
-        });
-        const result = await response.json();
-        if (result.success) {
-            alert(`✅ Import erfolgreich!\n📥 ${result.imported} neue Leads\n🔄 ${result.updated} aktualisiert`);
-            loadLeads();
-            clearForm();
-        } else {
-            throw new Error(result.error || 'Unbekannter Fehler');
-        }
-    } catch (error) {
-        alert('❌ Fehler beim Import: ' + error.message);
-    } finally {
-        setStatus('', false);
-        importCsvBtn.disabled = false;
-        csvFileInput.value = '';
-    }
-});
-
-// Dropbox-Import
-importDropboxBtn.addEventListener('click', async () => {
-    if (!confirm('☁️ Möchtest du die neueste CSV aus Dropbox importieren?')) return;
-    try {
-        setStatus('☁️ Lade aus Dropbox...', true);
-        importDropboxBtn.disabled = true;
-        const response = await apiRequest('/import/dropbox', { method: 'POST' });
-        const result = await response.json();
-        if (result.success) {
-            alert(`☁️ Dropbox-Import erfolgreich!\n📥 ${result.imported} neue Leads\n🔄 ${result.updated} aktualisiert`);
-            loadLeads();
-            clearForm();
-        } else {
-            throw new Error(result.error || 'Unbekannter Fehler');
-        }
-    } catch (error) {
-        alert('❌ Fehler beim Dropbox-Import: ' + error.message);
-    } finally {
-        setStatus('', false);
-        importDropboxBtn.disabled = false;
-    }
 });
 
 // ============================================================
-// 16. HISTOGRAMM
+// 14. HISTOGRAMM
 // ============================================================
-async function loadHistogram(year = 'alle') {
+const histogram = document.getElementById('histogram');
+const histogramEmpty = document.getElementById('histogramEmpty');
+const histogramYear = document.getElementById('histogramYear');
+const histogramView = document.getElementById('histogramView');
+
+async function loadHistogram() {
     try {
-        const url = year === 'alle' ? '/stats/daily' : `/stats/daily?year=${year}`;
-        const response = await apiRequest(url);
+        const year = histogramYear.value || 'alle';
+        const response = await apiRequest(`/stats/daily?year=${year}`);
         const result = await response.json();
         if (!result.success) throw new Error(result.error || 'Unbekannter Fehler');
-        updateYearSelect(result.availableYears || []);
-        renderHistogram(result.data, result.totalLeads);
-        histogramTotal.textContent = `📊 ${result.totalLeads} Leads`;
+        
+        histogramYear.innerHTML = '<option value="alle">Alle Jahre</option>';
+        if (result.availableYears) {
+            result.availableYears.forEach(y => {
+                const opt = document.createElement('option');
+                opt.value = y;
+                opt.textContent = y;
+                histogramYear.appendChild(opt);
+            });
+        }
+        if (result.availableYears && result.availableYears.length > 0) {
+            histogramYear.value = result.availableYears[result.availableYears.length - 1];
+        }
+        
+        renderHistogram(result.data, histogramView.value);
     } catch (error) {
         histogramEmpty.style.display = 'block';
         histogramEmpty.textContent = '❌ Fehler: ' + error.message;
@@ -960,126 +1122,243 @@ async function loadHistogram(year = 'alle') {
     }
 }
 
-function updateYearSelect(availableYears) {
-    const currentValue = yearSelect.value;
-    const currentOptions = Array.from(yearSelect.options).map(o => o.value);
-    const newYears = ['alle', ...availableYears.map(y => String(y))];
-    if (JSON.stringify(currentOptions) === JSON.stringify(newYears)) return;
-    yearSelect.innerHTML = '';
-    newYears.forEach(y => {
-        const opt = document.createElement('option');
-        opt.value = y;
-        opt.textContent = y === 'alle' ? 'Alle Jahre' : String(y);
-        yearSelect.appendChild(opt);
-    });
-    yearSelect.value = currentValue;
-}
-
-function renderHistogram(data, totalLeads) {
+function renderHistogram(data, view) {
     histogram.innerHTML = '';
     histogramEmpty.style.display = 'none';
     histogram.style.display = 'flex';
     if (!data || data.length === 0) {
         histogramEmpty.style.display = 'block';
-        histogramEmpty.textContent = '📭 Keine Leads für diesen Zeitraum.';
+        histogramEmpty.textContent = '📭 Keine Daten für diesen Zeitraum.';
         histogram.style.display = 'none';
         return;
     }
-    const maxCount = Math.max(...data.map(d => d.count), 1);
-    const maxHeight = 180;
-    data.forEach(item => {
+    
+    let grouped = data;
+    if (view === 'month') {
+        const months = {};
+        data.forEach(d => {
+            const month = d.date.substring(0, 7);
+            months[month] = (months[month] || 0) + d.count;
+        });
+        grouped = Object.keys(months).map(m => ({ date: m, count: months[m] }));
+    } else if (view === 'year') {
+        const years = {};
+        data.forEach(d => {
+            const year = d.date.substring(0, 4);
+            years[year] = (years[year] || 0) + d.count;
+        });
+        grouped = Object.keys(years).map(y => ({ date: y, count: years[y] }));
+    }
+    
+    const maxCount = Math.max(...grouped.map(d => d.count), 1);
+    const maxHeight = 160;
+    
+    grouped.forEach(item => {
         const height = (item.count / maxCount) * maxHeight;
-        const wrapper = document.createElement('div');
-        wrapper.className = 'bar-wrapper';
-        wrapper.style.height = `${Math.max(height + 14, 18)}px`;
-        const valueLabel = document.createElement('div');
-        valueLabel.className = 'bar-value';
-        valueLabel.textContent = item.count;
-        wrapper.appendChild(valueLabel);
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.style.height = `${Math.max(height + 18, 20)}px`;
+        const value = document.createElement('div');
+        value.className = 'value';
+        value.textContent = item.count;
+        bar.appendChild(value);
         const fill = document.createElement('div');
-        fill.className = 'bar-fill';
-        fill.style.height = `${height}px`;
-        wrapper.appendChild(fill);
-        wrapper.title = `${item.date}: ${item.count} Lead(s)`;
-        wrapper.addEventListener('click', () => alert(`Am ${item.date} wurden ${item.count} Leads erfasst.`));
-        wrapper.addEventListener('mouseenter', () => {
-            fill.style.background = 'linear-gradient(180deg, #63B3ED 0%, #3182CE 100%)';
-        });
-        wrapper.addEventListener('mouseleave', () => {
-            fill.style.background = 'linear-gradient(180deg, #4A90E2 0%, #357ABD 100%)';
-        });
-        histogram.appendChild(wrapper);
+        fill.className = 'fill';
+        fill.style.height = `${Math.max(height, 4)}px`;
+        bar.appendChild(fill);
+        bar.title = `${item.date}: ${item.count} Leads`;
+        bar.addEventListener('click', () => alert(`${item.date}: ${item.count} Leads`));
+        histogram.appendChild(bar);
     });
 }
 
-function toggleHistogram() {
-    histogramVisible = !histogramVisible;
-    histogramContainer.style.display = histogramVisible ? 'block' : 'none';
-    toggleHistogramBtn.textContent = histogramVisible ? '📊 Histogramm ausblenden' : '📊 Histogramm anzeigen';
-    if (histogramVisible) loadHistogram(yearSelect.value);
-}
+histogramYear.addEventListener('change', loadHistogram);
+histogramView.addEventListener('change', loadHistogram);
+document.getElementById('refreshHistogramBtn2').addEventListener('click', loadHistogram);
 
 // ============================================================
-// 17. BILDVERARBEITUNG
+// 15. KARTE (Leaflet)
 // ============================================================
-async function handleImage(file) {
-    if (!file) return;
-    if (!file.type.startsWith('image/')) { showError('Bitte wähle ein Bild aus (JPG, PNG).'); return; }
-    if (file.size > 10 * 1024 * 1024) { showError('Bild zu groß (max 10MB).'); return; }
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-        const base64Image = event.target.result;
-        previewImage.src = base64Image;
-        previewContainer.style.display = 'block';
-        setLoading(true);
-        try {
-            const result = await processWithDeepSeek(base64Image);
-            fillForm(result.data);
-            setStatus(`✅ Lead gespeichert! ID: ${result.saved.id}`, true);
-            setTimeout(() => setStatus('', false), 3000);
-            loadLeads();
-        } catch (error) { showError(`Parsing fehlgeschlagen: ${error.message}`); setStatus('', false); }
-        finally { setLoading(false); }
+function initMap() {
+    if (mapInstance) return;
+    mapInstance = L.map('map').setView([51.1657, 10.4515], 6); // Deutschland
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(mapInstance);
+}
+
+async function loadMapData() {
+    if (!mapInstance) initMap();
+    try {
+        const response = await apiRequest('/leads');
+        const result = await response.json();
+        if (result.success) {
+            displayMapMarkers(result.data);
+        }
+    } catch (error) {
+        console.error('Kartenfehler:', error);
+    }
+}
+
+function displayMapMarkers(leads) {
+    // Vorhandene Marker entfernen
+    mapMarkers.forEach(marker => mapInstance.removeLayer(marker));
+    mapMarkers = [];
+    
+    // Nur Leads mit Adresse anzeigen
+    const leadsWithAddress = leads.filter(l => l.street || l.city);
+    document.getElementById('mapCount').textContent = leadsWithAddress.length;
+    
+    if (leadsWithAddress.length === 0) {
+        // Zentrum auf Deutschland setzen
+        mapInstance.setView([51.1657, 10.4515], 6);
+        L.popup()
+            .setLatLng([51.1657, 10.4515])
+            .setContent('📍 Keine Leads mit Adresse gefunden.<br>Füge Adressen hinzu, um sie auf der Karte zu sehen.')
+            .openOn(mapInstance);
+        return;
+    }
+    
+    // Hier müsste eine Geocoding-API eingebaut werden, um Adressen in Koordinaten umzuwandeln
+    // Da wir keine haben, simulieren wir Koordinaten basierend auf PLZ oder Stadt
+    // Für eine echte Produktionsumgebung: Google Maps Geocoding oder OpenStreetMap Nominatim
+    
+    // Demo: Simulierte Koordinaten basierend auf Stadt
+    const cityCoords = {
+        'Berlin': [52.5200, 13.4050],
+        'München': [48.1351, 11.5820],
+        'Hamburg': [53.5511, 9.9937],
+        'Köln': [50.9375, 6.9603],
+        'Frankfurt': [50.1109, 8.6821],
+        'Stuttgart': [48.7758, 9.1829],
+        'Düsseldorf': [51.2277, 6.7735],
+        'Leipzig': [51.3397, 12.3731],
+        'Dortmund': [51.5136, 7.4653],
+        'Essen': [51.4556, 7.0116],
+        'Bremen': [53.0793, 8.8017],
+        'Dresden': [51.0504, 13.7373],
+        'Hannover': [52.3705, 9.7332],
+        'Nürnberg': [49.4539, 11.0775],
+        'Duisburg': [51.4344, 6.7623],
+        'Bochum': [51.4818, 7.2197],
+        'Wuppertal': [51.2562, 7.1508],
+        'Bielefeld': [52.0302, 8.5325],
+        'Bonn': [50.7374, 7.0982],
+        'Münster': [51.9607, 7.6261],
+        'Karlsruhe': [49.0069, 8.4037],
+        'Mannheim': [49.4875, 8.4660],
+        'Augsburg': [48.3705, 10.8978],
+        'Wiesbaden': [50.0826, 8.2413],
+        'Gelsenkirchen': [51.5054, 7.1009],
+        'Mönchengladbach': [51.1805, 6.4428],
+        'Braunschweig': [52.2689, 10.5268],
+        'Chemnitz': [50.8278, 12.9214],
+        'Kiel': [54.3233, 10.1228],
+        'Aachen': [50.7753, 6.0839]
     };
-    reader.onerror = () => { showError('Fehler beim Lesen der Datei.'); setLoading(false); };
-    reader.readAsDataURL(file);
+    
+    leadsWithAddress.forEach(lead => {
+        let coords = null;
+        if (lead.city && cityCoords[lead.city]) {
+            coords = cityCoords[lead.city];
+        } else {
+            // Zufällige Koordinaten in Deutschland (nur für Demo)
+            const lat = 49 + Math.random() * 5;
+            const lng = 6 + Math.random() * 9;
+            coords = [lat, lng];
+        }
+        
+        const marker = L.marker(coords)
+            .addTo(mapInstance)
+            .bindPopup(`
+                <div style="min-width:180px;">
+                    <strong>${lead.first_name || ''} ${lead.last_name || ''}</strong><br>
+                    ${lead.company ? lead.company + '<br>' : ''}
+                    ${lead.position ? lead.position + '<br>' : ''}
+                    ${lead.email ? '✉️ ' + lead.email + '<br>' : ''}
+                    ${lead.phone ? '📞 ' + lead.phone + '<br>' : ''}
+                    ${lead.street || lead.city ? '📍 ' + (lead.street || '') + (lead.city ? ', ' + lead.city : '') : ''}
+                    <br>
+                    <button onclick="openLeadDetail('${lead.id}')" style="margin-top:4px; padding:4px 12px; background:#0066AA; color:white; border:none; border-radius:6px; cursor:pointer;">
+                        Details
+                    </button>
+                </div>
+            `);
+        
+        mapMarkers.push(marker);
+    });
+    
+    // Zoom auf alle Marker
+    if (mapMarkers.length > 0) {
+        const group = L.featureGroup(mapMarkers);
+        mapInstance.fitBounds(group.getBounds().pad(0.1));
+    }
 }
 
-// ============================================================
-// 18. EVENT LISTENER
-// ============================================================
-uploadArea.addEventListener('click', () => fileInput.click());
-uploadBtn.addEventListener('click', () => fileInput.click());
-fileInput.addEventListener('change', (e) => { if (e.target.files.length > 0) handleImage(e.target.files[0]); });
-uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.style.borderColor = '#4A90E2'; uploadArea.style.background = '#edf2f7'; });
-uploadArea.addEventListener('dragleave', () => { uploadArea.style.borderColor = '#cbd5e0'; uploadArea.style.background = '#f7fafc'; });
-uploadArea.addEventListener('drop', (e) => { e.preventDefault(); uploadArea.style.borderColor = '#cbd5e0'; uploadArea.style.background = '#f7fafc'; if (e.dataTransfer.files.length > 0) handleImage(e.dataTransfer.files[0]); });
-clearBtn.addEventListener('click', clearForm);
-saveBtn.addEventListener('click', saveLeadManually);
-refreshLeadsBtn.addEventListener('click', loadLeads);
-exportCsvBtn.addEventListener('click', exportCSV);
-closeQuestionnaireBtn.addEventListener('click', closeQuestionnaire);
-saveQuestionnaireBtn.addEventListener('click', saveQuestionnaire);
-toggleHistogramBtn.addEventListener('click', toggleHistogram);
-refreshHistogramBtn.addEventListener('click', () => loadHistogram(yearSelect.value));
-yearSelect.addEventListener('change', () => loadHistogram(yearSelect.value));
+// Map-Buttons
+document.getElementById('mapRefreshBtn').addEventListener('click', loadMapData);
+document.getElementById('mapFilterBtn').addEventListener('click', loadMapData);
 
 // ============================================================
-// 19. SERVICE WORKER & INIT
+// 16. CSV EXPORT / IMPORT
 // ============================================================
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').then(() => console.log('✅ SW registriert')).catch(err => console.warn('⚠️ SW Fehler:', err));
-}
+document.getElementById('exportCsvBtn2').addEventListener('click', async () => {
+    try {
+        const response = await apiRequest('/export/csv');
+        if (!response.ok) throw new Error('Export fehlgeschlagen');
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = `leads_${new Date().toISOString().slice(0,10)}.csv`;
+        a.click(); URL.revokeObjectURL(url);
+    } catch (error) { alert('❌ Fehler: ' + error.message); }
+});
 
+document.getElementById('importCsvBtn2').addEventListener('click', () => document.getElementById('csvFileInput').click());
+document.getElementById('csvFileInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file || !file.name.endsWith('.csv')) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    const token = getToken();
+    try {
+        const response = await fetch(`${API_URL}/import/csv`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+        const result = await response.json();
+        if (result.success) {
+            alert(`✅ Import: ${result.imported} neu, ${result.updated} aktualisiert`);
+            loadLeads();
+        } else throw new Error(result.error);
+    } catch (error) { alert('❌ Fehler: ' + error.message); }
+    e.target.value = '';
+});
+
+document.getElementById('importDropboxBtn2').addEventListener('click', async () => {
+    if (!confirm('☁️ Neueste CSV aus Dropbox importieren?')) return;
+    try {
+        const response = await apiRequest('/import/dropbox', { method: 'POST' });
+        const result = await response.json();
+        if (result.success) {
+            alert(`☁️ Import: ${result.imported} neu, ${result.updated} aktualisiert`);
+            loadLeads();
+        } else throw new Error(result.error);
+    } catch (error) { alert('❌ Fehler: ' + error.message); }
+});
+
+// ============================================================
+// 17. INIT
+// ============================================================
 document.addEventListener('DOMContentLoaded', () => {
-    checkConnection();
     const user = getUser();
     if (user && getToken()) {
         showApp(user);
     } else {
         showLogin();
     }
-    console.log('🚀 LeadCapture PWA mit Login und Registrierung geladen');
+    loadQuestionnaireTemplate();
+    console.log('🚀 LeadCapture PWA mit Lead-Detail, Kommunikation & Karte geladen');
 });
 </script>
 
