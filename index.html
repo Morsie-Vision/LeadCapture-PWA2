@@ -7,8 +7,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
     <meta name="theme-color" content="#0066AA">
-    
-    <!-- Leaflet CSS für Karte -->
+    <!-- Leaflet für Karte -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         /* ===== RESET & GRUNDLAGEN ===== */
@@ -51,7 +50,7 @@
         .search-bar input:focus { border-color: #0066AA; }
         .search-bar button { background: #0066AA; color: white; border: none; border-radius: 12px; padding: 10px 16px; font-weight: 600; cursor: pointer; }
 
-        /* ===== LEAD KARTEN (Liste) ===== */
+        /* ===== LEAD LIST ===== */
         .lead-card { background: white; border-radius: 12px; padding: 12px; margin-bottom: 8px; border: 1px solid #eef2f7; cursor: pointer; transition: all 0.2s; }
         .lead-card:active { background: #E8F4FD; }
         .lead-card .name { font-weight: 600; color: #1a1a1a; }
@@ -63,72 +62,36 @@
         .lead-card .actions .edit { background: #E8F4FD; color: #0066AA; }
         .lead-card .actions .questionnaire { background: #e8f0fe; color: #4a6fa5; }
         .lead-card .actions .delete { background: #fee2e2; color: #dc2626; }
+        .lead-card mark { background: #E8F4FD; color: #0066AA; }
 
-        /* ===== LEAD DETAIL (Modal) ===== */
+        /* ===== LEAD DETAIL MODAL ===== */
         #leadDetailOverlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-            display: none;
-            justify-content: center;
-            align-items: center;
-            padding: 16px;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 1000;
+            display: none; justify-content: center; align-items: center; padding: 16px;
         }
         #leadDetailOverlay.active { display: flex; }
         #leadDetailModal {
-            background: white;
-            max-width: 440px;
-            width: 100%;
-            max-height: 90vh;
-            border-radius: 20px;
-            padding: 20px;
-            overflow-y: auto;
-            position: relative;
+            background: white; max-width: 440px; width: 100%; max-height: 90vh;
+            border-radius: 20px; padding: 20px; overflow-y: auto; position: relative;
             box-shadow: 0 20px 60px rgba(0,0,0,0.2);
         }
-        #leadDetailModal .close-btn {
-            position: absolute;
-            top: 12px;
-            right: 16px;
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            color: #6b7a8f;
-        }
+        #leadDetailModal .close-btn { position: absolute; top: 12px; right: 16px; background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7a8f; }
         #leadDetailModal .detail-name { font-size: 22px; font-weight: 700; color: #1a1a1a; }
         #leadDetailModal .detail-company { font-size: 16px; color: #0066AA; font-weight: 500; margin-bottom: 4px; }
         #leadDetailModal .detail-position { font-size: 14px; color: #4a5568; margin-bottom: 8px; }
         #leadDetailModal .detail-section { margin: 12px 0; }
         #leadDetailModal .detail-section .label { font-size: 11px; text-transform: uppercase; color: #6b7a8f; font-weight: 600; letter-spacing: 0.5px; }
-        #leadDetailModal .detail-section .value { font-size: 15px; color: #1a1a1a; margin-top: 2px; }
-        #leadDetailModal .detail-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; padding-top: 16px; border-top: 1px solid #eef2f7; }
-        #leadDetailModal .detail-actions .btn { flex: 1; min-width: 60px; padding: 10px; border: none; border-radius: 10px; font-weight: 600; font-size: 13px; cursor: pointer; text-align: center; }
+        #leadDetailModal .detail-section .value { font-size: 15px; color: #1a1a1a; margin-top: 2px; word-break: break-word; }
+        #leadDetailModal .detail-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; padding-top: 16px; border-top: 1px solid #eef2f7; }
+        #leadDetailModal .detail-actions .btn { flex: 1; min-width: 60px; padding: 8px 0; border: none; border-radius: 10px; font-weight: 600; font-size: 12px; cursor: pointer; text-align: center; }
         #leadDetailModal .detail-actions .btn-phone { background: #22c55e; color: white; }
         #leadDetailModal .detail-actions .btn-email { background: #0066AA; color: white; }
         #leadDetailModal .detail-actions .btn-edit { background: #E8F4FD; color: #0066AA; }
         #leadDetailModal .detail-actions .btn-delete { background: #fee2e2; color: #dc2626; }
-
-        /* Edit-Modus in Detail */
-        #leadDetailModal .edit-mode .detail-value input,
-        #leadDetailModal .edit-mode .detail-value select {
-            width: 100%;
-            padding: 6px 10px;
-            border: 1.5px solid #0066AA;
-            border-radius: 8px;
-            font-size: 14px;
-            background: white;
-        }
-        #leadDetailModal .edit-mode .detail-value .current-value { display: none; }
-        #leadDetailModal .detail-value .current-value { display: block; }
-        #leadDetailModal .edit-mode .detail-value .current-value { display: none; }
-
-        /* ===== KARTE (Leaflet) ===== */
-        #map { height: 400px; border-radius: 12px; margin-top: 12px; border: 1px solid #eef2f7; }
-        .map-controls { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-        .map-controls select { padding: 6px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13px; background: white; }
-        .map-controls button { background: #0066AA; color: white; border: none; border-radius: 8px; padding: 6px 14px; font-size: 12px; cursor: pointer; }
+        #leadDetailModal .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; }
+        #leadDetailModal .form-grid .full { grid-column: span 2; }
+        #leadDetailModal .form-grid input, #leadDetailModal .form-grid select { padding: 6px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 14px; width: 100%; }
 
         /* ===== FORMULAR ===== */
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
@@ -145,14 +108,18 @@
         .btn-secondary { background: #E8F4FD; color: #0066AA; }
         .btn-success { background: #22c55e; color: white; }
         .btn-danger { background: #dc2626; color: white; }
+        .btn-outline { background: transparent; color: #0066AA; border: 2px solid #0066AA; }
         .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
 
-        /* ===== FRAGEBOGEN EDITOR ===== */
+        /* ===== FRAGEBOGEN ===== */
         .question-item { background: #f8fafc; border-radius: 10px; padding: 10px; margin-bottom: 8px; border: 1px solid #eef2f7; }
         .question-item .q-header { display: flex; justify-content: space-between; align-items: center; }
         .question-item .q-label { font-weight: 500; font-size: 14px; }
         .question-item .q-type { font-size: 12px; color: #6b7a8f; }
         .question-item .q-actions button { background: none; border: none; cursor: pointer; font-size: 16px; padding: 2px; }
+        .questionnaire-answer { margin-bottom: 10px; }
+        .questionnaire-answer label { font-weight: 600; font-size: 13px; color: #1a1a1a; display: block; margin-bottom: 2px; }
+        .questionnaire-answer textarea, .questionnaire-answer select, .questionnaire-answer input { width: 100%; padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 14px; }
 
         /* ===== HISTOGRAMM ===== */
         .histogram-controls { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
@@ -162,6 +129,7 @@
         .histogram .bar { flex: 1; min-width: 12px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; cursor: pointer; }
         .histogram .bar .fill { width: 100%; border-radius: 2px 2px 0 0; min-height: 3px; background: #0066AA; transition: height 0.3s; }
         .histogram .bar .value { font-size: 8px; color: #4a5568; margin-bottom: 2px; }
+        .histogram .bar .date-label { font-size: 7px; color: #a0aec0; margin-top: 2px; text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
         .histogram-empty { text-align: center; padding: 30px; color: #a0aec0; font-size: 14px; }
 
         /* ===== UPLOAD ===== */
@@ -174,13 +142,17 @@
         #previewContainer { display: none; margin-bottom: 12px; border-radius: 10px; overflow: hidden; }
         #previewContainer img { width: 100%; height: auto; display: block; max-height: 200px; object-fit: contain; }
 
-        /* ===== STATUS ===== */
+        /* ===== STATUS / FEHLER ===== */
         #status { display: none; background: #E8F4FD; padding: 10px 14px; border-radius: 10px; margin: 8px 0; font-size: 13px; color: #1a1a1a; }
         #status .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #cbd5e0; border-top: 2px solid #0066AA; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 8px; vertical-align: middle; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
         .error { background: #fee2e2; color: #dc2626; padding: 10px 14px; border-radius: 10px; margin: 8px 0; display: none; font-size: 13px; }
         .empty-leads { color: #a0aec0; text-align: center; padding: 12px; }
+
+        /* ===== KARTE ===== */
+        #map { height: 350px; border-radius: 12px; margin-top: 12px; border: 1px solid #eef2f7; }
+        .map-controls { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+        .map-controls button { padding: 6px 14px; border: none; border-radius: 8px; font-size: 12px; cursor: pointer; background: #E8F4FD; color: #0066AA; }
 
         /* ===== RESPONSIVE ===== */
         @media (max-width: 400px) { .grid-card { padding: 12px; } .grid-card .icon { font-size: 28px; } .grid-card .label { font-size: 12px; } }
@@ -190,7 +162,7 @@
 <body>
 
 <div class="container" id="app">
-    <!-- ===== HEADER ===== -->
+    <!-- HEADER -->
     <div class="header">
         <h1>📇 Lead<span>Capture</span></h1>
         <div class="header-actions">
@@ -199,15 +171,13 @@
         </div>
     </div>
 
-    <!-- ===== USER INFO ===== -->
+    <!-- USER INFO -->
     <div id="userInfo" class="user-info" style="display:none;">
         <span>👤 <span id="userName"></span> · <span class="tenant" id="tenantName"></span></span>
         <button class="btn-logout" id="logoutBtn2">Logout</button>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- LOGIN / REGISTER -->
-    <!-- ============================================================ -->
+    <!-- LOGIN -->
     <div id="loginContainer">
         <div id="loginFormContainer">
             <h2 style="font-size:20px; color:#1a1a1a; margin-bottom:16px;">🔐 Anmelden</h2>
@@ -233,50 +203,23 @@
         </div>
     </div>
 
-    <!-- ============================================================ -->
     <!-- APP (nach Login) -->
-    <!-- ============================================================ -->
     <div id="appContainer" style="display:none;">
 
-        <!-- ===== KACHEL-GRID ===== -->
+        <!-- KACHEL-GRID -->
         <div class="grid" id="mainGrid">
-            <div class="grid-card" data-view="scan">
-                <span class="icon">📸</span>
-                <div class="label">Visitenkarte</div>
-                <div class="sub">scannen & erfassen</div>
-            </div>
-            <div class="grid-card" data-view="search">
-                <span class="icon">🔍</span>
-                <div class="label">Suche</div>
-                <div class="sub">Leads finden</div>
-            </div>
-            <div class="grid-card" data-view="questionnaire">
-                <span class="icon">📝</span>
-                <div class="label">Fragebogen</div>
-                <div class="sub">erstellen & verwalten</div>
-            </div>
-            <div class="grid-card" data-view="stats">
-                <span class="icon">📊</span>
-                <div class="label">Statistik</div>
-                <div class="sub">Histogramm</div>
-            </div>
-            <div class="grid-card map-card" data-view="map">
-                <span class="icon">🗺️</span>
-                <div class="label">Karte</div>
-                <div class="sub">alle Leads auf einer Karte</div>
-            </div>
+            <div class="grid-card" data-view="scan"><span class="icon">📸</span><div class="label">Visitenkarte</div><div class="sub">scannen & erfassen</div></div>
+            <div class="grid-card" data-view="search"><span class="icon">🔍</span><div class="label">Suche</div><div class="sub">Leads finden</div></div>
+            <div class="grid-card" data-view="questionnaire"><span class="icon">📝</span><div class="label">Fragebogen</div><div class="sub">erstellen & verwalten</div></div>
+            <div class="grid-card" data-view="stats"><span class="icon">📊</span><div class="label">Statistik</div><div class="sub">Histogramm</div></div>
+            <div class="grid-card map-card" data-view="map"><span class="icon">🗺️</span><div class="label">Karte</div><div class="sub">alle Leads auf einer Karte</div></div>
         </div>
 
-        <!-- ===== VIEW: SCAN ===== -->
+        <!-- VIEW: SCAN -->
         <div class="view" id="view-scan">
-            <div class="view-header">
-                <button class="back" data-view="main">←</button>
-                <h2>📸 Visitenkarte scannen</h2>
-            </div>
+            <div class="view-header"><button class="back" data-view="main">←</button><h2>📸 Visitenkarte scannen</h2></div>
             <div class="upload-area" id="uploadArea">
-                <div class="icon">📸</div>
-                <p>Foto hochladen oder aufnehmen</p>
-                <small>JPG, PNG, PDF (max. 10MB)</small>
+                <div class="icon">📸</div><p>Foto hochladen oder aufnehmen</p><small>JPG, PNG, PDF (max. 10MB)</small>
                 <input type="file" id="fileInput" accept="image/*,application/pdf" capture="environment">
             </div>
             <div id="previewContainer"><img id="previewImage" alt="Vorschau"></div>
@@ -313,49 +256,47 @@
             </form>
         </div>
 
-        <!-- ===== VIEW: SEARCH ===== -->
+        <!-- VIEW: SEARCH -->
         <div class="view" id="view-search">
-            <div class="view-header">
-                <button class="back" data-view="main">←</button>
-                <h2>🔍 Suche</h2>
-            </div>
+            <div class="view-header"><button class="back" data-view="main">←</button><h2>🔍 Suche</h2></div>
             <div class="search-bar">
-                <input type="text" id="searchInput" placeholder="Name, Firma, E-Mail...">
+                <input type="text" id="searchInput" placeholder="Name, Firma, Ort, E-Mail, Telefon...">
                 <button id="searchBtn">Suchen</button>
             </div>
-            <div id="searchResults">
-                <div class="empty-leads">Gib einen Suchbegriff ein</div>
-            </div>
+            <div id="searchResults"><div class="empty-leads">Gib einen Suchbegriff ein</div></div>
         </div>
 
-        <!-- ===== VIEW: QUESTIONNAIRE ===== -->
+        <!-- VIEW: QUESTIONNAIRE -->
         <div class="view" id="view-questionnaire">
-            <div class="view-header">
-                <button class="back" data-view="main">←</button>
-                <h2>📝 Fragebogen</h2>
+            <div class="view-header"><button class="back" data-view="main">←</button><h2>📝 Fragebogen</h2></div>
+            <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:center;">
+                <select id="questionnaireTemplateSelect" style="flex:1; padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; background:white;">
+                    <option value="">Vorlage wählen...</option>
+                </select>
+                <button class="btn btn-secondary" id="loadTemplateBtn" style="flex:0; padding:6px 12px; font-size:12px;">📂 Laden</button>
+                <button class="btn btn-primary" id="saveTemplateBtn" style="flex:0; padding:6px 12px; font-size:12px;">💾 Speichern</button>
+                <button class="btn btn-danger" id="deleteTemplateBtn" style="flex:0; padding:6px 12px; font-size:12px;">🗑️</button>
             </div>
             <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
                 <button class="btn btn-primary" id="addQuestionBtn">➕ Frage hinzufügen</button>
-                <button class="btn btn-success" id="saveQuestionnaireTemplateBtn">💾 Vorlage speichern</button>
+                <button class="btn btn-success" id="saveQuestionnaireTemplateBtn">💾 Als Vorlage</button>
+                <button class="btn btn-secondary" id="resetQuestionnaireBtn">🔄 Zurücksetzen</button>
             </div>
             <div id="questionnaireEditor"></div>
             <div class="empty-leads" id="emptyQuestions">Keine Fragen definiert. Klicke auf "Frage hinzufügen".</div>
         </div>
 
-        <!-- ===== VIEW: STATS ===== -->
+        <!-- VIEW: STATS -->
         <div class="view" id="view-stats">
-            <div class="view-header">
-                <button class="back" data-view="main">←</button>
-                <h2>📊 Statistik</h2>
-            </div>
+            <div class="view-header"><button class="back" data-view="main">←</button><h2>📊 Statistik</h2></div>
             <div class="histogram-controls">
                 <select id="histogramYear"></select>
                 <select id="histogramView">
-                    <option value="year">Jahresansicht</option>
-                    <option value="month">Monatsansicht</option>
                     <option value="day">Tagesansicht</option>
+                    <option value="month">Monatsansicht</option>
+                    <option value="year">Jahresansicht</option>
                 </select>
-                <button class="btn btn-secondary" id="refreshHistogramBtn2" style="padding:6px 12px; font-size:12px;">🔄</button>
+                <button class="btn btn-secondary" id="refreshHistogramBtn" style="padding:6px 12px; font-size:12px;">🔄</button>
             </div>
             <div class="histogram-wrapper">
                 <div class="histogram" id="histogram"></div>
@@ -367,32 +308,33 @@
                 <button class="btn btn-secondary" id="importDropboxBtn2" style="background:#0061FF; color:white;">☁️ Dropbox</button>
                 <input type="file" id="csvFileInput" accept=".csv" style="display:none;">
             </div>
-            <div id="leadsContainer" style="margin-top:12px;">
+            <div style="margin-top:12px;">
                 <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><h3 style="font-size:16px;">📋 Alle Leads</h3><span id="leadsCount">0</span></div>
                 <div id="leadsList"><div class="empty-leads">📭 Noch keine Leads</div></div>
             </div>
         </div>
 
-        <!-- ===== VIEW: MAP ===== -->
+        <!-- VIEW: MAP -->
         <div class="view" id="view-map">
-            <div class="view-header">
-                <button class="back" data-view="main">←</button>
-                <h2>🗺️ Lead-Karte</h2>
-            </div>
+            <div class="view-header"><button class="back" data-view="main">←</button><h2>🗺️ Lead-Karte</h2></div>
             <div class="map-controls">
-                <button class="btn btn-secondary" id="mapFilterBtn" style="flex:1; padding:8px;">📍 Alle anzeigen</button>
-                <button class="btn btn-secondary" id="mapRefreshBtn" style="flex:1; padding:8px;">🔄 Aktualisieren</button>
+                <button id="mapRefreshBtn">🔄 Aktualisieren</button>
+                <button id="mapFilterBtn">📍 Alle anzeigen</button>
             </div>
             <div id="map"></div>
-            <div style="margin-top:8px; font-size:12px; color:#6b7a8f; text-align:center;">
-                <span id="mapCount">0</span> Leads auf der Karte · Klicke auf einen Punkt für Details
-            </div>
+            <div style="margin-top:8px; font-size:12px; color:#6b7a8f; text-align:center;"><span id="mapCount">0</span> Leads auf der Karte</div>
         </div>
+
+        <!-- VIEW: LEAD-QUESTIONNAIRE (wird bei Lead geöffnet) -->
+        <div class="view" id="view-lead-questionnaire">
+            <div class="view-header"><button class="back" data-view="main">←</button><h2>📝 Fragebogen für <span id="questionnaireLeadName"></span></h2></div>
+            <div id="questionnaireForm"></div>
+            <div class="actions"><button class="btn btn-success" id="saveQuestionnaireBtn">💾 Antworten speichern</button></div>
+        </div>
+
     </div>
 
-    <!-- ============================================================ -->
     <!-- LEAD DETAIL MODAL -->
-    <!-- ============================================================ -->
     <div id="leadDetailOverlay">
         <div id="leadDetailModal">
             <button class="close-btn" id="closeLeadDetail">×</button>
@@ -400,55 +342,32 @@
                 <div class="detail-name" id="detailName">—</div>
                 <div class="detail-company" id="detailCompany">—</div>
                 <div class="detail-position" id="detailPosition">—</div>
-
-                <div class="detail-section">
-                    <div class="label">Kontakt</div>
-                    <div class="value" id="detailContact">—</div>
-                </div>
-
-                <div class="detail-section">
-                    <div class="label">Adresse</div>
-                    <div class="value" id="detailAddress">—</div>
-                </div>
-
-                <div class="detail-section">
-                    <div class="label">Interessensgebiete</div>
-                    <div class="value" id="detailInterests">—</div>
-                </div>
-
-                <div class="detail-section">
-                    <div class="label">Besuchertyp</div>
-                    <div class="value" id="detailVisitorType">—</div>
-                </div>
-
-                <div class="detail-section">
-                    <div class="label">Erfasst am</div>
-                    <div class="value" id="detailCreated">—</div>
-                </div>
-
+                <div class="detail-section"><div class="label">Kontakt</div><div class="value" id="detailContact">—</div></div>
+                <div class="detail-section"><div class="label">Adresse</div><div class="value" id="detailAddress">—</div></div>
+                <div class="detail-section"><div class="label">Interessensgebiete</div><div class="value" id="detailInterests">—</div></div>
+                <div class="detail-section"><div class="label">Besuchertyp</div><div class="value" id="detailVisitorType">—</div></div>
+                <div class="detail-section"><div class="label">Erfasst am</div><div class="value" id="detailCreated">—</div></div>
                 <div class="detail-actions">
                     <button class="btn btn-phone" id="detailPhoneBtn">📞 Anrufen</button>
                     <button class="btn btn-email" id="detailEmailBtn">✉️ E-Mail</button>
                     <button class="btn btn-edit" id="detailEditBtn">✏️ Bearbeiten</button>
                     <button class="btn btn-delete" id="detailDeleteBtn">🗑️ Löschen</button>
                 </div>
-
-                <!-- Edit-Modus (wird bei Klick auf Bearbeiten eingeblendet) -->
                 <div id="detailEditMode" style="display:none; margin-top:16px; border-top:1px solid #eef2f7; padding-top:16px;">
                     <h4 style="font-size:14px; margin-bottom:8px;">✏️ Lead bearbeiten</h4>
-                    <div class="form-grid" style="margin:0;">
-                        <div class="form-group"><label>Vorname</label><input type="text" id="editFirstName" style="padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;"></div>
-                        <div class="form-group"><label>Nachname</label><input type="text" id="editLastName" style="padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;"></div>
-                        <div class="form-group full"><label>Firma</label><input type="text" id="editCompany" style="padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;"></div>
-                        <div class="form-group full"><label>Position</label><input type="text" id="editPosition" style="padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;"></div>
-                        <div class="form-group"><label>E-Mail</label><input type="email" id="editEmail" style="padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;"></div>
-                        <div class="form-group"><label>Telefon</label><input type="tel" id="editPhone" style="padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;"></div>
-                        <div class="form-group full"><label>Straße</label><input type="text" id="editStreet" style="padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;"></div>
-                        <div class="form-group"><label>PLZ</label><input type="text" id="editZip" style="padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;"></div>
-                        <div class="form-group"><label>Stadt</label><input type="text" id="editCity" style="padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;"></div>
-                        <div class="form-group full"><label>Interessensgebiete</label><input type="text" id="editInterests" style="padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;"></div>
+                    <div class="form-grid">
+                        <div class="form-group"><label>Vorname</label><input type="text" id="editFirstName"></div>
+                        <div class="form-group"><label>Nachname</label><input type="text" id="editLastName"></div>
+                        <div class="form-group full"><label>Firma</label><input type="text" id="editCompany"></div>
+                        <div class="form-group full"><label>Position</label><input type="text" id="editPosition"></div>
+                        <div class="form-group"><label>E-Mail</label><input type="email" id="editEmail"></div>
+                        <div class="form-group"><label>Telefon</label><input type="tel" id="editPhone"></div>
+                        <div class="form-group full"><label>Straße</label><input type="text" id="editStreet"></div>
+                        <div class="form-group"><label>PLZ</label><input type="text" id="editZip"></div>
+                        <div class="form-group"><label>Stadt</label><input type="text" id="editCity"></div>
+                        <div class="form-group full"><label>Interessensgebiete</label><input type="text" id="editInterests"></div>
                         <div class="form-group full"><label>Besuchertyp</label>
-                            <select id="editVisitorType" style="padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px; background:white;">
+                            <select id="editVisitorType">
                                 <option value="">Bitte wählen...</option>
                                 <option value="Entscheider">Entscheider</option>
                                 <option value="Fachbesucher">Fachbesucher</option>
@@ -458,15 +377,11 @@
                             </select>
                         </div>
                     </div>
-                    <div class="actions" style="margin-top:8px;">
-                        <button class="btn btn-success" id="saveEditBtn">💾 Speichern</button>
-                        <button class="btn btn-secondary" id="cancelEditBtn">Abbrechen</button>
-                    </div>
+                    <div class="actions"><button class="btn btn-success" id="saveEditBtn">💾 Speichern</button><button class="btn btn-secondary" id="cancelEditBtn">Abbrechen</button></div>
                 </div>
             </div>
         </div>
     </div>
-
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -475,9 +390,7 @@
 // 1. KONFIGURATION
 // ============================================================
 const API_URL = 'https://leadcapture-backend.onrender.com/api';
-let mapInstance = null;
-let mapMarkers = [];
-let currentLeadDetail = null;
+let mapInstance = null, mapMarkers = [], currentLeadDetail = null, allLeads = [];
 
 // ============================================================
 // 2. TOKEN-VERWALTUNG
@@ -507,8 +420,7 @@ async function apiRequest(endpoint, options = {}) {
 // ============================================================
 async function login(email, password) {
     const response = await fetch(`${API_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
     });
     const result = await response.json();
@@ -521,8 +433,7 @@ async function login(email, password) {
 
 async function register(email, password, fullName, tenantName) {
     const response = await fetch(`${API_URL}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, fullName, tenantName })
     });
     const result = await response.json();
@@ -556,9 +467,6 @@ const logoutBtn2 = document.getElementById('logoutBtn2');
 const userBadge = document.getElementById('userBadge');
 const userInfo = document.getElementById('userInfo');
 
-// ============================================================
-// 6. LOGIN / REGISTER EVENTS
-// ============================================================
 showRegisterLink.addEventListener('click', (e) => {
     e.preventDefault();
     document.getElementById('loginFormContainer').style.display = 'none';
@@ -599,34 +507,26 @@ registerForm.addEventListener('submit', async (e) => {
 });
 
 // ============================================================
-// 7. NAVIGATION (Kacheln)
+// 6. NAVIGATION
 // ============================================================
 function showView(viewId) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     const view = document.getElementById(`view-${viewId}`);
     if (view) view.classList.add('active');
     document.getElementById('mainGrid').style.display = viewId === 'main' ? 'grid' : 'none';
-    
-    if (viewId === 'map') { initMap(); }
+    if (viewId === 'map') { initMap(); loadMapData(); }
+    if (viewId === 'stats') { loadHistogram(); loadLeads(); }
+    if (viewId === 'questionnaire') { loadTemplates(); loadActiveTemplate(); }
 }
-
 document.querySelectorAll('.grid-card').forEach(card => {
-    card.addEventListener('click', () => {
-        const view = card.dataset.view;
-        showView(view);
-        if (view === 'search') { /* Suchfeld fokussieren */ }
-        if (view === 'stats') { loadHistogram(); loadLeads(); }
-        if (view === 'questionnaire') { loadQuestionnaireTemplate(); }
-        if (view === 'map') { loadMapData(); }
-    });
+    card.addEventListener('click', () => showView(card.dataset.view));
 });
-
 document.querySelectorAll('.back').forEach(btn => {
-    btn.addEventListener('click', () => { showView('main'); });
+    btn.addEventListener('click', () => showView('main'));
 });
 
 // ============================================================
-// 8. APP ANZEIGEN / LOGOUT
+// 7. APP ANZEIGEN / LOGOUT
 // ============================================================
 function showApp(user) {
     loginContainer.style.display = 'none';
@@ -638,22 +538,19 @@ function showApp(user) {
     showView('main');
     loadLeads();
 }
-
 function showLogin() {
     loginContainer.style.display = 'block';
     appContainer.style.display = 'none';
     userInfo.style.display = 'none';
     document.getElementById('loginFormContainer').style.display = 'block';
     document.getElementById('registerFormContainer').style.display = 'none';
-    loginEmail.value = '';
-    loginPassword.value = '';
+    loginEmail.value = ''; loginPassword.value = '';
 }
-
 logoutBtn.addEventListener('click', () => { removeToken(); showLogin(); });
 logoutBtn2.addEventListener('click', () => { removeToken(); showLogin(); });
 
 // ============================================================
-// 9. LEADS (mit API)
+// 8. LEADS + SUCHFUNKTION (ALLE FELDER)
 // ============================================================
 const leadsList = document.getElementById('leadsList');
 const leadsCount = document.getElementById('leadsCount');
@@ -661,47 +558,44 @@ const searchInput = document.getElementById('searchInput');
 const searchBtn = document.getElementById('searchBtn');
 const searchResults = document.getElementById('searchResults');
 
-let allLeads = [];
-
-async function loadLeads() {
-    try {
-        const response = await apiRequest('/leads');
-        const result = await response.json();
-        if (result.success) {
-            allLeads = result.data;
-            displayLeads(allLeads);
-        }
-    } catch (error) {
-        if (error.message.includes('Nicht eingeloggt')) showLogin();
-        else console.error(error);
-    }
+function filterLeads(leads, term) {
+    if (!term || term.trim() === '') return leads;
+    const t = term.toLowerCase().trim();
+    return leads.filter(lead => {
+        const fields = [
+            lead.first_name || '', lead.last_name || '', lead.company || '',
+            lead.position || '', lead.email || '', lead.phone || '',
+            lead.street || '', lead.zip || '', lead.city || '',
+            lead.visitor_type || '',
+            Array.isArray(lead.interests) ? lead.interests.join(' ') : '',
+            ...Object.values(lead.questionnaire || {}).map(v => String(v))
+        ];
+        return fields.some(f => f.toLowerCase().includes(t));
+    });
 }
 
 function displayLeads(leads, searchTerm = '') {
-    const filtered = searchTerm ? leads.filter(l => 
-        (l.first_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (l.last_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (l.company || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (l.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (l.phone || '').includes(searchTerm)
-    ) : leads;
-    
+    const filtered = searchTerm ? filterLeads(leads, searchTerm) : leads;
     leadsCount.textContent = `${leads.length} Einträge`;
     if (leads.length === 0) {
         leadsList.innerHTML = '<div class="empty-leads">📭 Noch keine Leads</div>';
-    } else {
-        leadsList.innerHTML = leads.map(lead => `
-            <div class="lead-card" onclick="openLeadDetail('${lead.id}')">
-                <div><span class="name">${lead.first_name || ''} ${lead.last_name || ''}</span> · <span class="company">${lead.company || 'Keine Firma'}</span></div>
-                <div class="details">${lead.position || 'Keine Position'} ${lead.email ? '· ✉️ ' + lead.email : ''} ${lead.phone ? '· 📞 ' + lead.phone : ''}</div>
-                <div class="meta">🕐 ${lead.created_at ? new Date(lead.created_at).toLocaleString() : ''}</div>
-            </div>
-        `).join('');
+        return;
     }
-    
+    const highlight = (text) => {
+        if (!searchTerm || !text) return text || '—';
+        const regex = new RegExp(`(${searchTerm})`, 'gi');
+        return String(text).replace(regex, '<mark>$1</mark>');
+    };
+    leadsList.innerHTML = filtered.map(lead => `
+        <div class="lead-card" onclick="openLeadDetail('${lead.id}')">
+            <div><span class="name">${highlight(lead.first_name)} ${highlight(lead.last_name)}</span> · <span class="company">${highlight(lead.company) || 'Keine Firma'}</span></div>
+            <div class="details">${highlight(lead.position) || 'Keine Position'} ${lead.email ? '· ✉️ ' + highlight(lead.email) : ''} ${lead.phone ? '· 📞 ' + highlight(lead.phone) : ''}</div>
+            ${lead.city ? `<div class="details">📍 ${highlight(lead.city)}</div>` : ''}
+            <div class="meta">🕐 ${lead.created_at ? new Date(lead.created_at).toLocaleString() : ''}</div>
+        </div>
+    `).join('');
     if (searchTerm) {
-        searchResults.innerHTML = filtered.length === 0 ? 
-            '<div class="empty-leads">🔍 Keine Leads gefunden</div>' :
+        searchResults.innerHTML = filtered.length === 0 ? `<div class="empty-leads">🔍 Keine Leads für "${searchTerm}"</div>` :
             filtered.map(lead => `
                 <div class="lead-card" onclick="openLeadDetail('${lead.id}')">
                     <div><span class="name">${lead.first_name || ''} ${lead.last_name || ''}</span> · <span class="company">${lead.company || 'Keine Firma'}</span></div>
@@ -711,75 +605,56 @@ function displayLeads(leads, searchTerm = '') {
     }
 }
 
-searchBtn.addEventListener('click', async () => {
-    const term = searchInput.value.trim();
-    if (!term) { searchResults.innerHTML = '<div class="empty-leads">Gib einen Suchbegriff ein</div>'; return; }
+async function loadLeads() {
     try {
         const response = await apiRequest('/leads');
         const result = await response.json();
-        if (result.success) {
-            displayLeads(result.data, term);
-        }
+        if (result.success) { allLeads = result.data; displayLeads(allLeads); }
+    } catch (error) { if (error.message.includes('Nicht eingeloggt')) showLogin(); else console.error(error); }
+}
+searchBtn.addEventListener('click', async () => {
+    const term = searchInput.value.trim();
+    if (!term) { searchResults.innerHTML = '<div class="empty-leads">🔍 Gib einen Suchbegriff ein</div>'; return; }
+    try {
+        const response = await apiRequest('/leads');
+        const result = await response.json();
+        if (result.success) displayLeads(result.data, term);
     } catch (error) { console.error(error); }
 });
 searchInput.addEventListener('keyup', (e) => { if (e.key === 'Enter') searchBtn.click(); });
 
 // ============================================================
-// 10. LEAD DETAIL
+// 9. LEAD DETAIL
 // ============================================================
 const detailOverlay = document.getElementById('leadDetailOverlay');
-const detailModal = document.getElementById('leadDetailModal');
 
 function openLeadDetail(leadId) {
     const lead = allLeads.find(l => l.id === leadId);
     if (!lead) return;
     currentLeadDetail = lead;
-    
     document.getElementById('detailName').textContent = `${lead.first_name || ''} ${lead.last_name || ''}`.trim() || 'Unbekannt';
     document.getElementById('detailCompany').textContent = lead.company || 'Keine Firma';
     document.getElementById('detailPosition').textContent = lead.position || 'Keine Position';
-    document.getElementById('detailContact').textContent = 
-        `${lead.email ? '✉️ ' + lead.email : ''}${lead.email && lead.phone ? ' · ' : ''}${lead.phone ? '📞 ' + lead.phone : ''}` || '—';
-    document.getElementById('detailAddress').textContent = 
-        `${lead.street || ''}${lead.street ? ', ' : ''}${lead.zip || ''}${lead.zip ? ' ' : ''}${lead.city || ''}`.trim() || '—';
+    document.getElementById('detailContact').textContent = `${lead.email ? '✉️ ' + lead.email : ''}${lead.email && lead.phone ? ' · ' : ''}${lead.phone ? '📞 ' + lead.phone : ''}` || '—';
+    document.getElementById('detailAddress').textContent = `${lead.street || ''}${lead.street ? ', ' : ''}${lead.zip || ''}${lead.zip ? ' ' : ''}${lead.city || ''}`.trim() || '—';
     document.getElementById('detailInterests').textContent = lead.interests?.length ? lead.interests.join(', ') : '—';
     document.getElementById('detailVisitorType').textContent = lead.visitor_type || '—';
     document.getElementById('detailCreated').textContent = lead.created_at ? new Date(lead.created_at).toLocaleString() : '—';
-    
-    // Telefon-Button
+
     const phoneBtn = document.getElementById('detailPhoneBtn');
-    if (lead.phone) {
-        phoneBtn.style.display = 'block';
-        phoneBtn.onclick = () => window.location.href = `tel:${lead.phone.replace(/\s/g, '')}`;
-    } else {
-        phoneBtn.style.display = 'none';
-    }
-    
-    // E-Mail-Button
+    if (lead.phone) { phoneBtn.style.display = 'block'; phoneBtn.onclick = () => window.location.href = `tel:${lead.phone.replace(/\s/g, '')}`; }
+    else phoneBtn.style.display = 'none';
     const emailBtn = document.getElementById('detailEmailBtn');
-    if (lead.email) {
-        emailBtn.style.display = 'block';
-        emailBtn.onclick = () => window.location.href = `mailto:${lead.email}`;
-    } else {
-        emailBtn.style.display = 'none';
-    }
-    
-    // Edit-Modus zurücksetzen
+    if (lead.email) { emailBtn.style.display = 'block'; emailBtn.onclick = () => window.location.href = `mailto:${lead.email}`; }
+    else emailBtn.style.display = 'none';
+
     document.getElementById('detailEditMode').style.display = 'none';
     document.getElementById('detailEditBtn').style.display = 'block';
-    
-    // Löschen-Button
-    document.getElementById('detailDeleteBtn').onclick = () => {
-        if (confirm('Lead wirklich löschen?')) {
-            deleteLead(lead.id);
-        }
-    };
-    
-    // Bearbeiten-Button
+    document.getElementById('detailDeleteBtn').onclick = () => { if (confirm('Lead wirklich löschen?')) deleteLead(lead.id); };
+
     document.getElementById('detailEditBtn').onclick = () => {
         document.getElementById('detailEditMode').style.display = 'block';
         document.getElementById('detailEditBtn').style.display = 'none';
-        // Felder füllen
         document.getElementById('editFirstName').value = lead.first_name || '';
         document.getElementById('editLastName').value = lead.last_name || '';
         document.getElementById('editCompany').value = lead.company || '';
@@ -792,10 +667,8 @@ function openLeadDetail(leadId) {
         document.getElementById('editInterests').value = lead.interests?.join(', ') || '';
         document.getElementById('editVisitorType').value = lead.visitor_type || '';
     };
-    
-    // Speichern-Button (Edit)
     document.getElementById('saveEditBtn').onclick = async () => {
-        const updatedLead = {
+        const updated = {
             firstName: document.getElementById('editFirstName').value,
             lastName: document.getElementById('editLastName').value,
             company: document.getElementById('editCompany').value,
@@ -811,73 +684,30 @@ function openLeadDetail(leadId) {
             visitorType: document.getElementById('editVisitorType').value
         };
         try {
-            await apiRequest(`/leads/${lead.id}`, {
-                method: 'PUT',
-                body: JSON.stringify({ lead: updatedLead })
-            });
+            await apiRequest(`/leads/${lead.id}`, { method: 'PUT', body: JSON.stringify({ lead: updated }) });
             alert('✅ Lead aktualisiert!');
             loadLeads();
             document.getElementById('detailEditMode').style.display = 'none';
             document.getElementById('detailEditBtn').style.display = 'block';
             openLeadDetail(lead.id);
-        } catch (error) {
-            alert('❌ Fehler: ' + error.message);
-        }
+        } catch (error) { alert('❌ Fehler: ' + error.message); }
     };
-    
     document.getElementById('cancelEditBtn').onclick = () => {
         document.getElementById('detailEditMode').style.display = 'none';
         document.getElementById('detailEditBtn').style.display = 'block';
     };
-    
     detailOverlay.classList.add('active');
 }
-
-document.getElementById('closeLeadDetail').addEventListener('click', () => {
-    detailOverlay.classList.remove('active');
-});
-detailOverlay.addEventListener('click', (e) => {
-    if (e.target === detailOverlay) detailOverlay.classList.remove('active');
-});
-
-// PUT-Endpunkt für Lead-Update (Backend)
-// Füge diesen Endpunkt in deine api-proxy.js ein:
-// app.put('/api/leads/:id', authenticate, async (req, res) => {
-//     const { id } = req.params;
-//     const { lead } = req.body;
-//     const { data, error } = await supabase
-//         .from('leads')
-//         .update({
-//             first_name: lead.firstName,
-//             last_name: lead.lastName,
-//             company: lead.company,
-//             position: lead.position,
-//             email: lead.email,
-//             phone: lead.phone,
-//             street: lead.address?.street,
-//             zip: lead.address?.zip,
-//             city: lead.address?.city,
-//             interests: lead.interests,
-//             visitor_type: lead.visitorType
-//         })
-//         .eq('id', id)
-//         .eq('tenant_id', req.tenantId)
-//         .select()
-//         .single();
-//     if (error) throw error;
-//     res.json({ success: true, data });
-// });
+document.getElementById('closeLeadDetail').onclick = () => detailOverlay.classList.remove('active');
+detailOverlay.addEventListener('click', (e) => { if (e.target === detailOverlay) detailOverlay.classList.remove('active'); });
 
 async function deleteLead(id) {
-    try {
-        await apiRequest(`/leads/${id}`, { method: 'DELETE' });
-        detailOverlay.classList.remove('active');
-        loadLeads();
-    } catch (error) { alert('Fehler: ' + error.message); }
+    try { await apiRequest(`/leads/${id}`, { method: 'DELETE' }); detailOverlay.classList.remove('active'); loadLeads(); }
+    catch (error) { alert('Fehler: ' + error.message); }
 }
 
 // ============================================================
-// 11. BILDVERARBEITUNG (Scan)
+// 10. BILDVERARBEITUNG (SCAN)
 // ============================================================
 const fileInput = document.getElementById('fileInput');
 const uploadArea = document.getElementById('uploadArea');
@@ -887,46 +717,42 @@ const statusDiv = document.getElementById('status');
 const statusText = document.getElementById('statusText');
 const errorBox = document.getElementById('errorBox');
 
-function showError(msg) {
-    errorBox.textContent = msg;
-    errorBox.style.display = 'block';
-    setTimeout(() => errorBox.style.display = 'none', 5000);
-}
-function setStatus(msg, show) {
-    statusText.textContent = msg;
-    statusDiv.style.display = show ? 'flex' : 'none';
-}
+function showError(msg) { errorBox.textContent = msg; errorBox.style.display = 'block'; setTimeout(() => errorBox.style.display = 'none', 5000); }
+function setStatus(msg, show) { statusText.textContent = msg; statusDiv.style.display = show ? 'flex' : 'none'; }
 
 async function handleImage(file) {
     if (!file) return;
-    if (!file.type.startsWith('image/')) { showError('Bitte wähle ein Bild aus (JPG, PNG).'); return; }
+    if (!file.type.startsWith('image/')) { showError('Bitte wähle ein Bild (JPG, PNG).'); return; }
     if (file.size > 10 * 1024 * 1024) { showError('Bild zu groß (max 10MB).'); return; }
     const reader = new FileReader();
     reader.onload = async (e) => {
         const base64Image = e.target.result;
-        previewImage.src = base64Image;
-        previewContainer.style.display = 'block';
+        previewImage.src = base64Image; previewContainer.style.display = 'block';
         setStatus('DeepSeek analysiert...', true);
         try {
             const response = await apiRequest('/process-image', { method: 'POST', body: JSON.stringify({ image: base64Image }) });
             const result = await response.json();
             if (result.success) {
+                const leadId = result.saved.id;
                 fillForm(result.data);
                 setStatus('✅ Lead erfasst!', true);
                 setTimeout(() => setStatus('', false), 2000);
                 loadLeads();
-            } else {
-                throw new Error(result.error || 'Unbekannter Fehler');
-            }
-        } catch (error) {
-            showError('Parsing fehlgeschlagen: ' + error.message);
-            setStatus('', false);
-        } finally { setStatus('', false); }
+                const questions = JSON.parse(localStorage.getItem('leadcapture_questions') || '[]');
+                if (questions.length > 0) {
+                    setTimeout(() => {
+                        if (confirm('📝 Möchtest du den Fragebogen für diesen Lead ausfüllen?')) {
+                            openLeadQuestionnaire(leadId);
+                        }
+                    }, 500);
+                }
+            } else throw new Error(result.error || 'Unbekannter Fehler');
+        } catch (error) { showError('Parsing fehlgeschlagen: ' + error.message); setStatus('', false); }
+        finally { setStatus('', false); }
     };
-    reader.onerror = () => { showError('Fehler beim Lesen der Datei.'); };
+    reader.onerror = () => showError('Fehler beim Lesen der Datei.');
     reader.readAsDataURL(file);
 }
-
 uploadArea.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', (e) => { if (e.target.files.length > 0) handleImage(e.target.files[0]); });
 document.getElementById('uploadBtn').addEventListener('click', () => fileInput.click());
@@ -944,7 +770,6 @@ const fields = {
     interests: document.getElementById('interests'),
     visitorType: document.getElementById('visitorType')
 };
-
 function fillForm(data) {
     fields.firstName.value = data.first_name || data.firstName || '';
     fields.lastName.value = data.last_name || data.lastName || '';
@@ -958,17 +783,16 @@ function fillForm(data) {
     fields.interests.value = Array.isArray(data.interests) ? data.interests.join(', ') : '';
     fields.visitorType.value = data.visitor_type || data.visitorType || '';
 }
-
 function clearForm() {
     Object.values(fields).forEach(f => f.value = '');
-    document.getElementById('previewContainer').style.display = 'none';
-    document.getElementById('previewImage').src = '';
-    document.getElementById('fileInput').value = '';
-    document.getElementById('status').style.display = 'none';
-    document.getElementById('errorBox').style.display = 'none';
+    previewContainer.style.display = 'none';
+    previewImage.src = '';
+    fileInput.value = '';
+    statusDiv.style.display = 'none';
+    errorBox.style.display = 'none';
 }
-
 document.getElementById('clearBtn').addEventListener('click', clearForm);
+
 document.getElementById('saveBtn').addEventListener('click', async () => {
     const leadData = {
         firstName: fields.firstName.value,
@@ -982,29 +806,90 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
         visitorType: fields.visitorType.value
     };
     try {
-        await apiRequest('/leads', { method: 'POST', body: JSON.stringify({ lead: leadData }) });
-        alert('✅ Lead gespeichert!');
-        loadLeads();
-        clearForm();
+        const response = await apiRequest('/leads', { method: 'POST', body: JSON.stringify({ lead: leadData }) });
+        const result = await response.json();
+        if (result.success) {
+            const leadId = result.data.id;
+            alert('✅ Lead gespeichert!');
+            loadLeads();
+            clearForm();
+            const questions = JSON.parse(localStorage.getItem('leadcapture_questions') || '[]');
+            if (questions.length > 0) {
+                if (confirm('📝 Möchtest du den Fragebogen für diesen Lead ausfüllen?')) {
+                    openLeadQuestionnaire(leadId);
+                }
+            }
+        }
     } catch (error) { alert('❌ Fehler: ' + error.message); }
 });
 
 // ============================================================
+// 11. FRAGEBOGEN-MANAGEMENT (MEHRERE VORLAGEN)
+// ============================================================
+const TEMPLATE_STORAGE_KEY = 'leadcapture_questionnaire_templates';
+const ACTIVE_TEMPLATE_KEY = 'leadcapture_active_template';
+let questionTemplate = [], templates = {}, activeTemplateName = '';
+
+function loadTemplates() {
+    const saved = localStorage.getItem(TEMPLATE_STORAGE_KEY);
+    templates = saved ? JSON.parse(saved) : {};
+    return templates;
+}
+function loadActiveTemplate() {
+    const saved = localStorage.getItem(ACTIVE_TEMPLATE_KEY);
+    activeTemplateName = saved || '';
+    questionTemplate = (activeTemplateName && templates[activeTemplateName]) ? templates[activeTemplateName] : [];
+    renderQuestionnaireEditor();
+    updateTemplateSelect();
+}
+function updateTemplateSelect() {
+    const select = document.getElementById('questionnaireTemplateSelect');
+    select.innerHTML = '<option value="">Vorlage wählen...</option>';
+    Object.keys(templates).forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        if (name === activeTemplateName) opt.selected = true;
+        select.appendChild(opt);
+    });
+}
+function saveTemplate(name) {
+    if (!name || !name.trim()) { alert('❌ Bitte gib einen Namen ein.'); return; }
+    if (questionTemplate.length === 0) { alert('❌ Keine Fragen.'); return; }
+    templates[name.trim()] = JSON.parse(JSON.stringify(questionTemplate));
+    localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(templates));
+    localStorage.setItem(ACTIVE_TEMPLATE_KEY, name.trim());
+    activeTemplateName = name.trim();
+    updateTemplateSelect();
+    alert(`✅ Vorlage "${name.trim()}" gespeichert!`);
+}
+function loadTemplate(name) {
+    if (!name || !templates[name]) { alert('❌ Vorlage nicht gefunden.'); return; }
+    questionTemplate = JSON.parse(JSON.stringify(templates[name]));
+    activeTemplateName = name;
+    localStorage.setItem(ACTIVE_TEMPLATE_KEY, name);
+    renderQuestionnaireEditor();
+    updateTemplateSelect();
+    alert(`📂 Vorlage "${name}" geladen.`);
+}
+function deleteTemplate(name) {
+    if (!name || !templates[name]) { alert('❌ Vorlage nicht gefunden.'); return; }
+    if (!confirm(`⚠️ Vorlage "${name}" löschen?`)) return;
+    delete templates[name];
+    localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(templates));
+    if (activeTemplateName === name) { activeTemplateName = ''; localStorage.setItem(ACTIVE_TEMPLATE_KEY, ''); questionTemplate = []; }
+    updateTemplateSelect(); renderQuestionnaireEditor();
+    alert(`🗑️ Vorlage "${name}" gelöscht.`);
+}
+document.getElementById('saveTemplateBtn').addEventListener('click', () => { const name = prompt('📝 Name für die Vorlage:'); if (name) saveTemplate(name); });
+document.getElementById('loadTemplateBtn').addEventListener('click', () => { const name = document.getElementById('questionnaireTemplateSelect').value; if (name) loadTemplate(name); });
+document.getElementById('deleteTemplateBtn').addEventListener('click', () => { const name = document.getElementById('questionnaireTemplateSelect').value; if (name) deleteTemplate(name); });
+
+// ============================================================
 // 12. FRAGEBOGEN EDITOR
 // ============================================================
-let questionTemplate = [];
 const questionEditor = document.getElementById('questionnaireEditor');
 const emptyQuestions = document.getElementById('emptyQuestions');
-
-function loadQuestionnaireTemplate() {
-    const saved = localStorage.getItem('leadcapture_questions');
-    questionTemplate = saved ? JSON.parse(saved) : [
-        { id: 'needs', label: 'Welche konkreten Anforderungen/Probleme hat der Lead?', type: 'textarea' },
-        { id: 'budget', label: 'Budgetrahmen / Investitionsbereitschaft?', type: 'text' },
-        { id: 'timeline', label: 'Zeitplan / Entscheidungszeitraum?', type: 'text' }
-    ];
-    renderQuestionnaireEditor();
-}
 
 function renderQuestionnaireEditor() {
     if (questionTemplate.length === 0) {
@@ -1016,70 +901,90 @@ function renderQuestionnaireEditor() {
     questionEditor.innerHTML = questionTemplate.map((q, index) => `
         <div class="question-item">
             <div class="q-header">
-                <div>
-                    <div class="q-label">${q.label}</div>
-                    <div class="q-type">${q.type} · ID: ${q.id}</div>
-                </div>
-                <div class="q-actions">
-                    <button onclick="removeQuestion(${index})">🗑️</button>
-                    <button onclick="editQuestion(${index})">✏️</button>
-                </div>
+                <div><div class="q-label">${q.label}</div><div class="q-type">${q.type} · ID: ${q.id}</div></div>
+                <div class="q-actions"><button onclick="removeQuestion(${index})">🗑️</button><button onclick="editQuestion(${index})">✏️</button></div>
             </div>
         </div>
     `).join('');
 }
-
 function addQuestion() {
-    const id = prompt('Frage-ID (z.B. "needs"):')?.trim();
-    if (!id) return;
-    const label = prompt('Fragen-Text:')?.trim();
-    if (!label) return;
+    const id = prompt('Frage-ID (z.B. "needs"):')?.trim(); if (!id) return;
+    const label = prompt('Fragen-Text:')?.trim(); if (!label) return;
     const type = prompt('Typ: text / textarea / select')?.trim() || 'text';
     questionTemplate.push({ id, label, type });
     localStorage.setItem('leadcapture_questions', JSON.stringify(questionTemplate));
     renderQuestionnaireEditor();
 }
-
 function removeQuestion(index) {
     if (!confirm('Frage löschen?')) return;
     questionTemplate.splice(index, 1);
     localStorage.setItem('leadcapture_questions', JSON.stringify(questionTemplate));
     renderQuestionnaireEditor();
 }
-
 function editQuestion(index) {
     const q = questionTemplate[index];
-    const newLabel = prompt('Fragen-Text:', q.label)?.trim();
-    if (newLabel) q.label = newLabel;
-    const newType = prompt('Typ (text/textarea/select):', q.type)?.trim();
-    if (newType) q.type = newType;
+    const newLabel = prompt('Fragen-Text:', q.label)?.trim(); if (newLabel) q.label = newLabel;
+    const newType = prompt('Typ (text/textarea/select):', q.type)?.trim(); if (newType) q.type = newType;
     localStorage.setItem('leadcapture_questions', JSON.stringify(questionTemplate));
     renderQuestionnaireEditor();
 }
-
 document.getElementById('addQuestionBtn').addEventListener('click', addQuestion);
 document.getElementById('saveQuestionnaireTemplateBtn').addEventListener('click', () => {
     localStorage.setItem('leadcapture_questions', JSON.stringify(questionTemplate));
     alert('✅ Vorlage gespeichert!');
+});
+document.getElementById('resetQuestionnaireBtn').addEventListener('click', () => {
+    if (confirm('⚠️ Alle Fragen zurücksetzen?')) {
+        localStorage.removeItem('leadcapture_questions');
+        questionTemplate = [];
+        renderQuestionnaireEditor();
+        alert('✅ Fragen zurückgesetzt.');
+    }
 });
 
 // ============================================================
 // 13. FRAGEBOGEN BEI LEAD
 // ============================================================
 let currentLeadId = null;
+async function openLeadQuestionnaire(leadId) {
+    currentLeadId = leadId;
+    showView('lead-questionnaire');
+    try {
+        const response = await apiRequest(`/questionnaire/${leadId}`);
+        const result = await response.json();
+        if (result.success) {
+            document.getElementById('questionnaireLeadName').textContent = result.data.leadName || 'Unbekannt';
+            renderLeadQuestionnaire(result.data.answers || {});
+        }
+    } catch (error) { alert('Fehler: ' + error.message); }
+}
+function renderLeadQuestionnaire(answers) {
+    const container = document.getElementById('questionnaireForm');
+    const questions = JSON.parse(localStorage.getItem('leadcapture_questions') || '[]');
+    if (questions.length === 0) {
+        container.innerHTML = '<div style="color:#a0aec0; text-align:center; padding:20px;">Keine Fragen definiert.</div>';
+        return;
+    }
+    container.innerHTML = questions.map(q => `
+        <div class="questionnaire-answer">
+            <label>${q.label}</label>
+            ${q.type === 'textarea' ?
+                `<textarea id="q_${q.id}" rows="2">${answers[q.id] || ''}</textarea>` :
+                `<input type="text" id="q_${q.id}" value="${answers[q.id] || ''}">`
+            }
+        </div>
+    `).join('');
+}
 document.getElementById('saveQuestionnaireBtn').addEventListener('click', async () => {
-    if (!currentLeadId) { alert('❌ Kein Lead ausgewählt.'); return; }
-    const questions = JSON.parse(localStorage.getItem('leadcapture_questions')) || [];
+    if (!currentLeadId) { alert('❌ Kein Lead.'); return; }
+    const questions = JSON.parse(localStorage.getItem('leadcapture_questions') || '[]');
     const answers = {};
     questions.forEach(q => {
         const el = document.getElementById(`q_${q.id}`);
         if (el) answers[q.id] = el.value;
     });
     try {
-        await apiRequest(`/questionnaire/${currentLeadId}`, {
-            method: 'POST',
-            body: JSON.stringify({ answers })
-        });
+        await apiRequest(`/questionnaire/${currentLeadId}`, { method: 'POST', body: JSON.stringify({ answers }) });
         alert('✅ Fragebogen gespeichert!');
         loadLeads();
         showView('main');
@@ -1087,239 +992,154 @@ document.getElementById('saveQuestionnaireBtn').addEventListener('click', async 
 });
 
 // ============================================================
-// HISTOGRAMM (KORRIGIERT)
+// 14. HISTOGRAMM
 // ============================================================
+const histogram = document.getElementById('histogram');
+const histogramEmpty = document.getElementById('histogramEmpty');
+const histogramYear = document.getElementById('histogramYear');
+const histogramView = document.getElementById('histogramView');
+
 async function loadHistogram() {
     try {
         const year = histogramYear.value || 'alle';
-        
-        console.log('📊 Lade Histogramm für Jahr:', year);
-        
         const response = await apiRequest(`/stats/daily?year=${year}`);
         const result = await response.json();
-        
-        console.log('📊 Histogramm-Antwort:', result);
-        
-        if (!result.success) {
-            throw new Error(result.error || 'Unbekannter Fehler');
-        }
-        
-        // Jahre-Dropdown füllen
-        const currentYear = new Date().getFullYear();
+        if (!result.success) throw new Error(result.error || 'Unbekannter Fehler');
+
         histogramYear.innerHTML = '<option value="alle">Alle Jahre</option>';
-        
-        if (result.availableYears && result.availableYears.length > 0) {
+        if (result.availableYears) {
             result.availableYears.forEach(y => {
                 const opt = document.createElement('option');
                 opt.value = y;
                 opt.textContent = y;
                 histogramYear.appendChild(opt);
             });
-            // Aktuellstes Jahr auswählen
             histogramYear.value = result.availableYears[result.availableYears.length - 1];
         }
-        
-        // Histogramm rendern
         renderHistogram(result.data, histogramView.value);
-        
     } catch (error) {
-        console.error('❌ Histogramm-Fehler:', error);
         histogramEmpty.style.display = 'block';
-        histogramEmpty.textContent = '❌ Fehler beim Laden: ' + (error.message || 'Unbekannter Fehler');
+        histogramEmpty.textContent = '❌ Fehler: ' + error.message;
         histogram.style.display = 'none';
     }
 }
-
-// ============================================================
-// HISTOGRAMM RENDERN (KORRIGIERT)
-// ============================================================
 function renderHistogram(data, view) {
     histogram.innerHTML = '';
     histogramEmpty.style.display = 'none';
     histogram.style.display = 'flex';
-    
     if (!data || data.length === 0) {
         histogramEmpty.style.display = 'block';
-        histogramEmpty.textContent = '📭 Keine Leads für diesen Zeitraum.';
+        histogramEmpty.textContent = '📭 Keine Daten.';
         histogram.style.display = 'none';
         return;
     }
-    
-    // Gruppierung je nach Ansicht
     let grouped = data;
     if (view === 'month') {
         const months = {};
-        data.forEach(d => {
-            const month = d.date.substring(0, 7); // YYYY-MM
-            months[month] = (months[month] || 0) + d.count;
-        });
-        grouped = Object.keys(months).sort().map(m => ({ 
-            date: m, 
-            count: months[m] 
-        }));
+        data.forEach(d => { const m = d.date.substring(0,7); months[m] = (months[m]||0)+d.count; });
+        grouped = Object.keys(months).sort().map(m => ({ date: m, count: months[m] }));
     } else if (view === 'year') {
         const years = {};
-        data.forEach(d => {
-            const year = d.date.substring(0, 4);
-            years[year] = (years[year] || 0) + d.count;
-        });
-        grouped = Object.keys(years).sort().map(y => ({ 
-            date: y, 
-            count: years[y] 
-        }));
+        data.forEach(d => { const y = d.date.substring(0,4); years[y] = (years[y]||0)+d.count; });
+        grouped = Object.keys(years).sort().map(y => ({ date: y, count: years[y] }));
     }
-    // 'day' → keine Gruppierung, einzelne Tage
-    
     const maxCount = Math.max(...grouped.map(d => d.count), 1);
     const maxHeight = 160;
-    
     grouped.forEach(item => {
         const height = (item.count / maxCount) * maxHeight;
         const bar = document.createElement('div');
         bar.className = 'bar';
         bar.style.height = `${Math.max(height + 18, 20)}px`;
-        
-        const value = document.createElement('div');
-        value.className = 'value';
-        value.textContent = item.count;
-        bar.appendChild(value);
-        
-        const fill = document.createElement('div');
-        fill.className = 'fill';
-        fill.style.height = `${Math.max(height, 4)}px`;
-        bar.appendChild(fill);
-        
-        const label = document.createElement('div');
-        label.style.cssText = 'font-size:8px; color:#a0aec0; margin-top:2px; text-align:center; max-width:100%; overflow:hidden; text-overflow:ellipsis;';
-        label.textContent = item.date;
-        bar.appendChild(label);
-        
+        const v = document.createElement('div');
+        v.className = 'value';
+        v.textContent = item.count;
+        bar.appendChild(v);
+        const f = document.createElement('div');
+        f.className = 'fill';
+        f.style.height = `${Math.max(height, 4)}px`;
+        bar.appendChild(f);
+        const l = document.createElement('div');
+        l.className = 'date-label';
+        l.textContent = item.date;
+        bar.appendChild(l);
         bar.title = `${item.date}: ${item.count} Leads`;
         bar.addEventListener('click', () => alert(`${item.date}: ${item.count} Leads`));
-        
         histogram.appendChild(bar);
     });
 }
+histogramYear.addEventListener('change', loadHistogram);
+histogramView.addEventListener('change', loadHistogram);
+document.getElementById('refreshHistogramBtn').addEventListener('click', loadHistogram);
+
 // ============================================================
-// 15. KARTE (Leaflet)
+// 15. KARTE
 // ============================================================
 function initMap() {
     if (mapInstance) return;
-    mapInstance = L.map('map').setView([51.1657, 10.4515], 6); // Deutschland
+    mapInstance = L.map('map').setView([51.1657, 10.4515], 6);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
+        attribution: '© OpenStreetMap'
     }).addTo(mapInstance);
 }
-
 async function loadMapData() {
     if (!mapInstance) initMap();
     try {
         const response = await apiRequest('/leads');
         const result = await response.json();
-        if (result.success) {
-            displayMapMarkers(result.data);
-        }
-    } catch (error) {
-        console.error('Kartenfehler:', error);
-    }
+        if (result.success) displayMapMarkers(result.data);
+    } catch (error) { console.error('Kartenfehler:', error); }
 }
-
 function displayMapMarkers(leads) {
-    // Vorhandene Marker entfernen
-    mapMarkers.forEach(marker => mapInstance.removeLayer(marker));
+    mapMarkers.forEach(m => mapInstance.removeLayer(m));
     mapMarkers = [];
-    
-    // Nur Leads mit Adresse anzeigen
-    const leadsWithAddress = leads.filter(l => l.street || l.city);
-    document.getElementById('mapCount').textContent = leadsWithAddress.length;
-    
-    if (leadsWithAddress.length === 0) {
-        // Zentrum auf Deutschland setzen
+    const withAddr = leads.filter(l => l.street || l.city);
+    document.getElementById('mapCount').textContent = withAddr.length;
+    if (withAddr.length === 0) {
         mapInstance.setView([51.1657, 10.4515], 6);
-        L.popup()
-            .setLatLng([51.1657, 10.4515])
-            .setContent('📍 Keine Leads mit Adresse gefunden.<br>Füge Adressen hinzu, um sie auf der Karte zu sehen.')
+        L.popup().setLatLng([51.1657, 10.4515])
+            .setContent('📍 Keine Adressen gefunden. Füge Adressen hinzu.')
             .openOn(mapInstance);
         return;
     }
-    
-    // Hier müsste eine Geocoding-API eingebaut werden, um Adressen in Koordinaten umzuwandeln
-    // Da wir keine haben, simulieren wir Koordinaten basierend auf PLZ oder Stadt
-    // Für eine echte Produktionsumgebung: Google Maps Geocoding oder OpenStreetMap Nominatim
-    
-    // Demo: Simulierte Koordinaten basierend auf Stadt
     const cityCoords = {
-        'Berlin': [52.5200, 13.4050],
-        'München': [48.1351, 11.5820],
-        'Hamburg': [53.5511, 9.9937],
-        'Köln': [50.9375, 6.9603],
-        'Frankfurt': [50.1109, 8.6821],
-        'Stuttgart': [48.7758, 9.1829],
-        'Düsseldorf': [51.2277, 6.7735],
-        'Leipzig': [51.3397, 12.3731],
-        'Dortmund': [51.5136, 7.4653],
-        'Essen': [51.4556, 7.0116],
-        'Bremen': [53.0793, 8.8017],
-        'Dresden': [51.0504, 13.7373],
-        'Hannover': [52.3705, 9.7332],
-        'Nürnberg': [49.4539, 11.0775],
-        'Duisburg': [51.4344, 6.7623],
-        'Bochum': [51.4818, 7.2197],
-        'Wuppertal': [51.2562, 7.1508],
-        'Bielefeld': [52.0302, 8.5325],
-        'Bonn': [50.7374, 7.0982],
-        'Münster': [51.9607, 7.6261],
-        'Karlsruhe': [49.0069, 8.4037],
-        'Mannheim': [49.4875, 8.4660],
-        'Augsburg': [48.3705, 10.8978],
-        'Wiesbaden': [50.0826, 8.2413],
-        'Gelsenkirchen': [51.5054, 7.1009],
-        'Mönchengladbach': [51.1805, 6.4428],
-        'Braunschweig': [52.2689, 10.5268],
-        'Chemnitz': [50.8278, 12.9214],
-        'Kiel': [54.3233, 10.1228],
-        'Aachen': [50.7753, 6.0839]
+        'Berlin': [52.52, 13.405], 'München': [48.135, 11.582], 'Hamburg': [53.551, 9.994],
+        'Köln': [50.938, 6.960], 'Frankfurt': [50.111, 8.682], 'Stuttgart': [48.776, 9.183],
+        'Düsseldorf': [51.228, 6.773], 'Leipzig': [51.340, 12.373], 'Dortmund': [51.514, 7.465],
+        'Essen': [51.456, 7.012], 'Bremen': [53.079, 8.802], 'Dresden': [51.050, 13.737],
+        'Hannover': [52.371, 9.733], 'Nürnberg': [49.454, 11.078], 'Duisburg': [51.434, 6.762],
+        'Bochum': [51.482, 7.216], 'Wuppertal': [51.256, 7.151], 'Bielefeld': [52.030, 8.533],
+        'Bonn': [50.737, 7.098], 'Münster': [51.961, 7.626], 'Karlsruhe': [49.007, 8.404],
+        'Mannheim': [49.488, 8.466], 'Augsburg': [48.371, 10.898], 'Wiesbaden': [50.083, 8.241],
+        'Gelsenkirchen': [51.505, 7.101], 'Mönchengladbach': [51.181, 6.443],
+        'Braunschweig': [52.269, 10.527], 'Chemnitz': [50.828, 12.921], 'Kiel': [54.323, 10.123],
+        'Aachen': [50.775, 6.084]
     };
-    
-    leadsWithAddress.forEach(lead => {
+    withAddr.forEach(lead => {
         let coords = null;
-        if (lead.city && cityCoords[lead.city]) {
-            coords = cityCoords[lead.city];
-        } else {
-            // Zufällige Koordinaten in Deutschland (nur für Demo)
-            const lat = 49 + Math.random() * 5;
-            const lng = 6 + Math.random() * 9;
+        if (lead.city && cityCoords[lead.city]) coords = cityCoords[lead.city];
+        else {
+            const lat = 49 + Math.random() * 5, lng = 6 + Math.random() * 9;
             coords = [lat, lng];
         }
-        
-        const marker = L.marker(coords)
-            .addTo(mapInstance)
+        const marker = L.marker(coords).addTo(mapInstance)
             .bindPopup(`
-                <div style="min-width:180px;">
+                <div style="min-width:160px;">
                     <strong>${lead.first_name || ''} ${lead.last_name || ''}</strong><br>
                     ${lead.company ? lead.company + '<br>' : ''}
                     ${lead.position ? lead.position + '<br>' : ''}
                     ${lead.email ? '✉️ ' + lead.email + '<br>' : ''}
                     ${lead.phone ? '📞 ' + lead.phone + '<br>' : ''}
                     ${lead.street || lead.city ? '📍 ' + (lead.street || '') + (lead.city ? ', ' + lead.city : '') : ''}
-                    <br>
-                    <button onclick="openLeadDetail('${lead.id}')" style="margin-top:4px; padding:4px 12px; background:#0066AA; color:white; border:none; border-radius:6px; cursor:pointer;">
-                        Details
-                    </button>
+                    <br><button onclick="openLeadDetail('${lead.id}')" style="margin-top:4px; padding:4px 12px; background:#0066AA; color:white; border:none; border-radius:6px; cursor:pointer;">Details</button>
                 </div>
             `);
-        
         mapMarkers.push(marker);
     });
-    
-    // Zoom auf alle Marker
     if (mapMarkers.length > 0) {
         const group = L.featureGroup(mapMarkers);
         mapInstance.fitBounds(group.getBounds().pad(0.1));
     }
 }
-
-// Map-Buttons
 document.getElementById('mapRefreshBtn').addEventListener('click', loadMapData);
 document.getElementById('mapFilterBtn').addEventListener('click', loadMapData);
 
@@ -1332,11 +1152,13 @@ document.getElementById('exportCsvBtn2').addEventListener('click', async () => {
         if (!response.ok) throw new Error('Export fehlgeschlagen');
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url; a.download = `leads_${new Date().toISOString().slice(0,10)}.csv`;
-        a.click(); URL.revokeObjectURL(url);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `leads_${new Date().toISOString().slice(0,10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
     } catch (error) { alert('❌ Fehler: ' + error.message); }
 });
-
 document.getElementById('importCsvBtn2').addEventListener('click', () => document.getElementById('csvFileInput').click());
 document.getElementById('csvFileInput').addEventListener('change', async (e) => {
     const file = e.target.files[0];
@@ -1358,7 +1180,6 @@ document.getElementById('csvFileInput').addEventListener('change', async (e) => 
     } catch (error) { alert('❌ Fehler: ' + error.message); }
     e.target.value = '';
 });
-
 document.getElementById('importDropboxBtn2').addEventListener('click', async () => {
     if (!confirm('☁️ Neueste CSV aus Dropbox importieren?')) return;
     try {
@@ -1376,15 +1197,12 @@ document.getElementById('importDropboxBtn2').addEventListener('click', async () 
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
     const user = getUser();
-    if (user && getToken()) {
-        showApp(user);
-    } else {
-        showLogin();
-    }
-    loadQuestionnaireTemplate();
-    console.log('🚀 LeadCapture PWA mit Lead-Detail, Kommunikation & Karte geladen');
+    if (user && getToken()) showApp(user);
+    else showLogin();
+    loadTemplates();
+    loadActiveTemplate();
+    console.log('🚀 LeadCapture PWA mit allen Features geladen');
 });
 </script>
-
 </body>
 </html>
