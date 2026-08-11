@@ -1749,7 +1749,8 @@ mapMarkers.push(marker);
         mapInstance.fitBounds(group.getBounds().pad(0.15));
         mapInstance._leadCaptureInitialViewSet = true;
     }
-} 
+});
+}
 // Stößt das Nachverorten offener Adressen an.
 // Nominatim erlaubt 1 Anfrage/Sekunde – daher in Blöcken.
 async function runGeocodeBackfill() {
