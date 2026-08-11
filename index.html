@@ -1705,23 +1705,49 @@ function displayMapMarkers(leads) {
         }
 
         const addrLine = [lead.street, [lead.zip, lead.city].filter(Boolean).join(' ')].filter(Boolean).join(', ');
-        const marker = L.marker(pos).addTo(mapInstance)
-            .bindPopup(`
-                <div style="min-width:170px;">
-                    <strong>${escapeHtml(`${lead.title || ''} ${lead.first_name || ''} ${lead.last_name || ''}`.replace(/\s+/g,' ').trim())}</strong><br>
-                    ${lead.company ? escapeHtml(lead.company) + '<br>' : ''}
-                    ${lead.position ? escapeHtml(lead.position) + '<br>' : ''}
-                    ${lead.email ? '✉️ ' + escapeHtml(lead.email) + '<br>' : ''}
-                    ${lead.phone ? '📞 ' + escapeHtml(lead.phone) + '<br>' : ''}
-                    ${addrLine ? '📍 ' + escapeHtml(addrLine) : ''}
-                    <br><button onclick="openLeadDetail('${lead.id}')" style="margin-top:6px; padding:4px 12px; background:#0066AA; color:white; border:none; border-radius:6px; cursor:pointer;">Details</button>
-                </div>
-            `);
-        mapMarkers.push(marker);
-    });
+     const marker = L.marker(pos, {
+    riseOnHover: true,
+    bubblingMouseEvents: false
+}).addTo(mapInstance);
 
+marker.bindPopup(`
+    <div style="min-width:170px;">
+        <strong>${escapeHtml(
+            `${lead.title || ''} ${lead.first_name || ''} ${lead.last_name || ''}`
+                .replace(/\s+/g, ' ')
+                .trim()
+        )}</strong><br>
+
+        ${lead.company ? escapeHtml(lead.company) + '<br>' : ''}
+        ${lead.position ? escapeHtml(lead.position) + '<br>' : ''}
+        ${lead.email ? '✉️ ' + escapeHtml(lead.email) + '<br>' : ''}
+        ${lead.phone ? '📞 ' + escapeHtml(lead.phone) + '<br>' : ''}
+        ${addrLine ? '📍 ' + escapeHtml(addrLine) : ''}
+
+        <br>
+        <button
+            onclick="openLeadDetail('${lead.id}')"
+            style="
+                margin-top:6px;
+                padding:6px 12px;
+                background:#0066AA;
+                color:white;
+                border:none;
+                border-radius:6px;
+                cursor:pointer;
+            "
+        >
+            Details
+        </button>
+    </div>
+`);
+
+mapMarkers.push(marker);
+
+  if (!mapInstance._leadCaptureInitialViewSet && mapMarkers.length > 0) {
     const group = L.featureGroup(mapMarkers);
     mapInstance.fitBounds(group.getBounds().pad(0.15));
+    mapInstance._leadCaptureInitialViewSet = true;
 }
 
 // Stößt das Nachverorten offener Adressen an.
