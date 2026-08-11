@@ -116,6 +116,7 @@
         .question-item .q-header { display: flex; justify-content: space-between; align-items: center; }
         .question-item .q-label { font-weight: 500; font-size: 14px; }
         .question-item .q-type { font-size: 12px; color: #6b7a8f; }
+        .question-item .q-options { font-size: 11px; color: #0066AA; margin-top: 2px; }
         .question-item .q-actions button { background: none; border: none; cursor: pointer; font-size: 16px; padding: 2px; }
         .questionnaire-answer { margin-bottom: 10px; }
         .questionnaire-answer label { font-weight: 600; font-size: 13px; color: #1a1a1a; display: block; margin-bottom: 2px; }
@@ -151,8 +152,11 @@
 
         /* ===== KARTE ===== */
         #map { height: 350px; border-radius: 12px; margin-top: 12px; border: 1px solid #eef2f7; }
-        .map-controls { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+        .map-controls { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
         .map-controls button { padding: 6px 14px; border: none; border-radius: 8px; font-size: 12px; cursor: pointer; background: #E8F4FD; color: #0066AA; }
+        .map-controls select { padding: 6px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 12px; background: white; }
+        .map-hint { margin-top: 8px; font-size: 12px; color: #6b7a8f; text-align: center; }
+        .map-warn { margin-top: 6px; font-size: 12px; color: #b45309; background: #fef3c7; padding: 6px 10px; border-radius: 8px; text-align: center; display: none; }
 
         /* ===== RESPONSIVE ===== */
         @media (max-width: 400px) { .grid-card { padding: 12px; } .grid-card .icon { font-size: 28px; } .grid-card .label { font-size: 12px; } }
@@ -290,7 +294,7 @@
         <div class="view" id="view-stats">
             <div class="view-header"><button class="back" data-view="main">←</button><h2>📊 Statistik</h2></div>
             <div class="histogram-controls">
-                <select id="histogramYear"></select>
+                <select id="histogramYear"><option value="alle">Alle Jahre</option></select>
                 <select id="histogramView">
                     <option value="day">Tagesansicht</option>
                     <option value="month">Monatsansicht</option>
@@ -319,10 +323,11 @@
             <div class="view-header"><button class="back" data-view="main">←</button><h2>🗺️ Lead-Karte</h2></div>
             <div class="map-controls">
                 <button id="mapRefreshBtn">🔄 Aktualisieren</button>
-                <button id="mapFilterBtn">📍 Alle anzeigen</button>
+                <select id="mapCityFilter"><option value="">📍 Alle Städte</option></select>
             </div>
             <div id="map"></div>
-            <div style="margin-top:8px; font-size:12px; color:#6b7a8f; text-align:center;"><span id="mapCount">0</span> Leads auf der Karte</div>
+            <div class="map-hint"><span id="mapCount">0</span> Leads auf der Karte</div>
+            <div class="map-warn" id="mapWarn"></div>
         </div>
 
         <!-- VIEW: LEAD-QUESTIONNAIRE (wird bei Lead geöffnet) -->
@@ -395,23 +400,88 @@ let mapInstance = null, mapMarkers = [], currentLeadDetail = null, allLeads = []
 // ============================================================
 // 2. TOKEN-VERWALTUNG
 // ============================================================
-function getToken() { return localStorage.getItem('leadcapture_token'); }
-function setToken(t) { localStorage.setItem('leadcapture_token', t); }
-function removeToken() { localStorage.removeItem('leadcapture_token'); localStorage.removeItem('leadcapture_user'); }
-function getUser() { const u = localStorage.getItem('leadcapture_user'); return u ? JSON.parse(u) : null; }
-function setUser(u) { localStorage.setItem('leadcapture_user', JSON.stringify(u)); }
+const TOKEN_KEY = 'leadcapture_token';
+const REFRESH_TOKEN_KEY = 'leadcapture_refresh_token';
+const USER_KEY = 'leadcapture_user';
+
+function getToken() { return localStorage.getItem(TOKEN_KEY); }
+function setToken(t) { localStorage.setItem(TOKEN_KEY, t); }
+function getRefreshToken() { return localStorage.getItem(REFRESH_TOKEN_KEY); }
+function setRefreshToken(t) { if (t) localStorage.setItem(REFRESH_TOKEN_KEY, t); }
+function removeToken() {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+}
+function getUser() { const u = localStorage.getItem(USER_KEY); return u ? JSON.parse(u) : null; }
+function setUser(u) { localStorage.setItem(USER_KEY, JSON.stringify(u)); }
 
 // ============================================================
-// 3. API HELPER
+// 3. API HELPER (MIT AUTOMATISCHEM TOKEN-REFRESH)  [FIX 1]
 // ============================================================
-async function apiRequest(endpoint, options = {}) {
+// Läuft ein Access-Token ab, wird EINMAL automatisch über
+// /auth/refresh erneuert und der Request wiederholt. Erst wenn
+// auch das fehlschlägt, wird der Nutzer ausgeloggt.
+let refreshPromise = null;
+
+async function refreshAccessToken() {
+    const rt = getRefreshToken();
+    if (!rt) return null;
+
+    // Parallele Requests teilen sich EINEN Refresh-Vorgang
+    if (refreshPromise) return refreshPromise;
+
+    refreshPromise = (async () => {
+        try {
+            console.log('🔄 Access-Token abgelaufen – erneuere...');
+            const res = await fetch(`${API_URL}/auth/refresh`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh_token: rt })
+            });
+            const result = await res.json();
+            if (!res.ok || !result.success) {
+                console.warn('⚠️ Refresh fehlgeschlagen:', result.error);
+                return null;
+            }
+            setToken(result.data.token);
+            setRefreshToken(result.data.refreshToken);
+            console.log('✅ Token erneuert');
+            return result.data.token;
+        } catch (err) {
+            console.error('❌ Refresh-Fehler:', err);
+            return null;
+        } finally {
+            refreshPromise = null;
+        }
+    })();
+
+    return refreshPromise;
+}
+
+async function apiRequest(endpoint, options = {}, isRetry = false) {
     const token = getToken();
     if (!token) throw new Error('Nicht eingeloggt');
+
     const response = await fetch(`${API_URL}${endpoint}`, {
         ...options,
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, ...(options.headers || {}) }
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            ...(options.headers || {})
+        }
     });
-    if (response.status === 401) { removeToken(); showLogin(); throw new Error('Session abgelaufen'); }
+
+    if (response.status === 401 || response.status === 403) {
+        if (!isRetry) {
+            const newToken = await refreshAccessToken();
+            if (newToken) return apiRequest(endpoint, options, true);
+        }
+        removeToken();
+        showLogin();
+        throw new Error('Session abgelaufen – bitte erneut anmelden');
+    }
+
     return response;
 }
 
@@ -425,9 +495,9 @@ async function login(email, password) {
     });
     const result = await response.json();
     if (!result.success) throw new Error(result.error || 'Login fehlgeschlagen');
-    localStorage.setItem('leadcapture_token', result.data.token);
-    localStorage.setItem('leadcapture_refresh_token', result.data.refreshToken);
-    localStorage.setItem('leadcapture_user', JSON.stringify(result.data.user));
+    setToken(result.data.token);
+    setRefreshToken(result.data.refreshToken);
+    setUser(result.data.user);
     return result.data;
 }
 
@@ -438,6 +508,10 @@ async function register(email, password, fullName, tenantName) {
     });
     const result = await response.json();
     if (!result.success) throw new Error(result.error || 'Registrierung fehlgeschlagen');
+    // Nach erfolgreicher Registrierung ebenfalls Session speichern
+    setToken(result.data.token);
+    setRefreshToken(result.data.refreshToken);
+    setUser(result.data.user);
     return result.data;
 }
 
@@ -558,6 +632,14 @@ const searchInput = document.getElementById('searchInput');
 const searchBtn = document.getElementById('searchBtn');
 const searchResults = document.getElementById('searchResults');
 
+// Verhindert, dass Sonderzeichen im Suchbegriff die Highlight-Regex zerschießen
+function escapeRegex(str) { return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+function escapeHtml(str) {
+    return String(str == null ? '' : str)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function filterLeads(leads, term) {
     if (!term || term.trim() === '') return leads;
     const t = term.toLowerCase().trim();
@@ -574,32 +656,50 @@ function filterLeads(leads, term) {
     });
 }
 
+// [FIX 4] Aktionsbuttons (inkl. Löschen) direkt in der Lead-Liste
+function leadActionsHtml(leadId) {
+    return `
+        <div class="actions">
+            <button class="edit" onclick="event.stopPropagation(); openLeadDetail('${leadId}')">✏️ Details</button>
+            <button class="questionnaire" onclick="event.stopPropagation(); openLeadQuestionnaire('${leadId}')">📝 Fragebogen</button>
+            <button class="delete" onclick="event.stopPropagation(); confirmDeleteLead('${leadId}')">🗑️ Löschen</button>
+        </div>`;
+}
+
 function displayLeads(leads, searchTerm = '') {
     const filtered = searchTerm ? filterLeads(leads, searchTerm) : leads;
-    leadsCount.textContent = `${leads.length} Einträge`;
+    leadsCount.textContent = searchTerm
+        ? `${filtered.length} / ${leads.length} Einträge`
+        : `${leads.length} Einträge`;
+
     if (leads.length === 0) {
         leadsList.innerHTML = '<div class="empty-leads">📭 Noch keine Leads</div>';
         return;
     }
     const highlight = (text) => {
-        if (!searchTerm || !text) return text || '—';
-        const regex = new RegExp(`(${searchTerm})`, 'gi');
-        return String(text).replace(regex, '<mark>$1</mark>');
+        const safe = escapeHtml(text);
+        if (!searchTerm || !text) return safe || '—';
+        const regex = new RegExp(`(${escapeRegex(searchTerm)})`, 'gi');
+        return safe.replace(regex, '<mark>$1</mark>');
     };
     leadsList.innerHTML = filtered.map(lead => `
         <div class="lead-card" onclick="openLeadDetail('${lead.id}')">
-            <div><span class="name">${highlight(lead.first_name)} ${highlight(lead.last_name)}</span> · <span class="company">${highlight(lead.company) || 'Keine Firma'}</span></div>
-            <div class="details">${highlight(lead.position) || 'Keine Position'} ${lead.email ? '· ✉️ ' + highlight(lead.email) : ''} ${lead.phone ? '· 📞 ' + highlight(lead.phone) : ''}</div>
+            <div><span class="name">${highlight(lead.first_name)} ${highlight(lead.last_name)}</span> · <span class="company">${lead.company ? highlight(lead.company) : 'Keine Firma'}</span></div>
+            <div class="details">${lead.position ? highlight(lead.position) : 'Keine Position'} ${lead.email ? '· ✉️ ' + highlight(lead.email) : ''} ${lead.phone ? '· 📞 ' + highlight(lead.phone) : ''}</div>
             ${lead.city ? `<div class="details">📍 ${highlight(lead.city)}</div>` : ''}
             <div class="meta">🕐 ${lead.created_at ? new Date(lead.created_at).toLocaleString() : ''}</div>
+            ${leadActionsHtml(lead.id)}
         </div>
     `).join('');
+
     if (searchTerm) {
-        searchResults.innerHTML = filtered.length === 0 ? `<div class="empty-leads">🔍 Keine Leads für "${searchTerm}"</div>` :
-            filtered.map(lead => `
+        searchResults.innerHTML = filtered.length === 0
+            ? `<div class="empty-leads">🔍 Keine Leads für "${escapeHtml(searchTerm)}"</div>`
+            : filtered.map(lead => `
                 <div class="lead-card" onclick="openLeadDetail('${lead.id}')">
-                    <div><span class="name">${lead.first_name || ''} ${lead.last_name || ''}</span> · <span class="company">${lead.company || 'Keine Firma'}</span></div>
-                    <div class="details">${lead.position || 'Keine Position'} ${lead.email ? '· ✉️ ' + lead.email : ''}</div>
+                    <div><span class="name">${highlight(lead.first_name)} ${highlight(lead.last_name)}</span> · <span class="company">${lead.company ? highlight(lead.company) : 'Keine Firma'}</span></div>
+                    <div class="details">${lead.position ? highlight(lead.position) : 'Keine Position'} ${lead.email ? '· ✉️ ' + highlight(lead.email) : ''}</div>
+                    ${leadActionsHtml(lead.id)}
                 </div>
             `).join('');
     }
@@ -618,7 +718,7 @@ searchBtn.addEventListener('click', async () => {
     try {
         const response = await apiRequest('/leads');
         const result = await response.json();
-        if (result.success) displayLeads(result.data, term);
+        if (result.success) { allLeads = result.data; displayLeads(result.data, term); }
     } catch (error) { console.error(error); }
 });
 searchInput.addEventListener('keyup', (e) => { if (e.key === 'Enter') searchBtn.click(); });
@@ -650,7 +750,7 @@ function openLeadDetail(leadId) {
 
     document.getElementById('detailEditMode').style.display = 'none';
     document.getElementById('detailEditBtn').style.display = 'block';
-    document.getElementById('detailDeleteBtn').onclick = () => { if (confirm('Lead wirklich löschen?')) deleteLead(lead.id); };
+    document.getElementById('detailDeleteBtn').onclick = () => confirmDeleteLead(lead.id);
 
     document.getElementById('detailEditBtn').onclick = () => {
         document.getElementById('detailEditMode').style.display = 'block';
@@ -685,11 +785,11 @@ function openLeadDetail(leadId) {
         };
         try {
             await apiRequest(`/leads/${lead.id}`, { method: 'PUT', body: JSON.stringify({ lead: updated }) });
-            alert('✅ Lead aktualisiert!');
-            loadLeads();
+            await loadLeads();
             document.getElementById('detailEditMode').style.display = 'none';
             document.getElementById('detailEditBtn').style.display = 'block';
             openLeadDetail(lead.id);
+            alert('✅ Lead aktualisiert!');
         } catch (error) { alert('❌ Fehler: ' + error.message); }
     };
     document.getElementById('cancelEditBtn').onclick = () => {
@@ -701,9 +801,23 @@ function openLeadDetail(leadId) {
 document.getElementById('closeLeadDetail').onclick = () => detailOverlay.classList.remove('active');
 detailOverlay.addEventListener('click', (e) => { if (e.target === detailOverlay) detailOverlay.classList.remove('active'); });
 
+function confirmDeleteLead(id) {
+    const lead = allLeads.find(l => l.id === id);
+    const name = lead ? (`${lead.first_name || ''} ${lead.last_name || ''}`.trim() || lead.company || 'diesen Lead') : 'diesen Lead';
+    if (confirm(`⚠️ "${name}" wirklich löschen?`)) deleteLead(id);
+}
+
 async function deleteLead(id) {
-    try { await apiRequest(`/leads/${id}`, { method: 'DELETE' }); detailOverlay.classList.remove('active'); loadLeads(); }
-    catch (error) { alert('Fehler: ' + error.message); }
+    try {
+        await apiRequest(`/leads/${id}`, { method: 'DELETE' });
+        detailOverlay.classList.remove('active');
+        await loadLeads();
+        // Suchergebnisse mit aktuellem Suchbegriff neu rendern
+        const term = searchInput.value.trim();
+        if (term) displayLeads(allLeads, term);
+        if (mapInstance) loadMapData();
+    }
+    catch (error) { alert('❌ Fehler: ' + error.message); }
 }
 
 // ============================================================
@@ -722,13 +836,17 @@ function setStatus(msg, show) { statusText.textContent = msg; statusDiv.style.di
 
 async function handleImage(file) {
     if (!file) return;
-    if (!file.type.startsWith('image/')) { showError('Bitte wähle ein Bild (JPG, PNG).'); return; }
-    if (file.size > 10 * 1024 * 1024) { showError('Bild zu groß (max 10MB).'); return; }
+    // PDF wird vom Backend ebenfalls unterstützt
+    const isImage = file.type.startsWith('image/');
+    const isPdf = file.type === 'application/pdf';
+    if (!isImage && !isPdf) { showError('Bitte wähle ein Bild (JPG, PNG) oder ein PDF.'); return; }
+    if (file.size > 10 * 1024 * 1024) { showError('Datei zu groß (max 10MB).'); return; }
     const reader = new FileReader();
     reader.onload = async (e) => {
         const base64Image = e.target.result;
-        previewImage.src = base64Image; previewContainer.style.display = 'block';
-        setStatus('DeepSeek analysiert...', true);
+        if (isImage) { previewImage.src = base64Image; previewContainer.style.display = 'block'; }
+        else { previewContainer.style.display = 'none'; }
+        setStatus('OCR läuft, danach DeepSeek-Analyse...', true);
         try {
             const response = await apiRequest('/process-image', { method: 'POST', body: JSON.stringify({ image: base64Image }) });
             const result = await response.json();
@@ -737,9 +855,8 @@ async function handleImage(file) {
                 fillForm(result.data);
                 setStatus('✅ Lead erfasst!', true);
                 setTimeout(() => setStatus('', false), 2000);
-                loadLeads();
-                const questions = JSON.parse(localStorage.getItem('leadcapture_questions') || '[]');
-                if (questions.length > 0) {
+                await loadLeads();
+                if (getActiveQuestions().length > 0) {
                     setTimeout(() => {
                         if (confirm('📝 Möchtest du den Fragebogen für diesen Lead ausfüllen?')) {
                             openLeadQuestionnaire(leadId);
@@ -810,11 +927,10 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
         const result = await response.json();
         if (result.success) {
             const leadId = result.data.id;
-            alert('✅ Lead gespeichert!');
-            loadLeads();
+            await loadLeads();
             clearForm();
-            const questions = JSON.parse(localStorage.getItem('leadcapture_questions') || '[]');
-            if (questions.length > 0) {
+            alert('✅ Lead gespeichert!');
+            if (getActiveQuestions().length > 0) {
                 if (confirm('📝 Möchtest du den Fragebogen für diesen Lead ausfüllen?')) {
                     openLeadQuestionnaire(leadId);
                 }
@@ -824,11 +940,24 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
 });
 
 // ============================================================
-// 11. FRAGEBOGEN-MANAGEMENT (MEHRERE VORLAGEN)
+// 11. FRAGEBOGEN-MANAGEMENT (MEHRERE VORLAGEN)  [FIX 2]
 // ============================================================
+// WICHTIG: 'leadcapture_questions' ist die EINE Quelle der Wahrheit
+// für den Lead-Fragebogen. Jede Änderung an questionTemplate muss
+// über persistActiveQuestions() dorthin geschrieben werden – sonst
+// sieht der Lead-Fragebogen die geladene Vorlage nicht.
 const TEMPLATE_STORAGE_KEY = 'leadcapture_questionnaire_templates';
 const ACTIVE_TEMPLATE_KEY = 'leadcapture_active_template';
+const ACTIVE_QUESTIONS_KEY = 'leadcapture_questions';
 let questionTemplate = [], templates = {}, activeTemplateName = '';
+
+function persistActiveQuestions() {
+    localStorage.setItem(ACTIVE_QUESTIONS_KEY, JSON.stringify(questionTemplate));
+}
+function getActiveQuestions() {
+    try { return JSON.parse(localStorage.getItem(ACTIVE_QUESTIONS_KEY) || '[]'); }
+    catch { return []; }
+}
 
 function loadTemplates() {
     const saved = localStorage.getItem(TEMPLATE_STORAGE_KEY);
@@ -838,7 +967,13 @@ function loadTemplates() {
 function loadActiveTemplate() {
     const saved = localStorage.getItem(ACTIVE_TEMPLATE_KEY);
     activeTemplateName = saved || '';
-    questionTemplate = (activeTemplateName && templates[activeTemplateName]) ? templates[activeTemplateName] : [];
+    if (activeTemplateName && templates[activeTemplateName]) {
+        questionTemplate = JSON.parse(JSON.stringify(templates[activeTemplateName]));
+    } else {
+        // Kein aktives Template: bereits gespeicherte Einzelfragen weiterverwenden
+        questionTemplate = getActiveQuestions();
+    }
+    persistActiveQuestions();
     renderQuestionnaireEditor();
     updateTemplateSelect();
 }
@@ -860,6 +995,7 @@ function saveTemplate(name) {
     localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(templates));
     localStorage.setItem(ACTIVE_TEMPLATE_KEY, name.trim());
     activeTemplateName = name.trim();
+    persistActiveQuestions();
     updateTemplateSelect();
     alert(`✅ Vorlage "${name.trim()}" gespeichert!`);
 }
@@ -868,16 +1004,22 @@ function loadTemplate(name) {
     questionTemplate = JSON.parse(JSON.stringify(templates[name]));
     activeTemplateName = name;
     localStorage.setItem(ACTIVE_TEMPLATE_KEY, name);
+    persistActiveQuestions();   // [FIX 2] fehlte vorher komplett
     renderQuestionnaireEditor();
     updateTemplateSelect();
-    alert(`📂 Vorlage "${name}" geladen.`);
+    alert(`📂 Vorlage "${name}" geladen (${questionTemplate.length} Fragen).`);
 }
 function deleteTemplate(name) {
     if (!name || !templates[name]) { alert('❌ Vorlage nicht gefunden.'); return; }
     if (!confirm(`⚠️ Vorlage "${name}" löschen?`)) return;
     delete templates[name];
     localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(templates));
-    if (activeTemplateName === name) { activeTemplateName = ''; localStorage.setItem(ACTIVE_TEMPLATE_KEY, ''); questionTemplate = []; }
+    if (activeTemplateName === name) {
+        activeTemplateName = '';
+        localStorage.setItem(ACTIVE_TEMPLATE_KEY, '');
+        questionTemplate = [];
+        persistActiveQuestions();
+    }
     updateTemplateSelect(); renderQuestionnaireEditor();
     alert(`🗑️ Vorlage "${name}" gelöscht.`);
 }
@@ -886,10 +1028,11 @@ document.getElementById('loadTemplateBtn').addEventListener('click', () => { con
 document.getElementById('deleteTemplateBtn').addEventListener('click', () => { const name = document.getElementById('questionnaireTemplateSelect').value; if (name) deleteTemplate(name); });
 
 // ============================================================
-// 12. FRAGEBOGEN EDITOR
+// 12. FRAGEBOGEN EDITOR  [FIX 5: Select-Typ mit Optionen]
 // ============================================================
 const questionEditor = document.getElementById('questionnaireEditor');
 const emptyQuestions = document.getElementById('emptyQuestions');
+const VALID_TYPES = ['text', 'textarea', 'select'];
 
 function renderQuestionnaireEditor() {
     if (questionTemplate.length === 0) {
@@ -901,42 +1044,78 @@ function renderQuestionnaireEditor() {
     questionEditor.innerHTML = questionTemplate.map((q, index) => `
         <div class="question-item">
             <div class="q-header">
-                <div><div class="q-label">${q.label}</div><div class="q-type">${q.type} · ID: ${q.id}</div></div>
+                <div>
+                    <div class="q-label">${escapeHtml(q.label)}</div>
+                    <div class="q-type">${escapeHtml(q.type)} · ID: ${escapeHtml(q.id)}</div>
+                    ${q.type === 'select' && q.options?.length ? `<div class="q-options">▾ ${escapeHtml(q.options.join(' · '))}</div>` : ''}
+                </div>
                 <div class="q-actions"><button onclick="removeQuestion(${index})">🗑️</button><button onclick="editQuestion(${index})">✏️</button></div>
             </div>
         </div>
     `).join('');
 }
+
+function askForOptions(existing) {
+    const raw = prompt('Auswahloptionen (mit Komma getrennt):', existing ? existing.join(', ') : '');
+    if (raw === null) return null;
+    const opts = raw.split(',').map(s => s.trim()).filter(Boolean);
+    if (opts.length === 0) { alert('❌ Mindestens eine Option nötig.'); return null; }
+    return opts;
+}
+
 function addQuestion() {
     const id = prompt('Frage-ID (z.B. "needs"):')?.trim(); if (!id) return;
+    if (questionTemplate.some(q => q.id === id)) { alert('❌ Diese ID existiert bereits.'); return; }
     const label = prompt('Fragen-Text:')?.trim(); if (!label) return;
-    const type = prompt('Typ: text / textarea / select')?.trim() || 'text';
-    questionTemplate.push({ id, label, type });
-    localStorage.setItem('leadcapture_questions', JSON.stringify(questionTemplate));
+    let type = prompt('Typ: text / textarea / select', 'text')?.trim().toLowerCase() || 'text';
+    if (!VALID_TYPES.includes(type)) { alert(`❌ Unbekannter Typ "${type}". Erlaubt: ${VALID_TYPES.join(', ')}`); return; }
+
+    const question = { id, label, type };
+    if (type === 'select') {
+        const opts = askForOptions();
+        if (!opts) return;
+        question.options = opts;
+    }
+    questionTemplate.push(question);
+    persistActiveQuestions();
     renderQuestionnaireEditor();
 }
 function removeQuestion(index) {
     if (!confirm('Frage löschen?')) return;
     questionTemplate.splice(index, 1);
-    localStorage.setItem('leadcapture_questions', JSON.stringify(questionTemplate));
+    persistActiveQuestions();
     renderQuestionnaireEditor();
 }
 function editQuestion(index) {
     const q = questionTemplate[index];
     const newLabel = prompt('Fragen-Text:', q.label)?.trim(); if (newLabel) q.label = newLabel;
-    const newType = prompt('Typ (text/textarea/select):', q.type)?.trim(); if (newType) q.type = newType;
-    localStorage.setItem('leadcapture_questions', JSON.stringify(questionTemplate));
+    const newType = prompt('Typ (text/textarea/select):', q.type)?.trim().toLowerCase();
+    if (newType) {
+        if (!VALID_TYPES.includes(newType)) { alert(`❌ Unbekannter Typ "${newType}". Typ bleibt "${q.type}".`); }
+        else q.type = newType;
+    }
+    if (q.type === 'select') {
+        const opts = askForOptions(q.options);
+        if (opts) q.options = opts;
+        else if (!q.options?.length) { alert('❌ Select ohne Optionen – Typ auf "text" gesetzt.'); q.type = 'text'; }
+    } else {
+        delete q.options;
+    }
+    persistActiveQuestions();
     renderQuestionnaireEditor();
 }
 document.getElementById('addQuestionBtn').addEventListener('click', addQuestion);
 document.getElementById('saveQuestionnaireTemplateBtn').addEventListener('click', () => {
-    localStorage.setItem('leadcapture_questions', JSON.stringify(questionTemplate));
-    alert('✅ Vorlage gespeichert!');
+    const name = prompt('📝 Name für die Vorlage:', activeTemplateName || '');
+    if (name) saveTemplate(name);
 });
 document.getElementById('resetQuestionnaireBtn').addEventListener('click', () => {
-    if (confirm('⚠️ Alle Fragen zurücksetzen?')) {
-        localStorage.removeItem('leadcapture_questions');
+    if (confirm('⚠️ Alle Fragen zurücksetzen? (Gespeicherte Vorlagen bleiben erhalten)')) {
         questionTemplate = [];
+        activeTemplateName = '';
+        localStorage.setItem(ACTIVE_TEMPLATE_KEY, '');
+        persistActiveQuestions();
+        updateTemplateSelect();
         renderQuestionnaireEditor();
         alert('✅ Fragen zurückgesetzt.');
     }
@@ -960,24 +1139,31 @@ async function openLeadQuestionnaire(leadId) {
 }
 function renderLeadQuestionnaire(answers) {
     const container = document.getElementById('questionnaireForm');
-    const questions = JSON.parse(localStorage.getItem('leadcapture_questions') || '[]');
+    const questions = getActiveQuestions();
     if (questions.length === 0) {
-        container.innerHTML = '<div style="color:#a0aec0; text-align:center; padding:20px;">Keine Fragen definiert.</div>';
+        container.innerHTML = '<div style="color:#a0aec0; text-align:center; padding:20px;">Keine Fragen definiert. Lege sie unter 📝 Fragebogen an oder lade eine Vorlage.</div>';
         return;
     }
-    container.innerHTML = questions.map(q => `
-        <div class="questionnaire-answer">
-            <label>${q.label}</label>
-            ${q.type === 'textarea' ?
-                `<textarea id="q_${q.id}" rows="2">${answers[q.id] || ''}</textarea>` :
-                `<input type="text" id="q_${q.id}" value="${answers[q.id] || ''}">`
-            }
-        </div>
-    `).join('');
+    container.innerHTML = questions.map(q => {
+        const val = answers[q.id] || '';
+        let field;
+        if (q.type === 'textarea') {
+            field = `<textarea id="q_${escapeHtml(q.id)}" rows="2">${escapeHtml(val)}</textarea>`;
+        } else if (q.type === 'select') {
+            // [FIX 5] Select wird jetzt wirklich als Dropdown gerendert
+            const opts = (q.options || []).map(o =>
+                `<option value="${escapeHtml(o)}"${o === val ? ' selected' : ''}>${escapeHtml(o)}</option>`
+            ).join('');
+            field = `<select id="q_${escapeHtml(q.id)}"><option value="">Bitte wählen...</option>${opts}</select>`;
+        } else {
+            field = `<input type="text" id="q_${escapeHtml(q.id)}" value="${escapeHtml(val)}">`;
+        }
+        return `<div class="questionnaire-answer"><label>${escapeHtml(q.label)}</label>${field}</div>`;
+    }).join('');
 }
 document.getElementById('saveQuestionnaireBtn').addEventListener('click', async () => {
     if (!currentLeadId) { alert('❌ Kein Lead.'); return; }
-    const questions = JSON.parse(localStorage.getItem('leadcapture_questions') || '[]');
+    const questions = getActiveQuestions();
     const answers = {};
     questions.forEach(q => {
         const el = document.getElementById(`q_${q.id}`);
@@ -985,37 +1171,48 @@ document.getElementById('saveQuestionnaireBtn').addEventListener('click', async 
     });
     try {
         await apiRequest(`/questionnaire/${currentLeadId}`, { method: 'POST', body: JSON.stringify({ answers }) });
-        alert('✅ Fragebogen gespeichert!');
-        loadLeads();
+        await loadLeads();
         showView('main');
+        alert('✅ Fragebogen gespeichert!');
     } catch (error) { alert('❌ Fehler: ' + error.message); }
 });
 
 // ============================================================
-// 14. HISTOGRAMM
+// 14. HISTOGRAMM  [FIX 3: Jahresfilter bleibt erhalten]
 // ============================================================
 const histogram = document.getElementById('histogram');
 const histogramEmpty = document.getElementById('histogramEmpty');
 const histogramYear = document.getElementById('histogramYear');
 const histogramView = document.getElementById('histogramView');
 
+// Baut das Jahres-Dropdown NUR neu, wenn sich die verfügbaren Jahre
+// tatsächlich geändert haben – und behält dabei die Auswahl des Nutzers.
+function syncYearOptions(availableYears) {
+    if (!availableYears) return;
+    const desired = ['alle', ...availableYears.map(String)];
+    const existing = Array.from(histogramYear.options).map(o => o.value);
+    if (existing.join(',') === desired.join(',')) return;   // nichts zu tun
+
+    const current = histogramYear.value;
+    histogramYear.innerHTML = '<option value="alle">Alle Jahre</option>';
+    availableYears.forEach(y => {
+        const opt = document.createElement('option');
+        opt.value = String(y);
+        opt.textContent = y;
+        histogramYear.appendChild(opt);
+    });
+    // Auswahl des Nutzers wiederherstellen, sonst "Alle Jahre"
+    histogramYear.value = desired.includes(current) ? current : 'alle';
+}
+
 async function loadHistogram() {
     try {
         const year = histogramYear.value || 'alle';
-        const response = await apiRequest(`/stats/daily?year=${year}`);
+        const response = await apiRequest(`/stats/daily?year=${encodeURIComponent(year)}`);
         const result = await response.json();
         if (!result.success) throw new Error(result.error || 'Unbekannter Fehler');
 
-        histogramYear.innerHTML = '<option value="alle">Alle Jahre</option>';
-        if (result.availableYears) {
-            result.availableYears.forEach(y => {
-                const opt = document.createElement('option');
-                opt.value = y;
-                opt.textContent = y;
-                histogramYear.appendChild(opt);
-            });
-            histogramYear.value = result.availableYears[result.availableYears.length - 1];
-        }
+        syncYearOptions(result.availableYears);
         renderHistogram(result.data, histogramView.value);
     } catch (error) {
         histogramEmpty.style.display = 'block';
@@ -1072,8 +1269,43 @@ histogramView.addEventListener('change', loadHistogram);
 document.getElementById('refreshHistogramBtn').addEventListener('click', loadHistogram);
 
 // ============================================================
-// 15. KARTE
+// 15. KARTE  [FIX 6: keine Zufallskoordinaten mehr]
 // ============================================================
+// Ohne echtes Geocoding werden nur Leads angezeigt, deren Stadt in
+// der Referenzliste steht. Alles andere würde erfundene Positionen
+// erzeugen – siehe Roadmap Phase 7 "Geocoding".
+const CITY_COORDS = {
+    'berlin': [52.52, 13.405], 'münchen': [48.135, 11.582], 'muenchen': [48.135, 11.582],
+    'hamburg': [53.551, 9.994], 'köln': [50.938, 6.960], 'koeln': [50.938, 6.960],
+    'frankfurt': [50.111, 8.682], 'frankfurt am main': [50.111, 8.682],
+    'stuttgart': [48.776, 9.183], 'düsseldorf': [51.228, 6.773], 'duesseldorf': [51.228, 6.773],
+    'leipzig': [51.340, 12.373], 'dortmund': [51.514, 7.465], 'essen': [51.456, 7.012],
+    'bremen': [53.079, 8.802], 'dresden': [51.050, 13.737], 'hannover': [52.371, 9.733],
+    'nürnberg': [49.454, 11.078], 'nuernberg': [49.454, 11.078], 'duisburg': [51.434, 6.762],
+    'bochum': [51.482, 7.216], 'wuppertal': [51.256, 7.151], 'bielefeld': [52.030, 8.533],
+    'bonn': [50.737, 7.098], 'münster': [51.961, 7.626], 'muenster': [51.961, 7.626],
+    'karlsruhe': [49.007, 8.404], 'mannheim': [49.488, 8.466], 'augsburg': [48.371, 10.898],
+    'wiesbaden': [50.083, 8.241], 'gelsenkirchen': [51.505, 7.101],
+    'mönchengladbach': [51.181, 6.443], 'moenchengladbach': [51.181, 6.443],
+    'braunschweig': [52.269, 10.527], 'chemnitz': [50.828, 12.921], 'kiel': [54.323, 10.123],
+    'aachen': [50.775, 6.084], 'halle': [51.482, 11.970], 'magdeburg': [52.121, 11.627],
+    'freiburg': [47.999, 7.842], 'krefeld': [51.334, 6.564], 'lübeck': [53.866, 10.685],
+    'luebeck': [53.866, 10.685], 'erfurt': [50.978, 11.029], 'rostock': [54.093, 12.099],
+    'kassel': [51.312, 9.480], 'mainz': [49.993, 8.247], 'saarbrücken': [49.240, 6.997],
+    'saarbruecken': [49.240, 6.997], 'potsdam': [52.396, 13.059], 'suhl': [50.610, 10.693],
+    'jena': [50.927, 11.589], 'gera': [50.881, 12.082], 'ilmenau': [50.683, 10.918],
+    'wien': [48.208, 16.373], 'zürich': [47.377, 8.542], 'zuerich': [47.377, 8.542]
+};
+
+function lookupCoords(city) {
+    if (!city) return null;
+    const key = city.toLowerCase().trim();
+    if (CITY_COORDS[key]) return CITY_COORDS[key];
+    // "12345 Berlin" oder "Berlin-Mitte" tolerieren
+    const cleaned = key.replace(/^\d{4,5}\s+/, '').split(/[-,/]/)[0].trim();
+    return CITY_COORDS[cleaned] || null;
+}
+
 function initMap() {
     if (mapInstance) return;
     mapInstance = L.map('map').setView([51.1657, 10.4515], 6);
@@ -1086,62 +1318,98 @@ async function loadMapData() {
     try {
         const response = await apiRequest('/leads');
         const result = await response.json();
-        if (result.success) displayMapMarkers(result.data);
+        if (result.success) { allLeads = result.data; displayMapMarkers(result.data); }
     } catch (error) { console.error('Kartenfehler:', error); }
 }
+
+function updateCityFilterOptions(leads) {
+    const select = document.getElementById('mapCityFilter');
+    const current = select.value;
+    const cities = [...new Set(leads.map(l => l.city).filter(c => c && lookupCoords(c)))].sort();
+    const desired = ['', ...cities];
+    const existing = Array.from(select.options).map(o => o.value);
+    if (existing.join('|') === desired.join('|')) return;
+
+    select.innerHTML = '<option value="">📍 Alle Städte</option>';
+    cities.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c; opt.textContent = c;
+        select.appendChild(opt);
+    });
+    select.value = desired.includes(current) ? current : '';
+}
+
 function displayMapMarkers(leads) {
     mapMarkers.forEach(m => mapInstance.removeLayer(m));
     mapMarkers = [];
-    const withAddr = leads.filter(l => l.street || l.city);
-    document.getElementById('mapCount').textContent = withAddr.length;
-    if (withAddr.length === 0) {
+
+    updateCityFilterOptions(leads);
+    const cityFilter = document.getElementById('mapCityFilter').value;
+
+    const warnBox = document.getElementById('mapWarn');
+    const mapCount = document.getElementById('mapCount');
+
+    // Nur Leads mit AUFLÖSBARER Stadt bekommen einen Marker
+    const locatable = [];
+    let unlocatable = 0;
+    leads.forEach(lead => {
+        const coords = lookupCoords(lead.city);
+        if (coords) {
+            if (!cityFilter || lead.city === cityFilter) locatable.push({ lead, coords });
+        } else if (lead.street || lead.city) {
+            unlocatable++;
+        }
+    });
+
+    mapCount.textContent = locatable.length;
+
+    if (unlocatable > 0) {
+        warnBox.style.display = 'block';
+        warnBox.textContent = `⚠️ ${unlocatable} Lead(s) mit Adresse konnten keiner Position zugeordnet werden (Stadt nicht in der Referenzliste). Echtes Geocoding steht noch aus.`;
+    } else {
+        warnBox.style.display = 'none';
+    }
+
+    if (locatable.length === 0) {
         mapInstance.setView([51.1657, 10.4515], 6);
-        L.popup().setLatLng([51.1657, 10.4515])
-            .setContent('📍 Keine Adressen gefunden. Füge Adressen hinzu.')
-            .openOn(mapInstance);
         return;
     }
-    const cityCoords = {
-        'Berlin': [52.52, 13.405], 'München': [48.135, 11.582], 'Hamburg': [53.551, 9.994],
-        'Köln': [50.938, 6.960], 'Frankfurt': [50.111, 8.682], 'Stuttgart': [48.776, 9.183],
-        'Düsseldorf': [51.228, 6.773], 'Leipzig': [51.340, 12.373], 'Dortmund': [51.514, 7.465],
-        'Essen': [51.456, 7.012], 'Bremen': [53.079, 8.802], 'Dresden': [51.050, 13.737],
-        'Hannover': [52.371, 9.733], 'Nürnberg': [49.454, 11.078], 'Duisburg': [51.434, 6.762],
-        'Bochum': [51.482, 7.216], 'Wuppertal': [51.256, 7.151], 'Bielefeld': [52.030, 8.533],
-        'Bonn': [50.737, 7.098], 'Münster': [51.961, 7.626], 'Karlsruhe': [49.007, 8.404],
-        'Mannheim': [49.488, 8.466], 'Augsburg': [48.371, 10.898], 'Wiesbaden': [50.083, 8.241],
-        'Gelsenkirchen': [51.505, 7.101], 'Mönchengladbach': [51.181, 6.443],
-        'Braunschweig': [52.269, 10.527], 'Chemnitz': [50.828, 12.921], 'Kiel': [54.323, 10.123],
-        'Aachen': [50.775, 6.084]
-    };
-    withAddr.forEach(lead => {
-        let coords = null;
-        if (lead.city && cityCoords[lead.city]) coords = cityCoords[lead.city];
-        else {
-            const lat = 49 + Math.random() * 5, lng = 6 + Math.random() * 9;
-            coords = [lat, lng];
+
+    // Mehrere Leads in derselben Stadt leicht versetzen, damit sie
+    // nicht exakt übereinander liegen (deterministisch, nicht zufällig)
+    const cityUsage = {};
+    locatable.forEach(({ lead, coords }) => {
+        const key = (lead.city || '').toLowerCase();
+        const n = cityUsage[key] = (cityUsage[key] || 0);
+        cityUsage[key]++;
+        let pos = coords;
+        if (n > 0) {
+            const angle = (n * 137.5) * Math.PI / 180;   // goldener Winkel
+            const radius = 0.012 * Math.ceil(n / 8);
+            pos = [coords[0] + radius * Math.cos(angle), coords[1] + radius * Math.sin(angle)];
         }
-        const marker = L.marker(coords).addTo(mapInstance)
+        const marker = L.marker(pos).addTo(mapInstance)
             .bindPopup(`
                 <div style="min-width:160px;">
-                    <strong>${lead.first_name || ''} ${lead.last_name || ''}</strong><br>
-                    ${lead.company ? lead.company + '<br>' : ''}
-                    ${lead.position ? lead.position + '<br>' : ''}
-                    ${lead.email ? '✉️ ' + lead.email + '<br>' : ''}
-                    ${lead.phone ? '📞 ' + lead.phone + '<br>' : ''}
-                    ${lead.street || lead.city ? '📍 ' + (lead.street || '') + (lead.city ? ', ' + lead.city : '') : ''}
+                    <strong>${escapeHtml(lead.first_name || '')} ${escapeHtml(lead.last_name || '')}</strong><br>
+                    ${lead.company ? escapeHtml(lead.company) + '<br>' : ''}
+                    ${lead.position ? escapeHtml(lead.position) + '<br>' : ''}
+                    ${lead.email ? '✉️ ' + escapeHtml(lead.email) + '<br>' : ''}
+                    ${lead.phone ? '📞 ' + escapeHtml(lead.phone) + '<br>' : ''}
+                    ${lead.street || lead.city ? '📍 ' + escapeHtml(lead.street || '') + (lead.city ? ', ' + escapeHtml(lead.city) : '') : ''}
                     <br><button onclick="openLeadDetail('${lead.id}')" style="margin-top:4px; padding:4px 12px; background:#0066AA; color:white; border:none; border-radius:6px; cursor:pointer;">Details</button>
                 </div>
             `);
         mapMarkers.push(marker);
     });
+
     if (mapMarkers.length > 0) {
         const group = L.featureGroup(mapMarkers);
-        mapInstance.fitBounds(group.getBounds().pad(0.1));
+        mapInstance.fitBounds(group.getBounds().pad(0.15));
     }
 }
 document.getElementById('mapRefreshBtn').addEventListener('click', loadMapData);
-document.getElementById('mapFilterBtn').addEventListener('click', loadMapData);
+document.getElementById('mapCityFilter').addEventListener('change', () => displayMapMarkers(allLeads));
 
 // ============================================================
 // 16. CSV EXPORT / IMPORT
@@ -1165,17 +1433,31 @@ document.getElementById('csvFileInput').addEventListener('change', async (e) => 
     if (!file || !file.name.endsWith('.csv')) return;
     const formData = new FormData();
     formData.append('file', file);
-    const token = getToken();
-    try {
+
+    // Multipart-Upload: eigener fetch (kein JSON-Content-Type!), aber
+    // mit demselben Refresh-Verhalten wie apiRequest.
+    async function uploadCsv(isRetry = false) {
+        const token = getToken();
         const response = await fetch(`${API_URL}/import/csv`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` },
             body: formData
         });
+        if ((response.status === 401 || response.status === 403) && !isRetry) {
+            const newToken = await refreshAccessToken();
+            if (newToken) return uploadCsv(true);
+            removeToken(); showLogin();
+            throw new Error('Session abgelaufen – bitte erneut anmelden');
+        }
+        return response;
+    }
+
+    try {
+        const response = await uploadCsv();
         const result = await response.json();
         if (result.success) {
+            await loadLeads();
             alert(`✅ Import: ${result.imported} neu, ${result.updated} aktualisiert`);
-            loadLeads();
         } else throw new Error(result.error);
     } catch (error) { alert('❌ Fehler: ' + error.message); }
     e.target.value = '';
@@ -1186,8 +1468,8 @@ document.getElementById('importDropboxBtn2').addEventListener('click', async () 
         const response = await apiRequest('/import/dropbox', { method: 'POST' });
         const result = await response.json();
         if (result.success) {
+            await loadLeads();
             alert(`☁️ Import: ${result.imported} neu, ${result.updated} aktualisiert`);
-            loadLeads();
         } else throw new Error(result.error);
     } catch (error) { alert('❌ Fehler: ' + error.message); }
 });
@@ -1196,12 +1478,12 @@ document.getElementById('importDropboxBtn2').addEventListener('click', async () 
 // 17. INIT
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
+    loadTemplates();
+    loadActiveTemplate();
     const user = getUser();
     if (user && getToken()) showApp(user);
     else showLogin();
-    loadTemplates();
-    loadActiveTemplate();
-    console.log('🚀 LeadCapture PWA mit allen Features geladen');
+    console.log('🚀 LeadCapture PWA geladen (mit Token-Refresh, Vorlagen-Sync, Jahresfilter-Fix, Listen-Löschen, Select-Fragen, Karte ohne Zufallskoordinaten)');
 });
 </script>
 </body>
