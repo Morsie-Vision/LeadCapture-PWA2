@@ -1091,36 +1091,27 @@ document.getElementById('clearBtn').addEventListener('click', clearForm);
 // WICHTIG: process-image wird mit save:false aufgerufen. Der Lead
 // wird erst beim Klick auf "Speichern" angelegt – zusammen mit den
 // Fragebogen-Antworten. Das verhindert doppelte Leads.
-async function handleImage(file) {
-    if (!file) return;
-    const isImage = file.type.startsWith('image/');
-    const isPdf = file.type === 'application/pdf';
-    if (!isImage && !isPdf) { showError('Bitte wähle ein Bild (JPG, PNG) oder ein PDF.'); return; }
-    if (file.size > 10 * 1024 * 1024) { showError('Datei zu groß (max 10MB).'); return; }
+async function compressImage(file, maxDim = 1600, quality = 0.85) {
+    // PDFs unverändert durchreichen
+    if (file.type === 'application/pdf') {
+        return await fileToDataURL(file);
+    }
 
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-        const base64Image = e.target.result;
-        if (isImage) { previewImage.src = base64Image; previewContainer.style.display = 'block'; }
-        else previewContainer.style.display = 'none';
+    const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
+    const w = Math.round(bitmap.width * scale);
+    const h = Math.round(bitmap.height * scale);
 
-        setStatus('OCR läuft, danach DeepSeek-Analyse...', true);
-        try {
-            const response = await apiRequest('/process-image', {
-                method: 'POST',
-                body: JSON.stringify({ image: base64Image, save: false })
-            });
-            const result = await response.json();
-            if (!result.success) throw new Error(result.error || 'Unbekannter Fehler');
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    bitmap.close();
 
-            fillForm(result.data);
-            setStatus('✅ Karte ausgelesen – bitte prüfen und speichern.', true);
-            setTimeout(() => setStatus('', false), 2500);
-        } catch (error) {
-            showError('Parsing fehlgeschlagen: ' + error.message);
-            setStatus('', false);
-        }
-    };
+    return canvas.toDataURL('image/jpeg', quality);
+};
     reader.onerror = () => showError('Fehler beim Lesen der Datei.');
     reader.readAsDataURL(file);
 }
