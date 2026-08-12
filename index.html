@@ -162,6 +162,84 @@
         .map-warn { margin-top: 6px; font-size: 12px; color: #b45309; background: #fef3c7; padding: 8px 10px; border-radius: 8px; text-align: center; display: none; }
         .map-warn button { margin-top: 6px; padding: 6px 14px; border: none; border-radius: 8px; background: #0066AA; color: white; font-size: 12px; cursor: pointer; }
 
+        /* ===== KALENDER ===== */
+        .grid-card { position: relative; }
+        .tile-badge {
+            position: absolute; top: 8px; right: 8px; min-width: 20px; height: 20px;
+            background: #dc2626; color: #fff; border-radius: 10px; font-size: 11px;
+            font-weight: 700; display: flex; align-items: center; justify-content: center; padding: 0 6px;
+        }
+        .cal-strip-wrap { background: #0066AA; border-radius: 14px; padding: 10px 8px 8px 8px; margin-bottom: 12px; }
+        .cal-strip-head { display: flex; align-items: center; justify-content: space-between; padding: 0 4px 8px 4px; }
+        .cal-title { color: #fff; font-size: 14px; font-weight: 600; text-align: center; flex: 1; }
+        .cal-nav {
+            background: rgba(255,255,255,0.15); border: none; color: #fff; width: 30px; height: 30px;
+            border-radius: 8px; font-size: 18px; cursor: pointer; line-height: 1;
+        }
+        .cal-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+        .cal-day {
+            position: relative; text-align: center; padding: 6px 2px; border-radius: 8px;
+            cursor: pointer; color: rgba(255,255,255,0.85); transition: background 0.15s;
+        }
+        .cal-day:active { background: rgba(255,255,255,0.2); }
+        .cal-day.selected { background: rgba(255,255,255,0.25); }
+        .cal-day.today .cal-daynum { text-decoration: underline; font-weight: 800; }
+        .cal-day.weekend { color: #ffc7c7; }
+        .cal-dayname { font-size: 10px; opacity: 0.85; }
+        .cal-daynum { font-size: 17px; font-weight: 600; margin-top: 1px; }
+        .cal-badge {
+            position: absolute; top: 2px; right: 4px; min-width: 15px; height: 15px;
+            background: #dc2626; color: #fff; border-radius: 8px; font-size: 9px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center; padding: 0 3px;
+        }
+        .cal-toolbar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+        .cal-toolbar .btn { padding: 8px 12px; font-size: 13px; flex: 1; min-width: 90px; }
+
+        /* Terminkarten */
+        .appt-card {
+            background: #fff; border: 1px solid #eef2f7; border-top: 3px solid #0066AA;
+            border-radius: 12px; padding: 12px; margin-bottom: 10px;
+            box-shadow: 0 2px 8px rgba(0,102,170,0.06);
+        }
+        .appt-card.status-erledigt { border-top-color: #22c55e; opacity: 0.75; }
+        .appt-card.status-laufend  { border-top-color: #f59e0b; }
+        .appt-card.status-abgesagt { border-top-color: #a0aec0; opacity: 0.6; }
+        .appt-card .appt-company { font-size: 15px; font-weight: 600; color: #1a1a1a; }
+        .appt-card .appt-contact { font-size: 14px; color: #0066AA; margin-bottom: 8px; }
+        .appt-card .appt-sep { border-top: 1px solid #eef2f7; margin: 8px 0; }
+        .appt-field { margin-bottom: 6px; }
+        .appt-field .lbl { font-size: 11px; color: #6b7a8f; }
+        .appt-field .val { font-size: 14px; color: #1a1a1a; }
+        .appt-times { display: flex; gap: 12px; }
+        .appt-times > div { flex: 1; }
+        .appt-actions { display: flex; gap: 6px; margin-top: 10px; }
+        .appt-actions button {
+            border: none; border-radius: 8px; padding: 9px 0; cursor: pointer;
+            font-size: 13px; font-weight: 600; background: #0066AA; color: #fff;
+        }
+        .appt-actions .act-main { flex: 2.2; }
+        .appt-actions .act-icon { flex: 1; background: #0066AA; }
+        .appt-actions .act-icon.secondary { background: #E8F4FD; color: #0066AA; }
+        .appt-actions .act-main.stop { background: #f59e0b; }
+        .appt-actions button:disabled { background: #e2e8f0; color: #a0aec0; cursor: default; }
+        .cal-empty { text-align: center; color: #a0aec0; padding: 28px 12px; font-size: 14px; }
+
+        /* Termin-Modal */
+        #apptOverlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1500;
+            display: none; justify-content: center; align-items: center; padding: 16px;
+        }
+        #apptOverlay.active { display: flex; }
+        #apptModal {
+            background: #fff; max-width: 440px; width: 100%; max-height: 90vh;
+            border-radius: 20px; padding: 20px; overflow-y: auto; position: relative;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        #apptModal .close-btn {
+            position: absolute; top: 12px; right: 16px; background: none; border: none;
+            font-size: 24px; cursor: pointer; color: #6b7a8f;
+        }
+
         /* ===== KAMERA (Live-Erfassung) ===== */
         #cameraOverlay {
             position: fixed; inset: 0; background: #000; z-index: 2000;
@@ -262,6 +340,12 @@
             <div class="grid-card" data-view="search"><span class="icon">🔍</span><div class="label">Suche</div><div class="sub">Leads finden</div></div>
             <div class="grid-card" data-view="questionnaire"><span class="icon">📝</span><div class="label">Fragebogen</div><div class="sub">erstellen & verwalten</div></div>
             <div class="grid-card" data-view="stats"><span class="icon">📊</span><div class="label">Statistik</div><div class="sub">Histogramm</div></div>
+            <div class="grid-card" data-view="calendar">
+                <span class="icon">📅</span>
+                <div class="label">Kalender</div>
+                <div class="sub">Termine &amp; Besuche</div>
+                <span class="tile-badge" id="calendarTodayBadge" style="display:none;">0</span>
+            </div>
             <div class="grid-card map-card" data-view="map"><span class="icon">🗺️</span><div class="label">Karte</div><div class="sub">alle Leads auf einer Karte</div></div>
         </div>
 
@@ -404,6 +488,32 @@
             </div>
         </div>
 
+        <!-- VIEW: KALENDER -->
+        <div class="view" id="view-calendar">
+            <div class="view-header">
+                <button class="back" data-view="main">←</button>
+                <h2>📅 Termine</h2>
+            </div>
+
+            <!-- Wochenstreifen -->
+            <div class="cal-strip-wrap">
+                <div class="cal-strip-head">
+                    <button class="cal-nav" id="calPrevWeek">‹</button>
+                    <div class="cal-title" id="calWeekTitle">–</div>
+                    <button class="cal-nav" id="calNextWeek">›</button>
+                </div>
+                <div class="cal-days" id="calDays"></div>
+            </div>
+
+            <div class="cal-toolbar">
+                <button class="btn btn-secondary" id="calTodayBtn">Heute</button>
+                <button class="btn btn-primary" id="calNewBtn">➕ Termin</button>
+                <button class="btn btn-secondary" id="calSubscribeBtn">🔗 Abo-Link</button>
+            </div>
+
+            <div id="calList"></div>
+        </div>
+
         <!-- VIEW: MAP -->
         <div class="view" id="view-map">
             <div class="view-header"><button class="back" data-view="main">←</button><h2>🗺️ Lead-Karte</h2></div>
@@ -451,6 +561,9 @@
                     <button class="btn btn-edit" id="detailEditBtn">✏️ Bearbeiten</button>
                     <button class="btn btn-delete" id="detailDeleteBtn">🗑️ Löschen</button>
                 </div>
+                <div class="detail-actions" style="border-top:none; padding-top:0; margin-top:8px;">
+                    <button class="btn" id="detailApptBtn" style="background:#0066AA; color:#fff;">📅 Termin anlegen</button>
+                </div>
                 <div id="detailEditMode" style="display:none; margin-top:16px; border-top:1px solid #eef2f7; padding-top:16px;">
                     <h4 style="font-size:14px; margin-bottom:8px;">✏️ Lead bearbeiten</h4>
                     <div class="form-grid">
@@ -485,6 +598,78 @@
                     <div class="actions"><button class="btn btn-success" id="saveEditBtn">💾 Speichern</button><button class="btn btn-secondary" id="cancelEditBtn">Abbrechen</button></div>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- TERMIN-MODAL (Anlegen / Bearbeiten) -->
+<div id="apptOverlay">
+    <div id="apptModal">
+        <button class="close-btn" id="apptCloseBtn">×</button>
+        <h3 id="apptModalTitle" style="font-size:18px; margin-bottom:12px; padding-right:28px;">Neuer Termin</h3>
+
+        <div class="form-grid">
+            <div class="form-group full">
+                <label for="apptLead">Verknüpfter Lead</label>
+                <select id="apptLead"><option value="">— kein Lead —</option></select>
+            </div>
+            <div class="form-group full">
+                <label for="apptTitle">Titel *</label>
+                <input type="text" id="apptTitle" placeholder="z.B. Verkaufsgespräch">
+            </div>
+            <div class="form-group full">
+                <label for="apptMainItem">Thema / Produkt</label>
+                <input type="text" id="apptMainItem" placeholder="z.B. vicotar Objektive">
+            </div>
+            <div class="form-group">
+                <label for="apptDate">Datum *</label>
+                <input type="date" id="apptDate">
+            </div>
+            <div class="form-group">
+                <label for="apptDuration">Dauer</label>
+                <select id="apptDuration">
+                    <option value="30">30 Min</option>
+                    <option value="60" selected>60 Min</option>
+                    <option value="90">90 Min</option>
+                    <option value="120">2 Std</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="apptStart">Von *</label>
+                <input type="time" id="apptStart">
+            </div>
+            <div class="form-group">
+                <label for="apptEnd">Bis *</label>
+                <input type="time" id="apptEnd">
+            </div>
+            <div class="form-group full">
+                <label for="apptLocation">Ort</label>
+                <input type="text" id="apptLocation" placeholder="wird aus dem Lead übernommen">
+            </div>
+            <div class="form-group full">
+                <label for="apptDescription">Notizen</label>
+                <textarea id="apptDescription" rows="2"></textarea>
+            </div>
+            <div class="form-group full">
+                <label for="apptReminder">Erinnerung</label>
+                <select id="apptReminder">
+                    <option value="0">keine</option>
+                    <option value="15">15 Min vorher</option>
+                    <option value="30" selected>30 Min vorher</option>
+                    <option value="60">1 Std vorher</option>
+                    <option value="1440">1 Tag vorher</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="error" id="apptError"></div>
+
+        <div class="actions">
+            <button class="btn btn-success" id="apptSaveBtn">💾 Speichern</button>
+            <button class="btn btn-secondary" id="apptCancelBtn">Abbrechen</button>
+        </div>
+        <div class="actions" id="apptDeleteRow" style="display:none;">
+            <button class="btn btn-danger" id="apptDeleteBtn">🗑️ Termin löschen</button>
         </div>
     </div>
 </div>
@@ -709,6 +894,7 @@ function showView(viewId) {
     if (viewId === 'stats') { loadHistogram(); loadLeads(); }
     if (viewId === 'questionnaire') { loadTemplates(); loadActiveTemplate(); }
     if (viewId === 'scan') { loadTemplates(); updateScanTemplateSelect(); }
+    if (viewId === 'calendar') { loadCalendar(); }
 }
 document.querySelectorAll('.grid-card').forEach(card => {
     card.addEventListener('click', () => showView(card.dataset.view));
@@ -1029,6 +1215,15 @@ function openLeadDetail(leadId) {
         document.getElementById('detailEditMode').style.display = 'none';
         document.getElementById('detailEditBtn').style.display = 'block';
     };
+
+    // Termin direkt aus dem Lead heraus anlegen
+    document.getElementById('detailApptBtn').onclick = () => {
+        detailOverlay.classList.remove('active');
+        if (!calWeekStart) { calSelectedDate = new Date(); calWeekStart = startOfWeek(calSelectedDate); }
+        showView('calendar');
+        setTimeout(() => openApptModal(null, lead.id), 150);
+    };
+
     detailOverlay.classList.add('active');
 }
 document.getElementById('closeLeadDetail').onclick = () => detailOverlay.classList.remove('active');
@@ -1964,6 +2159,448 @@ document.getElementById('mapRefreshBtn').addEventListener('click', loadMapData);
 document.getElementById('mapCityFilter').addEventListener('change', () => displayMapMarkers(allLeads));
 
 // ============================================================
+// 19b. KALENDER / TERMINE
+// ============================================================
+// Einbahnstraße: Termine werden hier gepflegt und per iCal-Abo
+// nach Outlook/Apple gegeben. Es wird nichts zurückgelesen.
+
+let calSelectedDate = new Date();   // aktuell gewählter Tag
+let calWeekStart = null;            // Montag der angezeigten Woche
+let calAppointments = [];           // Termine des gewählten Tages
+let calCounts = {};                 // { 'YYYY-MM-DD': anzahl }
+let editingApptId = null;
+
+const DAY_NAMES = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+
+// --- Datums-Hilfen (lokale Zeit, keine UTC-Verschiebung) ---
+function dateKey(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+function startOfWeek(d) {
+    const out = new Date(d);
+    out.setHours(0, 0, 0, 0);
+    // getDay(): 0 = Sonntag -> auf Montag als Wochenstart umrechnen
+    const shift = (out.getDay() + 6) % 7;
+    out.setDate(out.getDate() - shift);
+    return out;
+}
+function addDays(d, n) {
+    const out = new Date(d);
+    out.setDate(out.getDate() + n);
+    return out;
+}
+function isoWeekNumber(d) {
+    const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const dayNum = t.getUTCDay() || 7;
+    t.setUTCDate(t.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+    return Math.ceil((((t - yearStart) / 86400000) + 1) / 7);
+}
+function fmtTime(iso) {
+    if (!iso) return '';
+    return new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+}
+function minutesBetween(a, b) {
+    return Math.round((new Date(b) - new Date(a)) / 60000);
+}
+
+// --- Wochenstreifen rendern ---
+function renderWeekStrip() {
+    const container = document.getElementById('calDays');
+    const todayKey = dateKey(new Date());
+    const selKey = dateKey(calSelectedDate);
+
+    container.innerHTML = '';
+    for (let i = 0; i < 7; i++) {
+        const d = addDays(calWeekStart, i);
+        const key = dateKey(d);
+        const count = calCounts[key] || 0;
+
+        const el = document.createElement('div');
+        el.className = 'cal-day'
+            + (key === selKey ? ' selected' : '')
+            + (key === todayKey ? ' today' : '')
+            + (i >= 5 ? ' weekend' : '');
+        el.innerHTML = `
+            <div class="cal-dayname">${DAY_NAMES[i]}</div>
+            <div class="cal-daynum">${d.getDate()}</div>
+            ${count > 0 ? `<span class="cal-badge">${count}</span>` : ''}
+        `;
+        el.addEventListener('click', () => {
+            calSelectedDate = d;
+            renderWeekStrip();
+            loadDayAppointments();
+        });
+        container.appendChild(el);
+    }
+
+    const weekNo = isoWeekNumber(calSelectedDate);
+    document.getElementById('calWeekTitle').textContent =
+        calSelectedDate.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+        + ` · KW ${weekNo}`;
+}
+
+// --- Termine des gewählten Tages laden ---
+async function loadDayAppointments() {
+    const list = document.getElementById('calList');
+    const dayStart = new Date(calSelectedDate); dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(calSelectedDate); dayEnd.setHours(23, 59, 59, 999);
+
+    try {
+        const res = await apiRequest(
+            `/appointments?from=${encodeURIComponent(dayStart.toISOString())}&to=${encodeURIComponent(dayEnd.toISOString())}`
+        );
+        const result = await res.json();
+        if (!result.success) throw new Error(result.error);
+
+        calAppointments = result.data || [];
+        renderAppointments();
+    } catch (error) {
+        list.innerHTML = `<div class="cal-empty">❌ ${escapeHtml(error.message)}</div>`;
+    }
+}
+
+// --- Badge-Zahlen für die Woche laden ---
+async function loadWeekCounts() {
+    const from = new Date(calWeekStart);
+    const to = addDays(calWeekStart, 6); to.setHours(23, 59, 59, 999);
+
+    try {
+        const res = await apiRequest(
+            `/appointments/counts?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`
+        );
+        const result = await res.json();
+        if (result.success) calCounts = result.data || {};
+    } catch (error) { console.error('Zähler-Fehler:', error); }
+}
+
+function renderAppointments() {
+    const list = document.getElementById('calList');
+
+    if (calAppointments.length === 0) {
+        list.innerHTML = '<div class="cal-empty">📭 Keine Termine an diesem Tag</div>';
+        return;
+    }
+
+    list.innerHTML = calAppointments.map(a => {
+        const lead = a.leads;
+        const company = lead?.company || a.location || '—';
+        const contact = lead ? `${lead.first_name || ''} ${lead.last_name || ''}`.trim() : '';
+        const planned = `${fmtTime(a.starts_at)} – ${fmtTime(a.ends_at)} (${minutesBetween(a.starts_at, a.ends_at)}min)`;
+        const running = a.status === 'laufend';
+        const done = a.status === 'erledigt';
+
+        return `
+        <div class="appt-card status-${escapeHtml(a.status)}">
+            <div class="appt-company">${escapeHtml(company)}</div>
+            ${contact ? `<div class="appt-contact">${escapeHtml(contact)}</div>` : ''}
+            <div class="appt-sep"></div>
+
+            ${a.main_item ? `
+            <div class="appt-field">
+                <div class="lbl">Thema</div>
+                <div class="val">${escapeHtml(a.main_item)}</div>
+            </div>` : ''}
+
+            <div class="appt-field">
+                <div class="lbl">Geplant</div>
+                <div class="val">${escapeHtml(planned)}</div>
+            </div>
+
+            <div class="appt-field appt-times">
+                <div>
+                    <div class="lbl">Startzeit (ist)</div>
+                    <div class="val">${a.actual_start ? fmtTime(a.actual_start) : '–'}</div>
+                </div>
+                <div>
+                    <div class="lbl">Endzeit (ist)</div>
+                    <div class="val">${a.actual_end ? fmtTime(a.actual_end) : '–'}</div>
+                </div>
+            </div>
+
+            <div class="appt-actions">
+                ${done
+                    ? `<button class="act-main" disabled>ERLEDIGT</button>`
+                    : running
+                        ? `<button class="act-main stop" onclick="stopAppointment('${a.id}')">STOP</button>`
+                        : `<button class="act-main" onclick="startAppointment('${a.id}')">START</button>`}
+                <button class="act-icon" ${lead?.phone ? `onclick="window.location.href='tel:${escapeHtml((lead.phone||'').replace(/\s/g,''))}'"` : 'disabled'}>📞</button>
+                <button class="act-icon" ${lead?.email ? `onclick="window.location.href='mailto:${escapeHtml(lead.email)}'"` : 'disabled'}>✉️</button>
+                <button class="act-icon" ${(a.latitude && a.longitude) ? `onclick="openMaps(${a.latitude},${a.longitude})"` : 'disabled'}>📍</button>
+                <button class="act-icon secondary" onclick="openApptModal('${a.id}')">✏️</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function openMaps(lat, lon) {
+    // Auf iOS öffnet maps.apple.com die Karten-App, sonst Google Maps
+    const isApple = /iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent);
+    window.open(isApple
+        ? `https://maps.apple.com/?daddr=${lat},${lon}`
+        : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`, '_blank');
+}
+
+async function startAppointment(id) {
+    try {
+        await apiRequest(`/appointments/${id}/start`, { method: 'POST' });
+        await loadDayAppointments();
+    } catch (error) { alert('❌ Fehler: ' + error.message); }
+}
+
+async function stopAppointment(id) {
+    try {
+        await apiRequest(`/appointments/${id}/stop`, { method: 'POST' });
+        await loadDayAppointments();
+    } catch (error) { alert('❌ Fehler: ' + error.message); }
+}
+
+async function loadCalendar() {
+    if (!calWeekStart) calWeekStart = startOfWeek(calSelectedDate);
+    await loadWeekCounts();
+    renderWeekStrip();
+    await loadDayAppointments();
+    updateTodayBadge();
+}
+
+async function updateTodayBadge() {
+    const badge = document.getElementById('calendarTodayBadge');
+    const todayKey = dateKey(new Date());
+    const from = new Date(); from.setHours(0, 0, 0, 0);
+    const to = new Date(); to.setHours(23, 59, 59, 999);
+    try {
+        const res = await apiRequest(
+            `/appointments/counts?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`
+        );
+        const result = await res.json();
+        const n = result.success ? (result.data[todayKey] || 0) : 0;
+        badge.textContent = n;
+        badge.style.display = n > 0 ? 'flex' : 'none';
+    } catch { badge.style.display = 'none'; }
+}
+
+document.getElementById('calPrevWeek').addEventListener('click', async () => {
+    calWeekStart = addDays(calWeekStart, -7);
+    calSelectedDate = new Date(calWeekStart);
+    await loadWeekCounts();
+    renderWeekStrip();
+    loadDayAppointments();
+});
+document.getElementById('calNextWeek').addEventListener('click', async () => {
+    calWeekStart = addDays(calWeekStart, 7);
+    calSelectedDate = new Date(calWeekStart);
+    await loadWeekCounts();
+    renderWeekStrip();
+    loadDayAppointments();
+});
+document.getElementById('calTodayBtn').addEventListener('click', async () => {
+    calSelectedDate = new Date();
+    calWeekStart = startOfWeek(calSelectedDate);
+    await loadWeekCounts();
+    renderWeekStrip();
+    loadDayAppointments();
+});
+
+// --- Abo-Link für Outlook/Apple ---
+document.getElementById('calSubscribeBtn').addEventListener('click', async () => {
+    try {
+        const res = await apiRequest('/calendar/feed-url');
+        const result = await res.json();
+        if (!result.success) throw new Error(result.error);
+
+        const msg = 'Diese URL in Outlook oder Apple Kalender als "Kalender abonnieren" eintragen:\n\n'
+            + result.url
+            + '\n\nHinweis: Die Übertragung ist einseitig – Termine aus LeadCapture erscheinen im Kalender, '
+            + 'aber nicht umgekehrt. Wie oft aktualisiert wird, bestimmt der Kalender selbst (oft 15 Min bis mehrere Stunden).';
+
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(result.url);
+            alert('🔗 Abo-Link wurde in die Zwischenablage kopiert.\n\n' + msg);
+        } else {
+            prompt(msg, result.url);
+        }
+    } catch (error) { alert('❌ Fehler: ' + error.message); }
+});
+
+// ============================================================
+// 19c. TERMIN ANLEGEN / BEARBEITEN
+// ============================================================
+const apptOverlay = document.getElementById('apptOverlay');
+
+function fillLeadSelect(selectedId = '') {
+    const sel = document.getElementById('apptLead');
+    sel.innerHTML = '<option value="">— kein Lead —</option>';
+    [...allLeads]
+        .sort((a, b) => collator.compare(
+            (a.company || `${a.last_name || ''}`).trim(),
+            (b.company || `${b.last_name || ''}`).trim()))
+        .forEach(l => {
+            const name = `${l.first_name || ''} ${l.last_name || ''}`.trim();
+            const label = [l.company, name].filter(Boolean).join(' · ') || 'Unbenannt';
+            const opt = document.createElement('option');
+            opt.value = l.id;
+            opt.textContent = label;
+            if (l.id === selectedId) opt.selected = true;
+            sel.appendChild(opt);
+        });
+}
+
+async function openApptModal(id = null, presetLeadId = null) {
+    editingApptId = id;
+    document.getElementById('apptError').style.display = 'none';
+    document.getElementById('apptModalTitle').textContent = id ? 'Termin bearbeiten' : 'Neuer Termin';
+    document.getElementById('apptDeleteRow').style.display = id ? 'flex' : 'none';
+
+    if (allLeads.length === 0) await loadLeads();
+
+    if (id) {
+        const a = calAppointments.find(x => x.id === id);
+        if (!a) return;
+        fillLeadSelect(a.lead_id || '');
+        document.getElementById('apptTitle').value = a.title || '';
+        document.getElementById('apptMainItem').value = a.main_item || '';
+        document.getElementById('apptLocation').value = a.location || '';
+        document.getElementById('apptDescription').value = a.description || '';
+        document.getElementById('apptReminder').value = String(a.reminder_minutes ?? 30);
+
+        const s = new Date(a.starts_at), e = new Date(a.ends_at);
+        document.getElementById('apptDate').value = dateKey(s);
+        document.getElementById('apptStart').value = s.toTimeString().slice(0, 5);
+        document.getElementById('apptEnd').value = e.toTimeString().slice(0, 5);
+    } else {
+        fillLeadSelect(presetLeadId || '');
+        document.getElementById('apptTitle').value = '';
+        document.getElementById('apptMainItem').value = '';
+        document.getElementById('apptLocation').value = '';
+        document.getElementById('apptDescription').value = '';
+        document.getElementById('apptReminder').value = '30';
+        document.getElementById('apptDate').value = dateKey(calSelectedDate);
+
+        // Standard: nächste volle Stunde, 60 Minuten
+        const start = new Date();
+        start.setMinutes(0, 0, 0);
+        start.setHours(start.getHours() + 1);
+        document.getElementById('apptStart').value = start.toTimeString().slice(0, 5);
+        const end = new Date(start.getTime() + 60 * 60000);
+        document.getElementById('apptEnd').value = end.toTimeString().slice(0, 5);
+    }
+
+    apptOverlay.classList.add('active');
+}
+
+function closeApptModal() {
+    apptOverlay.classList.remove('active');
+    editingApptId = null;
+}
+
+// Dauer-Dropdown passt die Endzeit automatisch an
+document.getElementById('apptDuration').addEventListener('change', (e) => {
+    const startVal = document.getElementById('apptStart').value;
+    if (!startVal) return;
+    const [h, m] = startVal.split(':').map(Number);
+    const end = new Date();
+    end.setHours(h, m + parseInt(e.target.value, 10), 0, 0);
+    document.getElementById('apptEnd').value = end.toTimeString().slice(0, 5);
+});
+
+// Lead-Auswahl füllt den Ort vor, falls noch leer
+document.getElementById('apptLead').addEventListener('change', (e) => {
+    const lead = allLeads.find(l => l.id === e.target.value);
+    const locField = document.getElementById('apptLocation');
+    const titleField = document.getElementById('apptTitle');
+    if (!lead) return;
+
+    if (!locField.value.trim()) {
+        locField.value = [lead.company, lead.street, [lead.zip, lead.city].filter(Boolean).join(' ')]
+            .filter(Boolean).join(', ');
+    }
+    if (!titleField.value.trim()) {
+        const name = `${lead.first_name || ''} ${lead.last_name || ''}`.trim();
+        titleField.value = `Besuch ${lead.company || name}`.trim();
+    }
+});
+
+document.getElementById('apptSaveBtn').addEventListener('click', async () => {
+    const errBox = document.getElementById('apptError');
+    errBox.style.display = 'none';
+
+    const date = document.getElementById('apptDate').value;
+    const start = document.getElementById('apptStart').value;
+    const end = document.getElementById('apptEnd').value;
+    const title = document.getElementById('apptTitle').value.trim();
+
+    if (!title || !date || !start || !end) {
+        errBox.textContent = 'Titel, Datum, Von und Bis sind Pflichtfelder.';
+        errBox.style.display = 'block';
+        return;
+    }
+
+    // Lokale Zeit -> ISO. new Date('2026-08-13T08:30') interpretiert
+    // den String als LOKALE Zeit, toISOString() wandelt korrekt in UTC.
+    const startsAt = new Date(`${date}T${start}`);
+    const endsAt = new Date(`${date}T${end}`);
+
+    if (endsAt <= startsAt) {
+        errBox.textContent = 'Die Endzeit muss nach der Startzeit liegen.';
+        errBox.style.display = 'block';
+        return;
+    }
+
+    const payload = {
+        leadId: document.getElementById('apptLead').value || null,
+        title,
+        mainItem: document.getElementById('apptMainItem').value.trim(),
+        location: document.getElementById('apptLocation').value.trim(),
+        description: document.getElementById('apptDescription').value.trim(),
+        reminderMinutes: parseInt(document.getElementById('apptReminder').value, 10),
+        startsAt: startsAt.toISOString(),
+        endsAt: endsAt.toISOString()
+    };
+
+    const btn = document.getElementById('apptSaveBtn');
+    btn.disabled = true; btn.textContent = '⏳ Speichere...';
+
+    try {
+        const path = editingApptId ? `/appointments/${editingApptId}` : '/appointments';
+        const res = await apiRequest(path, {
+            method: editingApptId ? 'PUT' : 'POST',
+            body: JSON.stringify({ appointment: payload })
+        });
+        const result = await res.json();
+        if (!result.success) throw new Error(result.error);
+
+        closeApptModal();
+        // Zum Tag des Termins springen, falls verschoben
+        calSelectedDate = new Date(startsAt);
+        calWeekStart = startOfWeek(calSelectedDate);
+        await loadCalendar();
+    } catch (error) {
+        errBox.textContent = '❌ ' + error.message;
+        errBox.style.display = 'block';
+    } finally {
+        btn.disabled = false; btn.textContent = '💾 Speichern';
+    }
+});
+
+document.getElementById('apptDeleteBtn').addEventListener('click', async () => {
+    if (!editingApptId) return;
+    if (!confirm('⚠️ Diesen Termin wirklich löschen?')) return;
+    try {
+        await apiRequest(`/appointments/${editingApptId}`, { method: 'DELETE' });
+        closeApptModal();
+        await loadCalendar();
+    } catch (error) { alert('❌ Fehler: ' + error.message); }
+});
+
+document.getElementById('calNewBtn').addEventListener('click', () => openApptModal());
+document.getElementById('apptCloseBtn').addEventListener('click', closeApptModal);
+document.getElementById('apptCancelBtn').addEventListener('click', closeApptModal);
+apptOverlay.addEventListener('click', (e) => { if (e.target === apptOverlay) closeApptModal(); });
+
+// ============================================================
 // 20. CSV EXPORT / IMPORT
 // ============================================================
 document.getElementById('exportCsvBtn2').addEventListener('click', async () => {
@@ -2023,7 +2660,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = getUser();
     if (user && getToken()) showApp(user);
     else showLogin();
-    console.log('🚀 LeadCapture PWA v8.0.0 geladen');
+    console.log('🚀 LeadCapture PWA v9.0.0 geladen (Kalender + Kamera-Ausschnitt)');
 });
 </script>
 </body>
