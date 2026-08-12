@@ -162,6 +162,48 @@
         .map-warn { margin-top: 6px; font-size: 12px; color: #b45309; background: #fef3c7; padding: 8px 10px; border-radius: 8px; text-align: center; display: none; }
         .map-warn button { margin-top: 6px; padding: 6px 14px; border: none; border-radius: 8px; background: #0066AA; color: white; font-size: 12px; cursor: pointer; }
 
+        /* ===== KAMERA (Live-Erfassung) ===== */
+        #cameraOverlay {
+            position: fixed; inset: 0; background: #000; z-index: 2000;
+            display: none; align-items: center; justify-content: center; overflow: hidden;
+        }
+        #cameraOverlay.active { display: flex; }
+        #cameraVideo {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: cover; background: #000;
+        }
+        #cameraGuide {
+            position: relative;
+            width: 82%;
+            aspect-ratio: 85 / 55;      /* Standard-Visitenkartenformat, bei Bedarf anpassen */
+            max-width: 480px;
+            border-radius: 14px;
+            box-shadow: 0 0 0 9999px rgba(0,0,0,0.55);
+            pointer-events: none;
+        }
+        #cameraGuide::before {
+            content: ''; position: absolute; inset: 0;
+            border-radius: 14px; border: 2px dashed rgba(255,255,255,0.7);
+        }
+        #cameraHint {
+            position: absolute; top: max(env(safe-area-inset-top), 16px); left: 0; right: 0;
+            text-align: center; color: #fff; font-size: 14px; font-weight: 600;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.6); padding: 8px;
+        }
+        #cameraControls {
+            position: absolute; bottom: max(env(safe-area-inset-bottom), 24px); left: 0; right: 0;
+            display: flex; align-items: center; justify-content: center; gap: 32px; padding: 16px;
+        }
+        .cam-shutter {
+            width: 68px; height: 68px; border-radius: 50%;
+            background: #fff; border: 4px solid rgba(255,255,255,0.4); cursor: pointer;
+        }
+        .cam-shutter:active { background: #E8F4FD; }
+        .cam-btn {
+            background: rgba(255,255,255,0.15); color: #fff; border: none;
+            border-radius: 20px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
+        }
+
         /* ===== RESPONSIVE ===== */
         @media (max-width: 400px) { .grid-card { padding: 12px; } .grid-card .icon { font-size: 28px; } .grid-card .label { font-size: 12px; } }
         @media (min-width: 481px) { .container { padding: 24px; } }
@@ -227,9 +269,12 @@
         <div class="view" id="view-scan">
             <div class="view-header"><button class="back" data-view="main">←</button><h2>📸 Visitenkarte scannen</h2></div>
             <div class="upload-area" id="uploadArea">
-                <div class="icon">📸</div><p>Foto hochladen oder aufnehmen</p><small>JPG, PNG, PDF (max. 10MB)</small>
-                <input type="file" id="fileInput" accept="image/*,application/pdf" capture="environment">
+                <div class="icon">📸</div><p>Visitenkarte scannen</p><small>Live-Kamera mit Rahmen · JPG, PNG, PDF (max. 10MB)</small>
             </div>
+            <div style="text-align:center; margin: -4px 0 12px 0;">
+                <a href="#" id="galleryLink" style="font-size:12px; color:#6b7a8f; text-decoration:underline;">oder Datei aus Galerie wählen</a>
+            </div>
+            <input type="file" id="fileInput" accept="image/*,application/pdf" style="display:none;">
             <div id="previewContainer"><img id="previewImage" alt="Vorschau"></div>
             <div id="status"><span class="spinner"></span><span id="statusText">Verarbeite...</span></div>
             <div class="error" id="errorBox"></div>
@@ -284,7 +329,7 @@
 
                 <div class="actions">
                     <button type="button" class="btn btn-secondary" id="clearBtn">🗑️ Leeren</button>
-                    <button type="button" class="btn btn-primary" id="uploadBtn">📤 Foto hochladen</button>
+                    <button type="button" class="btn btn-primary" id="uploadBtn">📷 Kamera öffnen</button>
                     <button type="button" class="btn btn-success" id="saveBtn">💾 Speichern</button>
                 </div>
             </form>
@@ -441,6 +486,18 @@
                 </div>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- KAMERA-MODAL (Live-Erfassung mit Kartenrahmen) -->
+<div id="cameraOverlay">
+    <video id="cameraVideo" autoplay playsinline muted></video>
+    <div id="cameraGuide"></div>
+    <div id="cameraHint">Visitenkarte im Rahmen ausrichten</div>
+    <div id="cameraControls">
+        <button id="cameraCancelBtn" class="cam-btn">Abbrechen</button>
+        <button id="cameraShutterBtn" class="cam-shutter" aria-label="Aufnehmen"></button>
+        <button id="cameraSwitchBtn" class="cam-btn" title="Kamera wechseln">🔄</button>
     </div>
 </div>
 
@@ -1086,38 +1143,200 @@ function clearForm() {
 document.getElementById('clearBtn').addEventListener('click', clearForm);
 
 // ============================================================
-// 12. SCAN: BILDVERARBEITUNG
+// 12. SCAN: BILDVERARBEITUNG (Kamera mit Kartenausschnitt + Galerie)
 // ============================================================
 // WICHTIG: process-image wird mit save:false aufgerufen. Der Lead
 // wird erst beim Klick auf "Speichern" angelegt – zusammen mit den
 // Fragebogen-Antworten. Das verhindert doppelte Leads.
-async function compressImage(file, maxDim = 1600, quality = 0.85) {
-    // PDFs unverändert durchreichen
-    if (file.type === 'application/pdf') {
-        return await fileToDataURL(file);
-    }
+const galleryLink = document.getElementById('galleryLink');
 
+// Verkleinert eine Canvas auf maximal maxDim Kantenlänge und
+// kodiert als JPEG. Wird von Kamera- UND Galerie-Pfad genutzt.
+function downscaleCanvas(sourceCanvas, maxDim, quality) {
+    const scale = Math.min(1, maxDim / Math.max(sourceCanvas.width, sourceCanvas.height));
+    if (scale === 1) return sourceCanvas.toDataURL('image/jpeg', quality);
+
+    const out = document.createElement('canvas');
+    out.width = Math.round(sourceCanvas.width * scale);
+    out.height = Math.round(sourceCanvas.height * scale);
+    const ctx = out.getContext('2d');
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(sourceCanvas, 0, 0, out.width, out.height);
+    return out.toDataURL('image/jpeg', quality);
+}
+
+// Galerie-Pfad: komplettes Foto, EXIF-Rotation korrekt beachtet
+async function compressImage(file, maxDim = 1600, quality = 0.85) {
     const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
-    const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
-    const w = Math.round(bitmap.width * scale);
-    const h = Math.round(bitmap.height * scale);
+    const canvas = document.createElement('canvas');
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    canvas.getContext('2d').drawImage(bitmap, 0, 0);
+    bitmap.close();
+    return downscaleCanvas(canvas, maxDim, quality);
+}
+
+// Gemeinsamer Versand-Pfad für Kamera- UND Galerie-Bilder
+async function processCapturedImage(dataUrl, { showPreview = true } = {}) {
+    if (showPreview) {
+        previewImage.src = dataUrl;
+        previewContainer.style.display = 'block';
+    } else {
+        previewContainer.style.display = 'none';
+    }
+    setStatus('OCR läuft, danach DeepSeek-Analyse...', true);
+    try {
+        const response = await apiRequest('/process-image', {
+            method: 'POST',
+            body: JSON.stringify({ image: dataUrl, save: false })
+        });
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error || 'Unbekannter Fehler');
+
+        fillForm(result.data);
+        setStatus('✅ Karte ausgelesen – bitte prüfen und speichern.', true);
+        setTimeout(() => setStatus('', false), 2500);
+    } catch (error) {
+        showError('Verarbeitung fehlgeschlagen: ' + error.message);
+        setStatus('', false);
+    }
+}
+
+async function handleImage(file) {
+    if (!file) return;
+    const isImage = file.type.startsWith('image/');
+    const isPdf = file.type === 'application/pdf';
+    if (!isImage && !isPdf) { showError('Bitte wähle ein Bild (JPG, PNG) oder ein PDF.'); return; }
+    if (file.size > 10 * 1024 * 1024) { showError('Datei zu groß (max 10MB).'); return; }
+
+    try {
+        let dataUrl;
+        if (isImage) {
+            setStatus('Bild wird komprimiert...', true);
+            dataUrl = await compressImage(file);
+        } else {
+            dataUrl = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+        await processCapturedImage(dataUrl, { showPreview: isImage });
+    } catch (error) {
+        showError('Verarbeitung fehlgeschlagen: ' + error.message);
+        setStatus('', false);
+    }
+}
+
+fileInput.addEventListener('change', (e) => { if (e.target.files.length > 0) handleImage(e.target.files[0]); });
+galleryLink.addEventListener('click', (e) => { e.preventDefault(); fileInput.click(); });
+
+// ============================================================
+// 12b. KAMERA: LIVE-ERFASSUNG MIT AUSSCHNITT
+// ============================================================
+const CARD_ASPECT_RATIO = 85 / 55;  // Standard-Visitenkartenformat, bei Bedarf anpassen
+const CAPTURE_PADDING = 1.06;       // 6% Toleranz, falls Ausrichtung leicht daneben liegt
+
+let cameraStream = null;
+const cameraOverlay = document.getElementById('cameraOverlay');
+const cameraVideo = document.getElementById('cameraVideo');
+const cameraGuide = document.getElementById('cameraGuide');
+
+async function openCamera() {
+    if (!navigator.mediaDevices?.getUserMedia) {
+        showError('Kamera-Zugriff wird von diesem Browser nicht unterstützt. Bitte „Aus Galerie wählen" nutzen.');
+        return;
+    }
+    try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+            audio: false
+        });
+        cameraVideo.srcObject = cameraStream;
+        await cameraVideo.play();
+        cameraOverlay.classList.add('active');
+    } catch (error) {
+        console.error('Kamera-Fehler:', error);
+        showError('Kamera konnte nicht gestartet werden: ' + (error.message || 'Zugriff verweigert'));
+    }
+}
+
+function closeCamera() {
+    cameraStream?.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+    cameraVideo.srcObject = null;
+    cameraOverlay.classList.remove('active');
+}
+
+// Rechnet die Rahmenposition (CSS-Pixel) in Koordinaten des
+// nativen Kamerabilds um -- nötig wegen object-fit: cover, da
+// Video und sichtbarer Container fast nie dieselben Proportionen haben.
+function computeCropRegion() {
+    const videoW = cameraVideo.videoWidth;
+    const videoH = cameraVideo.videoHeight;
+    const containerRect = cameraVideo.getBoundingClientRect();
+    const guideRect = cameraGuide.getBoundingClientRect();
+
+    const scale = Math.max(containerRect.width / videoW, containerRect.height / videoH);
+    const displayedW = videoW * scale;
+    const displayedH = videoH * scale;
+    const videoLeft = containerRect.left + (containerRect.width - displayedW) / 2;
+    const videoTop = containerRect.top + (containerRect.height - displayedH) / 2;
+
+    let srcX = (guideRect.left - videoLeft) / scale;
+    let srcY = (guideRect.top - videoTop) / scale;
+    let srcW = guideRect.width / scale;
+    let srcH = guideRect.height / scale;
+
+    // Leichte Toleranz nach außen, zentriert um denselben Mittelpunkt
+    const cx = srcX + srcW / 2, cy = srcY + srcH / 2;
+    srcW *= CAPTURE_PADDING;
+    srcH *= CAPTURE_PADDING;
+    srcX = cx - srcW / 2;
+    srcY = cy - srcH / 2;
+
+    // Innerhalb der tatsächlichen Bildgrenzen bleiben
+    srcX = Math.max(0, Math.min(srcX, videoW - srcW));
+    srcY = Math.max(0, Math.min(srcY, videoH - srcH));
+    srcW = Math.min(srcW, videoW - srcX);
+    srcH = Math.min(srcH, videoH - srcY);
+
+    return { srcX, srcY, srcW, srcH };
+}
+
+function captureCard() {
+    const { srcX, srcY, srcW, srcH } = computeCropRegion();
 
     const canvas = document.createElement('canvas');
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext('2d');
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(bitmap, 0, 0, w, h);
-    bitmap.close();
+    canvas.width = srcW;
+    canvas.height = srcH;
+    canvas.getContext('2d').drawImage(cameraVideo, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
 
-    return canvas.toDataURL('image/jpeg', quality);
-};
-    reader.onerror = () => showError('Fehler beim Lesen der Datei.');
-    reader.readAsDataURL(file);
+    closeCamera();
+
+    const dataUrl = downscaleCanvas(canvas, 1600, 0.85);
+    processCapturedImage(dataUrl);
 }
-uploadArea.addEventListener('click', () => fileInput.click());
-fileInput.addEventListener('change', (e) => { if (e.target.files.length > 0) handleImage(e.target.files[0]); });
-document.getElementById('uploadBtn').addEventListener('click', () => fileInput.click());
+
+uploadArea.addEventListener('click', openCamera);
+document.getElementById('uploadBtn').addEventListener('click', openCamera);
+document.getElementById('cameraCancelBtn').addEventListener('click', closeCamera);
+document.getElementById('cameraShutterBtn').addEventListener('click', captureCard);
+document.getElementById('cameraSwitchBtn').addEventListener('click', async () => {
+    const track = cameraStream?.getVideoTracks()[0];
+    const currentFacing = track?.getSettings().facingMode;
+    closeCamera();
+    try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: currentFacing === 'environment' ? 'user' : 'environment' },
+            audio: false
+        });
+        cameraVideo.srcObject = cameraStream;
+        await cameraVideo.play();
+        cameraOverlay.classList.add('active');
+    } catch (error) { showError('Kamera konnte nicht gewechselt werden.'); }
+});
 
 // ============================================================
 // 13. SCAN: FRAGEBOGEN DIREKT AUSFÜLLEN
@@ -1696,52 +1915,25 @@ function displayMapMarkers(leads) {
         }
 
         const addrLine = [lead.street, [lead.zip, lead.city].filter(Boolean).join(' ')].filter(Boolean).join(', ');
-     const marker = L.marker(pos, {
-    riseOnHover: true,
-    bubblingMouseEvents: false
-}).addTo(mapInstance);
+        const marker = L.marker(pos).addTo(mapInstance)
+            .bindPopup(`
+                <div style="min-width:170px;">
+                    <strong>${escapeHtml(`${lead.title || ''} ${lead.first_name || ''} ${lead.last_name || ''}`.replace(/\s+/g,' ').trim())}</strong><br>
+                    ${lead.company ? escapeHtml(lead.company) + '<br>' : ''}
+                    ${lead.position ? escapeHtml(lead.position) + '<br>' : ''}
+                    ${lead.email ? '✉️ ' + escapeHtml(lead.email) + '<br>' : ''}
+                    ${lead.phone ? '📞 ' + escapeHtml(lead.phone) + '<br>' : ''}
+                    ${addrLine ? '📍 ' + escapeHtml(addrLine) : ''}
+                    <br><button onclick="openLeadDetail('${lead.id}')" style="margin-top:6px; padding:4px 12px; background:#0066AA; color:white; border:none; border-radius:6px; cursor:pointer;">Details</button>
+                </div>
+            `);
+        mapMarkers.push(marker);
+    });
 
-marker.bindPopup(`
-    <div style="min-width:170px;">
-        <strong>${escapeHtml(
-            `${lead.title || ''} ${lead.first_name || ''} ${lead.last_name || ''}`
-                .replace(/\s+/g, ' ')
-                .trim()
-        )}</strong><br>
-
-        ${lead.company ? escapeHtml(lead.company) + '<br>' : ''}
-        ${lead.position ? escapeHtml(lead.position) + '<br>' : ''}
-        ${lead.email ? '✉️ ' + escapeHtml(lead.email) + '<br>' : ''}
-        ${lead.phone ? '📞 ' + escapeHtml(lead.phone) + '<br>' : ''}
-        ${addrLine ? '📍 ' + escapeHtml(addrLine) : ''}
-
-        <br>
-        <button
-            onclick="openLeadDetail('${lead.id}')"
-            style="
-                margin-top:6px;
-                padding:6px 12px;
-                background:#0066AA;
-                color:white;
-                border:none;
-                border-radius:6px;
-                cursor:pointer;
-            "
-        >
-            Details
-        </button>
-    </div>
-`);
-
-mapMarkers.push(marker);
-
-    if (!mapInstance._leadCaptureInitialViewSet && mapMarkers.length > 0) {
-        const group = L.featureGroup(mapMarkers);
-        mapInstance.fitBounds(group.getBounds().pad(0.15));
-        mapInstance._leadCaptureInitialViewSet = true;
-    }
-});
+    const group = L.featureGroup(mapMarkers);
+    mapInstance.fitBounds(group.getBounds().pad(0.15));
 }
+
 // Stößt das Nachverorten offener Adressen an.
 // Nominatim erlaubt 1 Anfrage/Sekunde – daher in Blöcken.
 async function runGeocodeBackfill() {
