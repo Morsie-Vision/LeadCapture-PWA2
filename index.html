@@ -200,11 +200,24 @@
             background: #fff; border: 1px solid #eef2f7; border-top: 3px solid #0066AA;
             border-radius: 12px; padding: 12px; margin-bottom: 10px;
             box-shadow: 0 2px 8px rgba(0,102,170,0.06);
+            position: relative;
         }
+        /* Klickbarer Bereich: alles oberhalb der Aktionsleiste */
+        .appt-body { cursor: pointer; border-radius: 8px; margin: -4px; padding: 4px; transition: background 0.15s; }
+        .appt-body:active { background: #E8F4FD; }
+        /* Gebäude-Icon oben rechts: Termin-Historie der Firma */
+        .appt-history-btn {
+            position: absolute; top: 8px; right: 8px; z-index: 2;
+            width: 34px; height: 34px; border: none; border-radius: 9px;
+            background: #E8F4FD; color: #0066AA; font-size: 17px;
+            cursor: pointer; line-height: 1; display: flex;
+            align-items: center; justify-content: center;
+        }
+        .appt-history-btn:active { background: #cfe6f8; }
         .appt-card.status-erledigt { border-top-color: #22c55e; opacity: 0.75; }
         .appt-card.status-laufend  { border-top-color: #f59e0b; }
         .appt-card.status-abgesagt { border-top-color: #a0aec0; opacity: 0.6; }
-        .appt-card .appt-company { font-size: 15px; font-weight: 600; color: #1a1a1a; }
+        .appt-card .appt-company { font-size: 15px; font-weight: 600; color: #1a1a1a; padding-right: 40px; }
         .appt-card .appt-contact { font-size: 14px; color: #0066AA; margin-bottom: 8px; }
         .appt-card .appt-sep { border-top: 1px solid #eef2f7; margin: 8px 0; }
         .appt-field { margin-bottom: 6px; }
@@ -238,6 +251,77 @@
         #apptModal .close-btn {
             position: absolute; top: 12px; right: 16px; background: none; border: none;
             font-size: 24px; cursor: pointer; color: #6b7a8f;
+        }
+
+        /* Zielverfolgung / Gamification */
+        .goal-panel {
+            background: linear-gradient(135deg, #0066AA 0%, #0080d6 100%);
+            border-radius: 14px; padding: 14px; margin-bottom: 12px; color: #fff;
+        }
+        .goal-head { display: flex; justify-content: space-between; align-items: flex-start; }
+        .goal-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.85; }
+        .goal-count { font-size: 24px; font-weight: 700; line-height: 1.15; }
+        .goal-count .goal-of { font-size: 13px; font-weight: 400; opacity: 0.9; }
+        .goal-streak {
+            background: rgba(255,255,255,0.2); border-radius: 20px;
+            padding: 6px 12px; font-size: 15px; font-weight: 700; white-space: nowrap;
+        }
+        .goal-streak.cold { opacity: 0.55; }
+        .goal-bar {
+            height: 8px; background: rgba(255,255,255,0.25);
+            border-radius: 4px; margin: 10px 0 8px 0; overflow: hidden;
+        }
+        .goal-bar-fill {
+            height: 100%; width: 0%; background: #fff; border-radius: 4px;
+            transition: width 0.4s ease;
+        }
+        .goal-bar-fill.done { background: #86efac; }
+        .goal-foot { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+        .goal-foot button {
+            background: rgba(255,255,255,0.2); border: none; color: #fff;
+            border-radius: 8px; padding: 5px 10px; font-size: 11px; cursor: pointer;
+        }
+        .goal-weeks { display: flex; gap: 4px; margin-top: 10px; }
+        .goal-weeks .gw {
+            flex: 1; height: 24px; border-radius: 4px; background: rgba(255,255,255,0.18);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 9px; color: rgba(255,255,255,0.9);
+        }
+        .goal-weeks .gw.hit { background: rgba(134,239,172,0.85); color: #14532d; font-weight: 700; }
+        .goal-weeks .gw.current { outline: 2px solid #fff; }
+
+        /* Termin-Historie (Gebäude-Icon) */
+        #histOverlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1600;
+            display: none; justify-content: center; align-items: center; padding: 16px;
+        }
+        #histOverlay.active { display: flex; }
+        #histModal {
+            background: #fff; max-width: 440px; width: 100%; max-height: 85vh;
+            border-radius: 20px; padding: 20px; overflow-y: auto; position: relative;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        #histModal .close-btn {
+            position: absolute; top: 12px; right: 16px; background: none; border: none;
+            font-size: 24px; cursor: pointer; color: #6b7a8f;
+        }
+        #histModal h3 { font-size: 17px; margin-bottom: 2px; padding-right: 28px; }
+        #histModal .hist-sub { font-size: 13px; color: #6b7a8f; margin-bottom: 14px; }
+        .hist-item {
+            border-left: 3px solid #22c55e; background: #f8fafc;
+            border-radius: 0 10px 10px 0; padding: 10px 12px; margin-bottom: 8px;
+            cursor: pointer;
+        }
+        .hist-item:active { background: #E8F4FD; }
+        .hist-item.offen { border-left-color: #a0aec0; }
+        .hist-item .hist-date { font-size: 13px; font-weight: 600; color: #0066AA; }
+        .hist-item .hist-title { font-size: 14px; color: #1a1a1a; margin-top: 2px; }
+        .hist-item .hist-who { font-size: 12px; color: #0066AA; margin-top: 3px; }
+        .hist-item .hist-meta { font-size: 12px; color: #6b7a8f; margin-top: 4px; }
+        .hist-item .hist-note { font-size: 12px; color: #4a5568; margin-top: 6px; white-space: pre-wrap; }
+        .hist-summary {
+            background: #E8F4FD; border-radius: 10px; padding: 10px 12px;
+            font-size: 13px; color: #1a1a1a; margin-bottom: 12px;
         }
 
         /* ===== KAMERA (Live-Erfassung) ===== */
@@ -302,7 +386,10 @@
     <!-- USER INFO -->
     <div id="userInfo" class="user-info" style="display:none;">
         <span>👤 <span id="userName"></span> · <span class="tenant" id="tenantName"></span></span>
-        <button class="btn-logout" id="logoutBtn2">Logout</button>
+        <span>
+            <button class="btn-logout" id="featuresBtn" style="background:#E8F4FD; color:#0066AA; margin-right:6px;">Module</button>
+            <button class="btn-logout" id="logoutBtn2">Logout</button>
+        </span>
     </div>
 
     <!-- LOGIN -->
@@ -336,17 +423,17 @@
 
         <!-- KACHEL-GRID -->
         <div class="grid" id="mainGrid">
-            <div class="grid-card" data-view="scan"><span class="icon">📸</span><div class="label">Visitenkarte</div><div class="sub">scannen & erfassen</div></div>
-            <div class="grid-card" data-view="search"><span class="icon">🔍</span><div class="label">Suche</div><div class="sub">Leads finden</div></div>
-            <div class="grid-card" data-view="questionnaire"><span class="icon">📝</span><div class="label">Fragebogen</div><div class="sub">erstellen & verwalten</div></div>
-            <div class="grid-card" data-view="stats"><span class="icon">📊</span><div class="label">Statistik</div><div class="sub">Histogramm</div></div>
-            <div class="grid-card" data-view="calendar">
+            <div class="grid-card" data-view="scan" data-feature="scan"><span class="icon">📸</span><div class="label">Visitenkarte</div><div class="sub">scannen &amp; erfassen</div></div>
+            <div class="grid-card" data-view="search" data-feature="leads"><span class="icon">🔍</span><div class="label">Suche</div><div class="sub">Leads finden</div></div>
+            <div class="grid-card" data-view="questionnaire" data-feature="questionnaire"><span class="icon">📝</span><div class="label">Fragebogen</div><div class="sub">erstellen &amp; verwalten</div></div>
+            <div class="grid-card" data-view="stats" data-feature="stats"><span class="icon">📊</span><div class="label">Statistik</div><div class="sub">Histogramm</div></div>
+            <div class="grid-card" data-view="calendar" data-feature="calendar">
                 <span class="icon">📅</span>
                 <div class="label">Kalender</div>
                 <div class="sub">Termine &amp; Besuche</div>
                 <span class="tile-badge" id="calendarTodayBadge" style="display:none;">0</span>
             </div>
-            <div class="grid-card map-card" data-view="map"><span class="icon">🗺️</span><div class="label">Karte</div><div class="sub">alle Leads auf einer Karte</div></div>
+            <div class="grid-card map-card" data-view="map" data-feature="map"><span class="icon">🗺️</span><div class="label">Karte</div><div class="sub">alle Leads auf einer Karte</div></div>
         </div>
 
         <!-- VIEW: SCAN -->
@@ -382,7 +469,8 @@
 
                     <div class="form-section-title">Kontakt</div>
                     <div class="form-group"><label for="email">E-Mail</label><input type="email" id="email" placeholder="max@firma.de"></div>
-                    <div class="form-group"><label for="phone">Telefon</label><input type="tel" id="phone" placeholder="+49 123 456789"></div>
+                    <div class="form-group"><label for="phone">Telefon (Festnetz)</label><input type="tel" id="phone" placeholder="+49 3681 123456"></div>
+                    <div class="form-group"><label for="mobile">Mobil</label><input type="tel" id="mobile" placeholder="+49 170 1234567"></div>
                     <div class="form-group"><label for="fax">Fax</label><input type="tel" id="fax" placeholder="+49 123 456780"></div>
                     <div class="form-group"><label for="website">Website</label><input type="url" id="website" placeholder="https://firma.de"></div>
                     <div class="form-group full"><label for="linkedin">LinkedIn-Profil</label><input type="url" id="linkedin" placeholder="https://linkedin.com/in/..."></div>
@@ -478,8 +566,8 @@
                 <div class="histogram-empty" id="histogramEmpty">📭 Keine Daten</div>
             </div>
             <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
-                <button class="btn btn-primary" id="exportCsvBtn2">📊 CSV exportieren</button>
-                <button class="btn btn-secondary" id="importCsvBtn2">📥 CSV importieren</button>
+                <button class="btn btn-primary" id="exportCsvBtn2" data-feature="csv_export">📊 CSV exportieren</button>
+                <button class="btn btn-secondary" id="importCsvBtn2" data-feature="csv_import">📥 CSV importieren</button>
                 <input type="file" id="csvFileInput" accept=".csv" style="display:none;">
             </div>
             <div style="margin-top:12px;">
@@ -503,6 +591,23 @@
                     <button class="cal-nav" id="calNextWeek">›</button>
                 </div>
                 <div class="cal-days" id="calDays"></div>
+            </div>
+
+            <!-- Zielverfolgung (Modul gamification) -->
+            <div class="goal-panel" id="goalPanel" data-feature="gamification" style="display:none;">
+                <div class="goal-head">
+                    <div>
+                        <div class="goal-label">Diese Woche</div>
+                        <div class="goal-count"><span id="goalCount">0</span> <span class="goal-of">von <span id="goalTarget">0</span> Terminen</span></div>
+                    </div>
+                    <div class="goal-streak" id="goalStreak" title="Wochen in Folge mit erreichtem Ziel">🔥 0</div>
+                </div>
+                <div class="goal-bar"><div class="goal-bar-fill" id="goalBarFill"></div></div>
+                <div class="goal-foot">
+                    <span id="goalHint">–</span>
+                    <button id="goalEditBtn">Ziel ändern</button>
+                </div>
+                <div class="goal-weeks" id="goalWeeks"></div>
             </div>
 
             <div class="cal-toolbar">
@@ -583,7 +688,8 @@
                         <div class="form-group full"><label>Firma</label><input type="text" id="editCompany"></div>
                         <div class="form-group full"><label>Position</label><input type="text" id="editPosition"></div>
                         <div class="form-group"><label>E-Mail</label><input type="email" id="editEmail"></div>
-                        <div class="form-group"><label>Telefon</label><input type="tel" id="editPhone"></div>
+                        <div class="form-group"><label>Telefon (Festnetz)</label><input type="tel" id="editPhone"></div>
+                        <div class="form-group"><label>Mobil</label><input type="tel" id="editMobile"></div>
                         <div class="form-group"><label>Fax</label><input type="tel" id="editFax"></div>
                         <div class="form-group"><label>Website</label><input type="url" id="editWebsite"></div>
                         <div class="form-group full"><label>LinkedIn</label><input type="url" id="editLinkedin"></div>
@@ -599,6 +705,16 @@
                 </div>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- TERMIN-HISTORIE (Gebäude-Icon auf der Terminkarte) -->
+<div id="histOverlay">
+    <div id="histModal">
+        <button class="close-btn" id="histCloseBtn">×</button>
+        <h3 id="histTitle">Bisherige Termine</h3>
+        <div class="hist-sub" id="histSub"></div>
+        <div id="histContent"></div>
     </div>
 </div>
 
@@ -760,6 +876,29 @@ async function apiRequest(endpoint, options = {}, isRetry = false) {
     });
 
     if (response.status === 401 || response.status === 403) {
+        // WICHTIG: Ein 403 kann zwei Ursachen haben – abgelaufene
+        // Session ODER fehlende Modul-Lizenz. Nur bei Ersterem darf
+        // ausgeloggt werden, sonst fliegt der Nutzer beim Klick auf
+        // ein nicht gebuchtes Modul aus der App.
+        if (response.status === 403) {
+            const clone = response.clone();
+            try {
+                const body = await clone.json();
+                if (body?.code === 'FEATURE_NOT_LICENSED') {
+                    // Lizenzlage hat sich geändert -> Kacheln aktualisieren
+                    if (body.feature) {
+                        activeFeatures.delete(body.feature);
+                        try { localStorage.setItem(FEATURES_KEY, JSON.stringify([...activeFeatures])); } catch {}
+                        applyFeatureVisibility();
+                    }
+                    throw new Error(body.error || 'Dieses Modul ist nicht freigeschaltet.');
+                }
+            } catch (err) {
+                // Weiterwerfen, wenn es unsere Lizenzmeldung war
+                if (err instanceof Error && err.message && !err.message.includes('JSON')) throw err;
+            }
+        }
+
         if (!isRetry) {
             const newToken = await refreshAccessToken();
             if (newToken) return apiRequest(endpoint, options, true);
@@ -810,6 +949,13 @@ function escapeHtml(str) {
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
+// Wählt eine Nummer; entfernt Leerzeichen und Trennzeichen,
+// die manche Telefon-Apps nicht verarbeiten
+function dialNumber(number) {
+    if (!number) return;
+    window.location.href = `tel:${String(number).replace(/[\s()\-\/]/g, '')}`;
+}
+
 function normalizeUrl(url) {
     if (!url) return '';
     const u = String(url).trim();
@@ -862,7 +1008,7 @@ loginForm.addEventListener('submit', async (e) => {
     loginBtn.disabled = true; loginBtn.textContent = '⏳ ...';
     try {
         const data = await login(loginEmail.value, loginPassword.value);
-        showApp(data.user);
+        showApp(data.user, data.features);
     } catch (error) {
         loginError.textContent = error.message || 'Login fehlgeschlagen';
         loginError.style.display = 'block';
@@ -875,11 +1021,70 @@ registerForm.addEventListener('submit', async (e) => {
     registerBtn.disabled = true; registerBtn.textContent = '⏳ ...';
     try {
         const data = await register(registerEmail.value, registerPassword.value, registerFullName.value, registerTenantName.value);
-        showApp(data.user);
+        showApp(data.user, data.features);
     } catch (error) {
         registerError.textContent = error.message || 'Registrierung fehlgeschlagen';
         registerError.style.display = 'block';
     } finally { registerBtn.disabled = false; registerBtn.textContent = 'Registrieren'; }
+});
+
+// ============================================================
+// 6b. LIZENZIERTE MODULE (Feature-Flags)
+// ============================================================
+// Das Frontend blendet nur aus – erzwungen wird die Lizenz im
+// Backend. Ein manipuliertes Frontend bekommt dort ein 403.
+//
+// Neues Modul ergänzen: data-feature="key" an die Kachel schreiben.
+// Diese Logik muss dafür nicht angefasst werden.
+
+const FEATURES_KEY = 'leadcapture_features';
+let activeFeatures = new Set();
+
+function setFeatures(list) {
+    activeFeatures = new Set(Array.isArray(list) ? list : []);
+    try { localStorage.setItem(FEATURES_KEY, JSON.stringify([...activeFeatures])); } catch {}
+    applyFeatureVisibility();
+}
+function loadCachedFeatures() {
+    try {
+        const raw = localStorage.getItem(FEATURES_KEY);
+        activeFeatures = new Set(raw ? JSON.parse(raw) : []);
+    } catch { activeFeatures = new Set(); }
+}
+function hasFeature(key) { return activeFeatures.has(key); }
+
+// Blendet alle Elemente mit data-feature aus, die nicht lizenziert sind
+function applyFeatureVisibility() {
+    document.querySelectorAll('[data-feature]').forEach(el => {
+        el.style.display = hasFeature(el.dataset.feature) ? '' : 'none';
+    });
+}
+
+// Holt die aktuelle Lizenzlage vom Server (z.B. nach Ablauf einer Lizenz)
+async function refreshFeatures() {
+    try {
+        const res = await apiRequest('/features');
+        const result = await res.json();
+        if (result.success) setFeatures(result.active);
+        return result.data || [];
+    } catch (error) {
+        console.error('Feature-Abruf fehlgeschlagen:', error);
+        return [];
+    }
+}
+
+document.getElementById('featuresBtn').addEventListener('click', async () => {
+    const list = await refreshFeatures();
+    if (list.length === 0) { alert('Modul-Übersicht konnte nicht geladen werden.'); return; }
+
+    const fmt = (f) => {
+        const status = f.isCore ? 'immer aktiv'
+            : f.active
+                ? (f.validUntil ? `aktiv bis ${new Date(f.validUntil).toLocaleDateString('de-DE')}` : 'aktiv')
+                : 'nicht freigeschaltet';
+        return `${f.active ? '✅' : '🔒'} ${f.name} – ${status}`;
+    };
+    alert('📦 Ihre Module\n\n' + list.map(fmt).join('\n'));
 });
 
 // ============================================================
@@ -897,7 +1102,15 @@ function showView(viewId) {
     if (viewId === 'calendar') { loadCalendar(); }
 }
 document.querySelectorAll('.grid-card').forEach(card => {
-    card.addEventListener('click', () => showView(card.dataset.view));
+    card.addEventListener('click', () => {
+        // Zweite Absicherung: nicht lizenzierte Ansicht gar nicht erst öffnen
+        const needed = card.dataset.feature;
+        if (needed && !hasFeature(needed)) {
+            alert('🔒 Dieses Modul ist für Ihren Zugang nicht freigeschaltet.');
+            return;
+        }
+        showView(card.dataset.view);
+    });
 });
 document.querySelectorAll('.back').forEach(btn => {
     btn.addEventListener('click', () => showView('main'));
@@ -906,15 +1119,23 @@ document.querySelectorAll('.back').forEach(btn => {
 // ============================================================
 // 8. APP ANZEIGEN / LOGOUT
 // ============================================================
-function showApp(user) {
+function showApp(user, features) {
     loginContainer.style.display = 'none';
     appContainer.style.display = 'block';
     userInfo.style.display = 'flex';
     userName.textContent = user.fullName || user.email;
     tenantName.textContent = user.tenant?.name || 'Unbekannt';
     userBadge.textContent = user.fullName ? user.fullName.charAt(0).toUpperCase() : '👤';
+
+    if (features) setFeatures(features);
+    else applyFeatureVisibility();   // aus dem Cache
+
     showView('main');
     loadLeads();
+
+    // Lizenzlage im Hintergrund gegen den Server abgleichen,
+    // damit abgelaufene Module auch ohne neuen Login verschwinden
+    refreshFeatures();
 }
 function showLogin() {
     loginContainer.style.display = 'block';
@@ -924,8 +1145,14 @@ function showLogin() {
     document.getElementById('registerFormContainer').style.display = 'none';
     loginEmail.value = ''; loginPassword.value = '';
 }
-logoutBtn.addEventListener('click', () => { removeToken(); showLogin(); });
-logoutBtn2.addEventListener('click', () => { removeToken(); showLogin(); });
+function doLogout() {
+    removeToken();
+    try { localStorage.removeItem(FEATURES_KEY); } catch {}
+    activeFeatures = new Set();
+    showLogin();
+}
+logoutBtn.addEventListener('click', doLogout);
+logoutBtn2.addEventListener('click', doLogout);
 
 // ============================================================
 // 9. LEADS: FILTERN, SORTIEREN, ANZEIGEN
@@ -945,7 +1172,7 @@ function filterLeads(leads, term) {
     return leads.filter(lead => {
         const fields = [
             lead.title || '', lead.first_name || '', lead.last_name || '', lead.company || '',
-            lead.position || '', lead.email || '', lead.phone || '', lead.fax || '',
+            lead.position || '', lead.email || '', lead.phone || '', lead.mobile || '', lead.fax || '',
             lead.website || '', lead.linkedin || '', lead.vat_id || '',
             lead.street || '', lead.zip || '', lead.city || '', lead.state || '', lead.country || '',
             lead.visitor_type || '',
@@ -1119,9 +1346,10 @@ function openLeadDetail(leadId) {
 
     const contactParts = [];
     if (lead.email) contactParts.push(`✉️ ${escapeHtml(lead.email)}`);
-    if (lead.phone) contactParts.push(`📞 ${escapeHtml(lead.phone)}`);
-    if (lead.fax) contactParts.push(`📠 ${escapeHtml(lead.fax)}`);
-    document.getElementById('detailContact').innerHTML = contactParts.join(' · ') || '—';
+    if (lead.phone) contactParts.push(`📞 Festnetz: ${escapeHtml(lead.phone)}`);
+    if (lead.mobile) contactParts.push(`📱 Mobil: ${escapeHtml(lead.mobile)}`);
+    if (lead.fax) contactParts.push(`📠 Fax: ${escapeHtml(lead.fax)}`);
+    document.getElementById('detailContact').innerHTML = contactParts.join('<br>') || '—';
 
     const webParts = [];
     if (lead.website) webParts.push(`🌐 <a href="${escapeHtml(normalizeUrl(lead.website))}" target="_blank" rel="noopener">${escapeHtml(lead.website)}</a>`);
@@ -1139,9 +1367,24 @@ function openLeadDetail(leadId) {
     document.getElementById('detailVisitorType').textContent = lead.visitor_type || '—';
     document.getElementById('detailCreated').textContent = lead.created_at ? new Date(lead.created_at).toLocaleString() : '—';
 
+    // Bei zwei Nummern nachfragen, bei einer direkt wählen
     const phoneBtn = document.getElementById('detailPhoneBtn');
-    if (lead.phone) { phoneBtn.style.display = 'block'; phoneBtn.onclick = () => window.location.href = `tel:${lead.phone.replace(/\s/g, '')}`; }
-    else phoneBtn.style.display = 'none';
+    if (lead.phone || lead.mobile) {
+        phoneBtn.style.display = 'block';
+        phoneBtn.textContent = (lead.phone && lead.mobile) ? '📞 Anrufen…' : '📞 Anrufen';
+        phoneBtn.onclick = () => {
+            if (lead.phone && lead.mobile) {
+                const useMobile = confirm(
+                    `Welche Nummer anrufen?\n\n`
+                    + `OK = 📱 Mobil (${lead.mobile})\n`
+                    + `Abbrechen = 📞 Festnetz (${lead.phone})`
+                );
+                dialNumber(useMobile ? lead.mobile : lead.phone);
+            } else {
+                dialNumber(lead.mobile || lead.phone);
+            }
+        };
+    } else phoneBtn.style.display = 'none';
     const emailBtn = document.getElementById('detailEmailBtn');
     if (lead.email) { emailBtn.style.display = 'block'; emailBtn.onclick = () => window.location.href = `mailto:${lead.email}`; }
     else emailBtn.style.display = 'none';
@@ -1161,6 +1404,7 @@ function openLeadDetail(leadId) {
         set('editPosition', lead.position);
         set('editEmail', lead.email);
         set('editPhone', lead.phone);
+        set('editMobile', lead.mobile);
         set('editFax', lead.fax);
         set('editWebsite', lead.website);
         set('editLinkedin', lead.linkedin);
@@ -1184,6 +1428,7 @@ function openLeadDetail(leadId) {
             position: val('editPosition'),
             email: val('editEmail'),
             phone: val('editPhone'),
+            mobile: val('editMobile'),
             fax: val('editFax'),
             website: val('editWebsite'),
             linkedin: val('editLinkedin'),
@@ -1266,6 +1511,7 @@ const fields = {
     position: document.getElementById('position'),
     email: document.getElementById('email'),
     phone: document.getElementById('phone'),
+    mobile: document.getElementById('mobile'),
     fax: document.getElementById('fax'),
     website: document.getElementById('website'),
     linkedin: document.getElementById('linkedin'),
@@ -1287,6 +1533,7 @@ function fillForm(data) {
     fields.position.value = data.position || '';
     fields.email.value = data.email || '';
     fields.phone.value = data.phone || '';
+    fields.mobile.value = data.mobile || '';
     fields.fax.value = data.fax || '';
     fields.website.value = data.website || '';
     fields.linkedin.value = data.linkedin || '';
@@ -1309,6 +1556,7 @@ function collectFormLead() {
         position: fields.position.value.trim(),
         email: fields.email.value.trim(),
         phone: fields.phone.value.trim(),
+        mobile: fields.mobile.value.trim(),
         fax: fields.fax.value.trim(),
         website: fields.website.value.trim(),
         linkedin: fields.linkedin.value.trim(),
@@ -2295,29 +2543,37 @@ function renderAppointments() {
 
         return `
         <div class="appt-card status-${escapeHtml(a.status)}">
-            <div class="appt-company">${escapeHtml(company)}</div>
-            ${contact ? `<div class="appt-contact">${escapeHtml(contact)}</div>` : ''}
-            <div class="appt-sep"></div>
+            ${lead ? `<button class="appt-history-btn" title="Bisherige Termine"
+                onclick="openLeadHistory('${a.lead_id}')">&#127970;</button>` : ''}
 
-            ${a.main_item ? `
-            <div class="appt-field">
-                <div class="lbl">Thema</div>
-                <div class="val">${escapeHtml(a.main_item)}</div>
-            </div>` : ''}
+            <!-- Der obere Bereich oeffnet den Termin zum Bearbeiten.
+                 Die Aktionsleiste darunter liegt bewusst ausserhalb,
+                 damit START/Anrufen/Mailen nicht das Modal oeffnen. -->
+            <div class="appt-body" onclick="openApptModal('${a.id}')">
+                <div class="appt-company">${escapeHtml(company)}</div>
+                ${contact ? `<div class="appt-contact">${escapeHtml(contact)}</div>` : ''}
+                <div class="appt-sep"></div>
 
-            <div class="appt-field">
-                <div class="lbl">Geplant</div>
-                <div class="val">${escapeHtml(planned)}</div>
-            </div>
+                ${a.main_item ? `
+                <div class="appt-field">
+                    <div class="lbl">Thema</div>
+                    <div class="val">${escapeHtml(a.main_item)}</div>
+                </div>` : ''}
 
-            <div class="appt-field appt-times">
-                <div>
-                    <div class="lbl">Startzeit (ist)</div>
-                    <div class="val">${a.actual_start ? fmtTime(a.actual_start) : '–'}</div>
+                <div class="appt-field">
+                    <div class="lbl">Geplant</div>
+                    <div class="val">${escapeHtml(planned)}</div>
                 </div>
-                <div>
-                    <div class="lbl">Endzeit (ist)</div>
-                    <div class="val">${a.actual_end ? fmtTime(a.actual_end) : '–'}</div>
+
+                <div class="appt-field appt-times">
+                    <div>
+                        <div class="lbl">Startzeit (ist)</div>
+                        <div class="val">${a.actual_start ? fmtTime(a.actual_start) : '\u2013'}</div>
+                    </div>
+                    <div>
+                        <div class="lbl">Endzeit (ist)</div>
+                        <div class="val">${a.actual_end ? fmtTime(a.actual_end) : '\u2013'}</div>
+                    </div>
                 </div>
             </div>
 
@@ -2327,10 +2583,9 @@ function renderAppointments() {
                     : running
                         ? `<button class="act-main stop" onclick="stopAppointment('${a.id}')">STOP</button>`
                         : `<button class="act-main" onclick="startAppointment('${a.id}')">START</button>`}
-                <button class="act-icon" ${lead?.phone ? `onclick="window.location.href='tel:${escapeHtml((lead.phone||'').replace(/\s/g,''))}'"` : 'disabled'}>📞</button>
-                <button class="act-icon" ${lead?.email ? `onclick="window.location.href='mailto:${escapeHtml(lead.email)}'"` : 'disabled'}>✉️</button>
-                <button class="act-icon" ${(a.latitude && a.longitude) ? `onclick="openMaps(${a.latitude},${a.longitude})"` : 'disabled'}>📍</button>
-                <button class="act-icon secondary" onclick="openApptModal('${a.id}')">✏️</button>
+                <button class="act-icon" ${(lead?.mobile || lead?.phone) ? `onclick="dialNumber('${escapeHtml(lead.mobile || lead.phone)}')"` : 'disabled'}>${lead?.mobile ? '&#128241;' : '&#128222;'}</button>
+                <button class="act-icon" ${lead?.email ? `onclick="window.location.href='mailto:${escapeHtml(lead.email)}'"` : 'disabled'}>&#9993;</button>
+                <button class="act-icon" ${(a.latitude && a.longitude) ? `onclick="openMaps(${a.latitude},${a.longitude})"` : 'disabled'}>&#128205;</button>
             </div>
         </div>`;
     }).join('');
@@ -2355,6 +2610,15 @@ async function stopAppointment(id) {
     try {
         await apiRequest(`/appointments/${id}/stop`, { method: 'POST' });
         await loadDayAppointments();
+
+        // Zielstand aktualisieren und bei erreichtem Ziel gratulieren
+        const before = goalStats?.currentWeek?.achieved;
+        await loadGoalStats();
+        if (!before && goalStats?.currentWeek?.achieved) {
+            const s = goalStats.streak;
+            alert(`🎉 Wochenziel erreicht!\n\n${goalStats.currentWeek.count} von ${goalStats.goal} Terminen`
+                + (s > 1 ? `\n🔥 ${s} Wochen in Folge` : ''));
+        }
     } catch (error) { alert('❌ Fehler: ' + error.message); }
 }
 
@@ -2364,6 +2628,7 @@ async function loadCalendar() {
     renderWeekStrip();
     await loadDayAppointments();
     updateTodayBadge();
+    loadGoalStats();
 }
 
 async function updateTodayBadge() {
@@ -2601,6 +2866,208 @@ document.getElementById('apptCancelBtn').addEventListener('click', closeApptModa
 apptOverlay.addEventListener('click', (e) => { if (e.target === apptOverlay) closeApptModal(); });
 
 // ============================================================
+// 19d. TERMIN-HISTORIE (Gebäude-Icon)
+// ============================================================
+// Zeigt alle bereits gelaufenen Termine beim selben Lead.
+// "Gelaufen" = Startzeit liegt zurück ODER Status erledigt.
+
+const histOverlay = document.getElementById('histOverlay');
+
+async function openLeadHistory(leadId) {
+    if (!leadId) return;
+
+    document.getElementById('histTitle').textContent = 'Bisherige Termine';
+    document.getElementById('histSub').textContent = '';
+    document.getElementById('histContent').innerHTML =
+        '<div class="cal-empty">⏳ Lade Historie…</div>';
+    histOverlay.classList.add('active');
+
+    try {
+        const res = await apiRequest(`/leads/${leadId}/appointments?scope=past`);
+        const result = await res.json();
+        if (!result.success) throw new Error(result.error);
+
+        // Titel zeigt die FIRMA, nicht den einzelnen Ansprechpartner
+        const lead = result.lead;
+        const heading = result.company
+            || `${lead?.first_name || ''} ${lead?.last_name || ''}`.trim()
+            || 'Ohne Firma';
+        document.getElementById('histTitle').textContent = '🏢 ' + heading;
+
+        renderHistory(result.data || [], {
+            company: result.company,
+            contactCount: result.contactCount || 1
+        });
+    } catch (error) {
+        document.getElementById('histContent').innerHTML =
+            `<div class="cal-empty">❌ ${escapeHtml(error.message)}</div>`;
+    }
+}
+
+function renderHistory(items, meta = {}) {
+    const box = document.getElementById('histContent');
+    const sub = document.getElementById('histSub');
+
+    if (items.length === 0) {
+        sub.textContent = '';
+        box.innerHTML = '<div class="cal-empty">📭 Noch keine vergangenen Termine bei diesem Kontakt.</div>';
+        return;
+    }
+
+    // Kennzahlen: wie oft war man da, wie lange insgesamt
+    const withDuration = items.filter(a => a.actual_start && a.actual_end);
+    const totalMin = withDuration.reduce((sum, a) => sum + minutesBetween(a.actual_start, a.actual_end), 0);
+    const last = items[0];
+
+    const contacts = meta.contactCount || 1;
+    sub.textContent = `${items.length} Termin${items.length === 1 ? '' : 'e'}`
+        + (contacts > 1 ? ` · ${contacts} Ansprechpartner` : '');
+
+    const summaryParts = [`Letzter Besuch: ${new Date(last.starts_at).toLocaleDateString('de-DE')}`];
+    if (withDuration.length > 0) {
+        const h = Math.floor(totalMin / 60), m = totalMin % 60;
+        summaryParts.push(`Erfasste Zeit: ${h > 0 ? h + ' Std ' : ''}${m} Min`);
+    }
+
+    box.innerHTML = `
+        <div class="hist-summary">${summaryParts.map(escapeHtml).join('<br>')}</div>
+        ${items.map(a => {
+            const d = new Date(a.starts_at);
+            const dateStr = d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
+            const ist = (a.actual_start && a.actual_end)
+                ? `${fmtTime(a.actual_start)}–${fmtTime(a.actual_end)} (${minutesBetween(a.actual_start, a.actual_end)}min)`
+                : a.actual_start ? `ab ${fmtTime(a.actual_start)}` : 'keine Ist-Zeit erfasst';
+            const offen = a.status !== 'erledigt';
+            // Bei Firmen-Historie kann jeder Termin einen anderen
+            // Ansprechpartner haben -> immer mit ausweisen
+            const who = a.leads
+                ? `${a.leads.first_name || ''} ${a.leads.last_name || ''}`.trim()
+                : '';
+
+            return `
+            <div class="hist-item ${offen ? 'offen' : ''}" onclick="jumpToAppointment('${a.id}','${a.starts_at}')">
+                <div class="hist-date">${escapeHtml(dateStr)}${offen ? ' · nicht abgeschlossen' : ''}</div>
+                <div class="hist-title">${escapeHtml(a.title)}</div>
+                ${who ? `<div class="hist-who">👤 ${escapeHtml(who)}</div>` : ''}
+                <div class="hist-meta">
+                    Geplant ${fmtTime(a.starts_at)}–${fmtTime(a.ends_at)} · Ist ${escapeHtml(ist)}
+                    ${a.main_item ? ' · ' + escapeHtml(a.main_item) : ''}
+                </div>
+                ${a.description ? `<div class="hist-note">${escapeHtml(a.description)}</div>` : ''}
+            </div>`;
+        }).join('')}
+    `;
+}
+
+// Aus der Historie zum jeweiligen Tag im Kalender springen
+async function jumpToAppointment(id, startsAt) {
+    closeHistory();
+    calSelectedDate = new Date(startsAt);
+    calWeekStart = startOfWeek(calSelectedDate);
+    await loadCalendar();
+    // Termin ist jetzt in calAppointments -> Bearbeiten möglich
+    setTimeout(() => openApptModal(id), 100);
+}
+
+function closeHistory() { histOverlay.classList.remove('active'); }
+
+document.getElementById('histCloseBtn').addEventListener('click', closeHistory);
+histOverlay.addEventListener('click', (e) => { if (e.target === histOverlay) closeHistory(); });
+
+// ============================================================
+// 19e. ZIELVERFOLGUNG (Gamification)
+// ============================================================
+// Gezählt werden ERLEDIGTE Termine der laufenden Woche.
+// Die Serie zählt zusammenhängende Wochen mit erreichtem Ziel;
+// die laufende Woche bricht sie nie ab, sondern verlängert sie
+// nur, sobald das Ziel geschafft ist.
+
+let goalStats = null;
+
+async function loadGoalStats() {
+    const panel = document.getElementById('goalPanel');
+    if (!hasFeature('gamification')) { panel.style.display = 'none'; return; }
+
+    try {
+        const res = await apiRequest('/gamification/stats?weeks=8');
+        const result = await res.json();
+        if (!result.success) throw new Error(result.error);
+
+        goalStats = result.data;
+        renderGoalPanel();
+    } catch (error) {
+        console.error('Zielverfolgung:', error);
+        panel.style.display = 'none';
+    }
+}
+
+function renderGoalPanel() {
+    const panel = document.getElementById('goalPanel');
+    if (!goalStats) { panel.style.display = 'none'; return; }
+
+    const { goal, streak, bestStreak, currentWeek, history } = goalStats;
+
+    // Ziel 0 = Nutzer hat die Zielverfolgung bewusst abgeschaltet.
+    // Panel trotzdem zeigen, damit man es wieder einschalten kann.
+    panel.style.display = 'block';
+
+    document.getElementById('goalCount').textContent = currentWeek.count;
+    document.getElementById('goalTarget').textContent = goal;
+
+    const fill = document.getElementById('goalBarFill');
+    fill.style.width = `${currentWeek.progress}%`;
+    fill.classList.toggle('done', currentWeek.achieved);
+
+    const streakEl = document.getElementById('goalStreak');
+    streakEl.textContent = `🔥 ${streak}`;
+    streakEl.classList.toggle('cold', streak === 0);
+    streakEl.title = `${streak} Woche(n) in Folge · Bestwert: ${bestStreak}`;
+
+    const hint = document.getElementById('goalHint');
+    if (goal === 0) {
+        hint.textContent = 'Zielverfolgung ist aus';
+    } else if (currentWeek.achieved) {
+        hint.textContent = streak > 1
+            ? `Ziel erreicht · ${streak} Wochen in Folge 🎉`
+            : 'Ziel erreicht 🎉';
+    } else {
+        hint.textContent = `Noch ${currentWeek.remaining} Termin${currentWeek.remaining === 1 ? '' : 'e'} bis zum Ziel`;
+    }
+
+    // Wochenverlauf: älteste links, aktuelle rechts
+    document.getElementById('goalWeeks').innerHTML = history.map(w => {
+        const label = w.week.split('KW')[1];
+        return `<div class="gw ${w.achieved ? 'hit' : ''} ${w.isCurrent ? 'current' : ''}"
+                     title="KW ${label}: ${w.count} von ${w.goal}">${label}</div>`;
+    }).join('');
+}
+
+document.getElementById('goalEditBtn').addEventListener('click', async () => {
+    const current = goalStats?.goal ?? 10;
+    const input = prompt(
+        'Wie viele erledigte Termine pro Woche willst du schaffen?\n(0 schaltet die Zielverfolgung aus)',
+        String(current)
+    );
+    if (input === null) return;
+
+    const goal = parseInt(input, 10);
+    if (!Number.isFinite(goal) || goal < 0 || goal > 200) {
+        alert('Bitte eine Zahl zwischen 0 und 200 eingeben.');
+        return;
+    }
+
+    try {
+        const res = await apiRequest('/gamification/goal', {
+            method: 'PUT',
+            body: JSON.stringify({ goal })
+        });
+        const result = await res.json();
+        if (!result.success) throw new Error(result.error);
+        await loadGoalStats();
+    } catch (error) { alert('❌ Fehler: ' + error.message); }
+});
+
+// ============================================================
 // 20. CSV EXPORT / IMPORT
 // ============================================================
 document.getElementById('exportCsvBtn2').addEventListener('click', async () => {
@@ -2657,10 +3124,11 @@ document.getElementById('csvFileInput').addEventListener('change', async (e) => 
 document.addEventListener('DOMContentLoaded', () => {
     loadTemplates();
     loadActiveTemplate();
+    loadCachedFeatures();
     const user = getUser();
     if (user && getToken()) showApp(user);
     else showLogin();
-    console.log('🚀 LeadCapture PWA v9.0.0 geladen (Kalender + Kamera-Ausschnitt)');
+    console.log('🚀 LeadCapture PWA v12.0.0 geladen (Zielverfolgung + Mobilnummer)');
 });
 </script>
 </body>
