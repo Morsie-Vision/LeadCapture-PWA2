@@ -860,9 +860,7 @@
                 <label for="apptDescription">Notizen</label>
                 <textarea id="apptDescription" rows="2"></textarea>
             </div>
-                </select>
             </div>
-        </div>
 
         <div class="error" id="apptError"></div>
 
@@ -2992,8 +2990,10 @@ async function openApptModal(id = null, presetLeadId = null) {
         document.getElementById('apptMainItem').value = a.main_item || '';
         document.getElementById('apptLocation').value = a.location || '';
         document.getElementById('apptDescription').value = a.description || '';
-        document.getElementById('apptReminder').value = String(a.reminder_minutes ?? 30);
-
+        const reminderField = document.getElementById('apptReminder');
+        if (reminderField) {
+            reminderField.value = String(a.reminder_minutes ?? 30);
+        };
         const s = new Date(a.starts_at), e = new Date(a.ends_at);
         document.getElementById('apptDate').value = dateKey(s);
         document.getElementById('apptStart').value = s.toTimeString().slice(0, 5);
@@ -3004,7 +3004,10 @@ async function openApptModal(id = null, presetLeadId = null) {
         document.getElementById('apptMainItem').value = '';
         document.getElementById('apptLocation').value = '';
         document.getElementById('apptDescription').value = '';
-        document.getElementById('apptReminder').value = '30';
+        const reminderField = document.getElementById('apptReminder');
+        if (reminderField) {
+            reminderField.value = '30';
+        };
         document.getElementById('apptDate').value = dateKey(calSelectedDate);
 
         // Standard: nächste volle Stunde, 60 Minuten
@@ -3066,7 +3069,7 @@ document.getElementById('apptSaveBtn').addEventListener('click', async () => {
         mainItem: document.getElementById('apptMainItem').value.trim(),
         location: document.getElementById('apptLocation').value.trim(),
         description: document.getElementById('apptDescription').value.trim(),
-        reminderMinutes: parseInt(document.getElementById('apptReminder').value, 10),
+       reminderMinutes: parseInt(document.getElementById('apptReminder')?.value || '30',10),
         startsAt: startsAt.toISOString(),
         endsAt: endsAt.toISOString()
     };
