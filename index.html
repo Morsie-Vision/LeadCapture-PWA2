@@ -2962,15 +2962,49 @@ document.getElementById('apptLeadClearBtn').addEventListener('click', () => sele
 
 async function openApptModal(id = null, presetLeadId = null) {
     editingApptId = id;
-    document.getElementById('apptError').style.display = 'none';
-    document.getElementById('apptModalTitle').textContent = id ? 'Termin bearbeiten' : 'Neuer Termin';
-    document.getElementById('apptDeleteRow').style.display = id ? 'flex' : 'none';
 
-    if (allLeads.length === 0) await loadLeads();
+    const modalTitle = document.getElementById('apptModalTitle');
+    const deleteRow = document.getElementById('apptDeleteRow');
+    const errorBox = document.getElementById('apptError');
 
-    const applyLead = (leadId) => {
-        const lead = leadId ? allLeads.find(l => l.id === leadId) : null;
-        apptLeadHidden.value = leadId || '';
+    // ------------------------------------------------------------
+    // 1. MODAL SOFORT ÖFFNEN
+    // ------------------------------------------------------------
+    // Ganz wichtig:
+    // Das Modal darf NICHT auf loadLeads() warten.
+    // Dadurch reagiert +Termin sofort.
+    // ------------------------------------------------------------
+    errorBox.style.display = 'none';
+
+    modalTitle.textContent = id
+        ? 'Termin bearbeiten'
+        : 'Neuer Termin';
+
+    deleteRow.style.display = id ? 'flex' : 'none';
+
+    apptOverlay.classList.add('active');
+
+
+    // ------------------------------------------------------------
+    // 2. TERMIN BEARBEITEN
+    // ------------------------------------------------------------
+    if (id) {
+
+        const a = calAppointments.find(x => x.id === id);
+
+        if (!a) {
+            console.error('❌ Termin nicht gefunden:', id);
+            errorBox.textContent = '❌ Termin konnte nicht geladen werden.';
+            errorBox.style.display = 'block';
+            return;
+        }
+
+        // Lead zunächst direkt aus dem Termin übernehmen
+        apptLeadHidden.value = a.lead_id || '';
+
+        // Falls Supabase den Lead mitliefert
+        const lead = a.leads || null;
+
         if (lead) {
             apptLeadSelectedText.textContent = leadLabel(lead);
             apptLeadSelected.style.display = 'flex';
@@ -2980,46 +3014,171 @@ async function openApptModal(id = null, presetLeadId = null) {
             apptLeadSearch.style.display = '';
             apptLeadSearch.value = '';
         }
-    };
 
-    if (id) {
-        const a = calAppointments.find(x => x.id === id);
-        if (!a) return;
-        applyLead(a.lead_id || '');
-        document.getElementById('apptTitle').value = a.title || '';
-        document.getElementById('apptMainItem').value = a.main_item || '';
-        document.getElementById('apptLocation').value = a.location || '';
-        document.getElementById('apptDescription').value = a.description || '';
-        const reminderField = document.getElementById('apptReminder');
-        if (reminderField) {
-            reminderField.value = String(a.reminder_minutes ?? 30);
-        };
-        const s = new Date(a.starts_at), e = new Date(a.ends_at);
-        document.getElementById('apptDate').value = dateKey(s);
-        document.getElementById('apptStart').value = s.toTimeString().slice(0, 5);
-        document.getElementById('apptEnd').value = e.toTimeString().slice(0, 5);
-    } else {
-        applyLead(presetLeadId || '');
-        document.getElementById('apptTitle').value = '';
-        document.getElementById('apptMainItem').value = '';
-        document.getElementById('apptLocation').value = '';
-        document.getElementById('apptDescription').value = '';
-        const reminderField = document.getElementById('apptReminder');
-        if (reminderField) {
-            reminderField.value = '30';
-        };
-        document.getElementById('apptDate').value = dateKey(calSelectedDate);
+        // Felder füllen
+        document.getElementById('apptTitle').value =
+            a.title || '';
 
-        // Standard: nächste volle Stunde, 60 Minuten
-        const start = new Date();
-        start.setMinutes(0, 0, 0);
-        start.setHours(start.getHours() + 1);
-        document.getElementById('apptStart').value = start.toTimeString().slice(0, 5);
-        const end = new Date(start.getTime() + 60 * 60000);
-        document.getElementById('apptEnd').value = end.toTimeString().slice(0, 5);
+        document.getElementById('apptMainItem').value =
+            a.main_item || '';
+
+        document.getElementById('apptLocation').value =
+            a.location || '';
+
+        document.getElementById('apptDescription').value =
+            a.description || '';
+
+        const reminderField =
+            document.getElementById('apptReminder');
+
+        if (reminderField) {
+            reminderField.value =
+                String(a.reminder_minutes ?? 30);
+        }
+
+        const s = new Date(a.starts_at);
+        const e = new Date(a.ends_at);
+
+        document.getElementById('apptDate').value =
+            dateKey(s);
+
+        document.getElementById('apptStart').value =
+            s.toTimeString().slice(0, 5);
+
+        document.getElementById('apptEnd').value =
+            e.toTimeString().slice(0, 5);
+
+
+        // --------------------------------------------------------
+        // Leads im Hintergrund nachladen
+        // --------------------------------------------------------
+        if (allLeads.length === 0) {
+            try {
+                await loadLeads();
+
+                const loadedLead =
+                    allLeads.find(l => l.id === a.lead_id);
+
+                if (loadedLead) {
+                    apptLeadSelectedText.textContent =
+                        leadLabel(loadedLead);
+
+                    apptLeadSelected.style.display = 'flex';
+                    apptLeadSearch.style.display = 'none';
+                }
+
+            } catch (err) {
+                console.warn(
+                    '⚠️ Leads konnten nicht nachgeladen werden:',
+                    err
+                );
+            }
+        }
+
+        return;
     }
 
-    apptOverlay.classList.add('active');
+
+    // ------------------------------------------------------------
+    // 3. NEUER TERMIN
+    // ------------------------------------------------------------
+
+    // Formular zurücksetzen
+    apptLeadHidden.value = '';
+
+    apptLeadSelected.style.display = 'none';
+    apptLeadSearch.style.display = '';
+    apptLeadSearch.value = '';
+
+    document.getElementById('apptTitle').value = '';
+    document.getElementById('apptMainItem').value = '';
+    document.getElementById('apptLocation').value = '';
+    document.getElementById('apptDescription').value = '';
+
+    const reminderField =
+        document.getElementById('apptReminder');
+
+    if (reminderField) {
+        reminderField.value = '30';
+    }
+
+    // Datum = aktuell ausgewählter Kalendertag
+    document.getElementById('apptDate').value =
+        dateKey(calSelectedDate);
+
+    // Standard: nächste volle Stunde
+    const start = new Date();
+
+    start.setMinutes(0, 0, 0);
+    start.setHours(start.getHours() + 1);
+
+    document.getElementById('apptStart').value =
+        start.toTimeString().slice(0, 5);
+
+    const end =
+        new Date(start.getTime() + 60 * 60000);
+
+    document.getElementById('apptEnd').value =
+        end.toTimeString().slice(0, 5);
+
+
+    // ------------------------------------------------------------
+    // 4. Falls aus einem Lead heraus ein Termin angelegt wird
+    // ------------------------------------------------------------
+    if (presetLeadId) {
+
+        apptLeadHidden.value = presetLeadId;
+
+        if (allLeads.length > 0) {
+
+            const lead =
+                allLeads.find(l => l.id === presetLeadId);
+
+            if (lead) {
+                selectApptLead(lead);
+            }
+
+        } else {
+
+            // Leads im Hintergrund laden
+            try {
+
+                await loadLeads();
+
+                const lead =
+                    allLeads.find(l => l.id === presetLeadId);
+
+                if (lead) {
+                    selectApptLead(lead);
+                }
+
+            } catch (err) {
+
+                console.warn(
+                    '⚠️ Lead konnte nicht geladen werden:',
+                    err
+                );
+
+            }
+        }
+
+        return;
+    }
+
+
+    // ------------------------------------------------------------
+    // 5. Leads im Hintergrund laden
+    // ------------------------------------------------------------
+    if (allLeads.length === 0) {
+        try {
+            await loadLeads();
+        } catch (err) {
+            console.warn(
+                '⚠️ Leads konnten nicht geladen werden:',
+                err
+            );
+        }
+    }
 }
 
 function closeApptModal() {
