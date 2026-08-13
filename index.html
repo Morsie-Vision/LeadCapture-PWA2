@@ -51,6 +51,24 @@
         .search-toolbar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
         .search-toolbar select { flex: 1; min-width: 150px; padding: 8px 10px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 13px; background: white; }
         .search-toolbar button { padding: 8px 14px; border: none; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; background: #E8F4FD; color: #0066AA; }
+        .search-mode-toggle { display: flex; gap: 6px; margin-bottom: 10px; }
+        .smt-btn {
+            flex: 1; padding: 8px 0; border: 1.5px solid #e2e8f0; border-radius: 10px;
+            background: #fff; color: #4a5568; font-size: 13px; font-weight: 600; cursor: pointer;
+        }
+        .smt-btn.active { background: #0066AA; border-color: #0066AA; color: #fff; }
+        .company-card {
+            background: #fff; border: 1px solid #eef2f7; border-radius: 12px;
+            padding: 12px; margin-bottom: 8px; cursor: pointer; display: flex;
+            justify-content: space-between; align-items: center; transition: background 0.15s;
+        }
+        .company-card:active { background: #E8F4FD; }
+        .company-card .cc-name { font-size: 15px; font-weight: 600; color: #1a1a1a; }
+        .company-card .cc-loc { font-size: 12px; color: #6b7a8f; margin-top: 2px; }
+        .company-card .cc-count {
+            background: #E8F4FD; color: #0066AA; border-radius: 12px;
+            padding: 3px 10px; font-size: 12px; font-weight: 700; white-space: nowrap;
+        }
         .result-info { font-size: 12px; color: #6b7a8f; margin-bottom: 8px; }
 
         /* ===== LEAD LIST ===== */
@@ -162,6 +180,16 @@
         .map-warn { margin-top: 6px; font-size: 12px; color: #b45309; background: #fef3c7; padding: 8px 10px; border-radius: 8px; text-align: center; display: none; }
         .map-warn button { margin-top: 6px; padding: 6px 14px; border: none; border-radius: 8px; background: #0066AA; color: white; font-size: 12px; cursor: pointer; }
 
+        .leads-filter-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            background: #E8F4FD; border-radius: 10px; padding: 8px 12px;
+            margin-bottom: 8px; font-size: 13px; color: #0066AA; font-weight: 600;
+        }
+        .leads-filter-bar button {
+            background: none; border: none; color: #0066AA; font-size: 12px;
+            font-weight: 600; cursor: pointer;
+        }
+
         /* ===== KALENDER ===== */
         .grid-card { position: relative; }
         .tile-badge {
@@ -248,6 +276,43 @@
             border-radius: 20px; padding: 20px; overflow-y: auto; position: relative;
             box-shadow: 0 20px 60px rgba(0,0,0,0.2);
         }
+        /* Datum/Dauer/Von/Bis liegen in derselben Zeile eines 2-Spalten-Grids.
+           OHNE min-width:0 zwingt der native <select> bzw. <input type="date">
+           seine Content-Breite auf die Grid-Spalte auf -> das erzeugte genau
+           das gemeldete Überlappen/ungleiche Breiten-Problem. */
+        #apptModal .form-grid > .form-group { min-width: 0; }
+        #apptModal .form-grid input,
+        #apptModal .form-grid select {
+            width: 100%;
+            box-sizing: border-box;
+            height: 40px;           /* exakt gleiche Höhe für input[type=date] und select */
+            font-size: 14px;
+            line-height: 1.2;
+        }
+
+        /* Lead-Suche im Termin-Modal */
+        .lead-search-results {
+            position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
+            background: #fff; border: 1.5px solid #e2e8f0; border-radius: 10px;
+            margin-top: 2px; max-height: 220px; overflow-y: auto;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12); display: none;
+        }
+        .lead-search-results.active { display: block; }
+        .lead-search-results .lsr-item { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; }
+        .lead-search-results .lsr-item:last-child { border-bottom: none; }
+        .lead-search-results .lsr-item:active { background: #E8F4FD; }
+        .lead-search-results .lsr-name { font-size: 14px; font-weight: 600; color: #1a1a1a; }
+        .lead-search-results .lsr-sub { font-size: 12px; color: #6b7a8f; }
+        .lead-search-results .lsr-empty { padding: 12px; font-size: 13px; color: #a0aec0; text-align: center; }
+        .lead-search-selected {
+            display: flex; align-items: center; justify-content: space-between;
+            background: #E8F4FD; border-radius: 10px; padding: 8px 12px; margin-top: 6px;
+            font-size: 13px; color: #0066AA; font-weight: 600;
+        }
+        .lead-search-selected button {
+            background: none; border: none; color: #0066AA; font-size: 15px;
+            cursor: pointer; padding: 0 0 0 8px;
+        }
         #apptModal .close-btn {
             position: absolute; top: 12px; right: 16px; background: none; border: none;
             font-size: 24px; cursor: pointer; color: #6b7a8f;
@@ -322,6 +387,20 @@
         .hist-summary {
             background: #E8F4FD; border-radius: 10px; padding: 10px 12px;
             font-size: 13px; color: #1a1a1a; margin-bottom: 12px;
+        }
+        .hist-contacts-label { font-size: 12px; font-weight: 700; color: #6b7a8f; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .hist-contacts { margin-bottom: 14px; }
+        .hist-contact {
+            display: flex; justify-content: space-between; align-items: center;
+            background: #f8fafc; border: 1px solid #eef2f7; border-radius: 10px;
+            padding: 8px 10px; margin-bottom: 6px;
+        }
+        .hist-contact-name { font-size: 13px; font-weight: 600; color: #1a1a1a; }
+        .hist-contact-pos { font-size: 11px; color: #6b7a8f; }
+        .hist-contact-actions { display: flex; gap: 6px; }
+        .hist-contact-actions button {
+            background: #E8F4FD; border: none; border-radius: 8px;
+            width: 30px; height: 30px; font-size: 14px; cursor: pointer;
         }
 
         /* ===== KAMERA (Live-Erfassung) ===== */
@@ -510,6 +589,10 @@
         <!-- VIEW: SEARCH -->
         <div class="view" id="view-search">
             <div class="view-header"><button class="back" data-view="main">←</button><h2>🔍 Suche</h2></div>
+            <div class="search-mode-toggle">
+                <button class="smt-btn active" id="searchModeAll" data-mode="all">🔍 Alle Felder</button>
+                <button class="smt-btn" id="searchModeCompany" data-mode="company">🏢 Nur Unternehmen</button>
+            </div>
             <div class="search-bar">
                 <input type="text" id="searchInput" placeholder="Name, Firma, Ort, E-Mail, Telefon...">
                 <button id="searchBtn">Suchen</button>
@@ -571,8 +654,12 @@
                 <input type="file" id="csvFileInput" accept=".csv" style="display:none;">
             </div>
             <div style="margin-top:12px;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><h3 style="font-size:16px;">📋 Alle Leads</h3><span id="leadsCount">0</span></div>
-                <div id="leadsList"><div class="empty-leads">📭 Noch keine Leads</div></div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><h3 style="font-size:16px;">📋 Leads</h3><span id="leadsCount">0</span></div>
+                <div id="leadsFilterBar" class="leads-filter-bar" style="display:none;">
+                    <span id="leadsFilterLabel"></span>
+                    <button id="leadsFilterClearBtn">✕ Filter aufheben</button>
+                </div>
+                <div id="leadsList"><div class="empty-leads">👆 Klicke auf einen Balken im Histogramm, um die Leads dieses Zeitraums zu sehen</div></div>
             </div>
         </div>
 
@@ -725,9 +812,15 @@
         <h3 id="apptModalTitle" style="font-size:18px; margin-bottom:12px; padding-right:28px;">Neuer Termin</h3>
 
         <div class="form-grid">
-            <div class="form-group full">
-                <label for="apptLead">Verknüpfter Lead</label>
-                <select id="apptLead"><option value="">— kein Lead —</option></select>
+            <div class="form-group full" style="position:relative;">
+                <label for="apptLeadSearch">Verknüpfter Lead</label>
+                <input type="text" id="apptLeadSearch" placeholder="Name oder Firma tippen..." autocomplete="off">
+                <input type="hidden" id="apptLead">
+                <div id="apptLeadResults" class="lead-search-results"></div>
+                <div id="apptLeadSelected" class="lead-search-selected" style="display:none;">
+                    <span id="apptLeadSelectedText"></span>
+                    <button type="button" id="apptLeadClearBtn">✕</button>
+                </div>
             </div>
             <div class="form-group full">
                 <label for="apptTitle">Titel *</label>
@@ -1248,24 +1341,69 @@ function makeHighlighter(searchTerm) {
     };
 }
 
-// Liste in der Statistik-Ansicht
+// Liste in der Statistik-Ansicht.
+// WICHTIG: Standardmäßig wird HIER NICHTS angezeigt - erst ein Klick
+// auf einen Histogramm-Balken blendet die passenden Leads ein.
+// Ist gerade ein Zeitraum-Filter aktiv, wird er nach jedem Neuladen
+// (z.B. nach dem Löschen eines Leads) automatisch neu angewendet.
+let leadsHistogramFilter = null;   // { label, prefix }
+
 function displayLeads(leads) {
-    leadsCount.textContent = `${leads.length} Einträge`;
-    if (leads.length === 0) {
-        leadsList.innerHTML = '<div class="empty-leads">📭 Noch keine Leads</div>';
+    if (leadsHistogramFilter) {
+        applyLeadsHistogramFilter(leads);
         return;
     }
-    const highlight = makeHighlighter('');
-    const sorted = sortLeads(leads, 'date_desc');
-    leadsList.innerHTML = sorted.map(lead => leadCardHtml(lead, highlight)).join('');
+    leadsCount.textContent = `${leads.length} Einträge insgesamt`;
+    document.getElementById('leadsFilterBar').style.display = 'none';
+    leadsList.innerHTML = '<div class="empty-leads">👆 Klicke auf einen Balken im Histogramm, um die Leads dieses Zeitraums zu sehen</div>';
 }
+
+function applyLeadsHistogramFilter(leads) {
+    const { label, prefix } = leadsHistogramFilter;
+    const filtered = leads.filter(l => (l.created_at || '').startsWith(prefix));
+
+    document.getElementById('leadsFilterBar').style.display = 'flex';
+    document.getElementById('leadsFilterLabel').textContent = `📅 ${label}: ${filtered.length} Lead${filtered.length === 1 ? '' : 's'}`;
+    leadsCount.textContent = `${filtered.length} / ${leads.length}`;
+
+    const highlight = makeHighlighter('');
+    const sorted = sortLeads(filtered, 'date_desc');
+    leadsList.innerHTML = sorted.length === 0
+        ? '<div class="empty-leads">📭 Keine Leads in diesem Zeitraum</div>'
+        : sorted.map(lead => leadCardHtml(lead, highlight)).join('');
+}
+
+function showLeadsForBar(item, view) {
+    const labels = {
+        day:   new Date(item.date + 'T12:00:00').toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+        month: new Date(item.date + '-01T12:00:00').toLocaleDateString('de-DE', { month: 'long', year: 'numeric' }),
+        year:  item.date
+    };
+    // item.date ist je nach Ansicht "YYYY-MM-DD", "YYYY-MM" oder "YYYY" -
+    // das ist zugleich der ISO-Präfix, mit dem sich created_at filtern lässt.
+    leadsHistogramFilter = { label: labels[view] || item.date, prefix: item.date };
+    applyLeadsHistogramFilter(allLeads);
+    document.getElementById('leadsList').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+document.getElementById('leadsFilterClearBtn').addEventListener('click', () => {
+    leadsHistogramFilter = null;
+    displayLeads(allLeads);
+});
 
 // Ergebnisliste in der Such-Ansicht (mit Sortierung)
 let currentSearchTerm = '';
 let searchActive = false;
+let searchMode = 'all';   // 'all' | 'company'
 
 function renderSearchResults() {
     if (!searchActive) return;
+
+    if (searchMode === 'company') {
+        renderCompanyResults();
+        return;
+    }
+
     const term = currentSearchTerm;
     const filtered = term ? filterLeads(allLeads, term) : allLeads;
     const sorted = sortLeads(filtered, sortSelect.value);
@@ -1279,6 +1417,69 @@ function renderSearchResults() {
         ? `<div class="empty-leads">🔍 Keine Leads gefunden</div>`
         : sorted.map(lead => leadCardHtml(lead, highlight)).join('');
 }
+
+// Fasst Leads zu eindeutigen Firmen zusammen (Groß-/Kleinschreibung
+// wird ignoriert, damit "Muster GmbH" und "muster gmbh" eine Firma sind)
+function buildCompanyList(term) {
+    const t = term.trim().toLowerCase();
+    const byKey = new Map();
+
+    allLeads.forEach(l => {
+        const name = (l.company || '').trim();
+        if (!name) return;
+        if (t && !name.toLowerCase().includes(t)) return;
+
+        const key = name.toLowerCase();
+        if (!byKey.has(key)) {
+            byKey.set(key, { name, city: l.city || '', country: l.country || '', count: 0 });
+        }
+        byKey.get(key).count++;
+    });
+
+    return [...byKey.values()].sort((a, b) => collator.compare(a.name, b.name));
+}
+
+function renderCompanyResults() {
+    const companies = buildCompanyList(currentSearchTerm);
+
+    searchResultInfo.textContent = currentSearchTerm
+        ? `${companies.length} Unternehmen für „${currentSearchTerm}"`
+        : `${companies.length} Unternehmen insgesamt`;
+
+    searchResults.innerHTML = companies.length === 0
+        ? `<div class="empty-leads">🔍 Keine Unternehmen gefunden</div>`
+        : companies.map((c, i) => `
+            <div class="company-card" data-company-idx="${i}">
+                <div>
+                    <div class="cc-name">${escapeHtml(c.name)}</div>
+                    ${c.city ? `<div class="cc-loc">📍 ${escapeHtml(c.city)}${c.country ? ', ' + escapeHtml(c.country) : ''}</div>` : ''}
+                </div>
+                <div class="cc-count">${c.count} Kontakt${c.count === 1 ? '' : 'e'}</div>
+            </div>
+        `).join('');
+
+    // data-Attribut statt Name direkt in onclick – ein Apostroph im
+    // Firmennamen (z.B. "O'Brien GmbH") würde sonst das Attribut brechen.
+    searchResults.querySelectorAll('.company-card').forEach((el, i) => {
+        el.addEventListener('click', () => openCompanyOverview(companies[i].name));
+    });
+}
+
+document.querySelectorAll('.smt-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.smt-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        searchMode = btn.dataset.mode;
+
+        // Sortierung ergibt im Firmenmodus keinen Sinn (immer A-Z)
+        sortSelect.style.display = searchMode === 'company' ? 'none' : '';
+        searchInput.placeholder = searchMode === 'company'
+            ? 'Firmenname...'
+            : 'Name, Firma, Ort, E-Mail, Telefon...';
+
+        renderSearchResults();
+    });
+});
 
 async function loadLeads() {
     try {
@@ -2264,7 +2465,7 @@ function renderHistogram(data, view) {
         l.className = 'date-label'; l.textContent = item.date;
         bar.appendChild(l);
         bar.title = `${item.date}: ${item.count} Leads`;
-        bar.addEventListener('click', () => alert(`${item.date}: ${item.count} Leads`));
+        bar.addEventListener('click', () => showLeadsForBar(item, view));
         histogram.appendChild(bar);
     });
 }
@@ -2578,11 +2779,16 @@ function renderAppointments() {
             </div>
 
             <div class="appt-actions">
+                <!-- START/STOP-Button auf Wunsch auskommentiert (nicht gelöscht).
+                     Gamification zählt einfach ab dem ANLEGEN eines Termins,
+                     der Status spielt dafür keine Rolle mehr. Zum Reaktivieren
+                     des manuellen Buttons den Block unten wieder einkommentieren.
                 ${done
                     ? `<button class="act-main" disabled>ERLEDIGT</button>`
                     : running
                         ? `<button class="act-main stop" onclick="stopAppointment('${a.id}')">STOP</button>`
                         : `<button class="act-main" onclick="startAppointment('${a.id}')">START</button>`}
+                -->
                 <button class="act-icon" ${(lead?.mobile || lead?.phone) ? `onclick="dialNumber('${escapeHtml(lead.mobile || lead.phone)}')"` : 'disabled'}>${lead?.mobile ? '&#128241;' : '&#128222;'}</button>
                 <button class="act-icon" ${lead?.email ? `onclick="window.location.href='mailto:${escapeHtml(lead.email)}'"` : 'disabled'}>&#9993;</button>
                 <button class="act-icon" ${(a.latitude && a.longitude) ? `onclick="openMaps(${a.latitude},${a.longitude})"` : 'disabled'}>&#128205;</button>
@@ -2610,15 +2816,6 @@ async function stopAppointment(id) {
     try {
         await apiRequest(`/appointments/${id}/stop`, { method: 'POST' });
         await loadDayAppointments();
-
-        // Zielstand aktualisieren und bei erreichtem Ziel gratulieren
-        const before = goalStats?.currentWeek?.achieved;
-        await loadGoalStats();
-        if (!before && goalStats?.currentWeek?.achieved) {
-            const s = goalStats.streak;
-            alert(`🎉 Wochenziel erreicht!\n\n${goalStats.currentWeek.count} von ${goalStats.goal} Terminen`
-                + (s > 1 ? `\n🔥 ${s} Wochen in Folge` : ''));
-        }
     } catch (error) { alert('❌ Fehler: ' + error.message); }
 }
 
@@ -2629,6 +2826,7 @@ async function loadCalendar() {
     await loadDayAppointments();
     updateTodayBadge();
     loadGoalStats();
+    setupPushReminders();
 }
 
 async function updateTodayBadge() {
@@ -2694,24 +2892,82 @@ document.getElementById('calSubscribeBtn').addEventListener('click', async () =>
 // 19c. TERMIN ANLEGEN / BEARBEITEN
 // ============================================================
 const apptOverlay = document.getElementById('apptOverlay');
+const apptLeadSearch = document.getElementById('apptLeadSearch');
+const apptLeadHidden = document.getElementById('apptLead');
+const apptLeadResults = document.getElementById('apptLeadResults');
+const apptLeadSelected = document.getElementById('apptLeadSelected');
+const apptLeadSelectedText = document.getElementById('apptLeadSelectedText');
 
-function fillLeadSelect(selectedId = '') {
-    const sel = document.getElementById('apptLead');
-    sel.innerHTML = '<option value="">— kein Lead —</option>';
-    [...allLeads]
-        .sort((a, b) => collator.compare(
-            (a.company || `${a.last_name || ''}`).trim(),
-            (b.company || `${b.last_name || ''}`).trim()))
-        .forEach(l => {
-            const name = `${l.first_name || ''} ${l.last_name || ''}`.trim();
-            const label = [l.company, name].filter(Boolean).join(' · ') || 'Unbenannt';
-            const opt = document.createElement('option');
-            opt.value = l.id;
-            opt.textContent = label;
-            if (l.id === selectedId) opt.selected = true;
-            sel.appendChild(opt);
-        });
+function leadLabel(l) {
+    const name = `${l.first_name || ''} ${l.last_name || ''}`.trim();
+    return [l.company, name].filter(Boolean).join(' · ') || 'Unbenannt';
 }
+
+function selectApptLead(lead) {
+    apptLeadHidden.value = lead ? lead.id : '';
+    if (lead) {
+        apptLeadSelectedText.textContent = leadLabel(lead);
+        apptLeadSelected.style.display = 'flex';
+        apptLeadSearch.style.display = 'none';
+        prefillFromLead(lead);
+    } else {
+        apptLeadSelected.style.display = 'none';
+        apptLeadSearch.style.display = '';
+        apptLeadSearch.value = '';
+    }
+    apptLeadResults.classList.remove('active');
+}
+
+function prefillFromLead(lead) {
+    const locField = document.getElementById('apptLocation');
+    const titleField = document.getElementById('apptTitle');
+    if (!locField.value.trim()) {
+        locField.value = [lead.company, lead.street, [lead.zip, lead.city].filter(Boolean).join(' ')]
+            .filter(Boolean).join(', ');
+    }
+    if (!titleField.value.trim()) {
+        const name = `${lead.first_name || ''} ${lead.last_name || ''}`.trim();
+        titleField.value = `Besuch ${lead.company || name}`.trim();
+    }
+}
+
+function renderLeadSearchResults(term) {
+    const t = term.trim().toLowerCase();
+    if (t.length < 2) { apptLeadResults.classList.remove('active'); return; }
+
+    const matches = allLeads.filter(l => {
+        const hay = `${l.company || ''} ${l.first_name || ''} ${l.last_name || ''}`.toLowerCase();
+        return hay.includes(t);
+    }).slice(0, 20);
+
+    apptLeadResults.innerHTML = matches.length === 0
+        ? '<div class="lsr-empty">Keine Treffer</div>'
+        : matches.map(l => {
+            const name = `${l.first_name || ''} ${l.last_name || ''}`.trim();
+            return `<div class="lsr-item" data-id="${l.id}">
+                <div class="lsr-name">${escapeHtml(l.company || name || 'Unbenannt')}</div>
+                ${l.company && name ? `<div class="lsr-sub">${escapeHtml(name)}</div>` : ''}
+            </div>`;
+        }).join('');
+
+    apptLeadResults.querySelectorAll('.lsr-item[data-id]').forEach(el => {
+        el.addEventListener('click', () => {
+            const lead = allLeads.find(l => l.id === el.dataset.id);
+            if (lead) selectApptLead(lead);
+        });
+    });
+
+    apptLeadResults.classList.add('active');
+}
+
+apptLeadSearch.addEventListener('input', (e) => renderLeadSearchResults(e.target.value));
+apptLeadSearch.addEventListener('focus', (e) => renderLeadSearchResults(e.target.value));
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('#apptLeadSearch') && !e.target.closest('#apptLeadResults')) {
+        apptLeadResults.classList.remove('active');
+    }
+});
+document.getElementById('apptLeadClearBtn').addEventListener('click', () => selectApptLead(null));
 
 async function openApptModal(id = null, presetLeadId = null) {
     editingApptId = id;
@@ -2721,10 +2977,24 @@ async function openApptModal(id = null, presetLeadId = null) {
 
     if (allLeads.length === 0) await loadLeads();
 
+    const applyLead = (leadId) => {
+        const lead = leadId ? allLeads.find(l => l.id === leadId) : null;
+        apptLeadHidden.value = leadId || '';
+        if (lead) {
+            apptLeadSelectedText.textContent = leadLabel(lead);
+            apptLeadSelected.style.display = 'flex';
+            apptLeadSearch.style.display = 'none';
+        } else {
+            apptLeadSelected.style.display = 'none';
+            apptLeadSearch.style.display = '';
+            apptLeadSearch.value = '';
+        }
+    };
+
     if (id) {
         const a = calAppointments.find(x => x.id === id);
         if (!a) return;
-        fillLeadSelect(a.lead_id || '');
+        applyLead(a.lead_id || '');
         document.getElementById('apptTitle').value = a.title || '';
         document.getElementById('apptMainItem').value = a.main_item || '';
         document.getElementById('apptLocation').value = a.location || '';
@@ -2736,7 +3006,7 @@ async function openApptModal(id = null, presetLeadId = null) {
         document.getElementById('apptStart').value = s.toTimeString().slice(0, 5);
         document.getElementById('apptEnd').value = e.toTimeString().slice(0, 5);
     } else {
-        fillLeadSelect(presetLeadId || '');
+        applyLead(presetLeadId || '');
         document.getElementById('apptTitle').value = '';
         document.getElementById('apptMainItem').value = '';
         document.getElementById('apptLocation').value = '';
@@ -2769,23 +3039,6 @@ document.getElementById('apptDuration').addEventListener('change', (e) => {
     const end = new Date();
     end.setHours(h, m + parseInt(e.target.value, 10), 0, 0);
     document.getElementById('apptEnd').value = end.toTimeString().slice(0, 5);
-});
-
-// Lead-Auswahl füllt den Ort vor, falls noch leer
-document.getElementById('apptLead').addEventListener('change', (e) => {
-    const lead = allLeads.find(l => l.id === e.target.value);
-    const locField = document.getElementById('apptLocation');
-    const titleField = document.getElementById('apptTitle');
-    if (!lead) return;
-
-    if (!locField.value.trim()) {
-        locField.value = [lead.company, lead.street, [lead.zip, lead.city].filter(Boolean).join(' ')]
-            .filter(Boolean).join(', ');
-    }
-    if (!titleField.value.trim()) {
-        const name = `${lead.first_name || ''} ${lead.last_name || ''}`.trim();
-        titleField.value = `Besuch ${lead.company || name}`.trim();
-    }
 });
 
 document.getElementById('apptSaveBtn').addEventListener('click', async () => {
@@ -2840,8 +3093,24 @@ document.getElementById('apptSaveBtn').addEventListener('click', async () => {
         closeApptModal();
         // Zum Tag des Termins springen, falls verschoben
         calSelectedDate = new Date(startsAt);
+        const wasNew = !editingApptId;
+        closeApptModal();
+        // Zum Tag des Termins springen, falls verschoben
+        calSelectedDate = new Date(startsAt);
         calWeekStart = startOfWeek(calSelectedDate);
         await loadCalendar();
+
+        // Gamification zählt ab dem ANLEGEN - hier prüfen, nicht bei
+        // Start/Stop, da dieser Button auf Wunsch entfernt wurde.
+        if (wasNew && hasFeature('gamification')) {
+            const before = goalStats?.currentWeek?.achieved;
+            await loadGoalStats();
+            if (!before && goalStats?.currentWeek?.achieved) {
+                const s = goalStats.streak;
+                alert(`🎉 Wochenziel erreicht!\n\n${goalStats.currentWeek.count} von ${goalStats.goal} Terminen`
+                    + (s > 1 ? `\n🔥 ${s} Wochen in Folge` : ''));
+            }
+        }
     } catch (error) {
         errBox.textContent = '❌ ' + error.message;
         errBox.style.display = 'block';
@@ -2873,21 +3142,23 @@ apptOverlay.addEventListener('click', (e) => { if (e.target === apptOverlay) clo
 
 const histOverlay = document.getElementById('histOverlay');
 
-async function openLeadHistory(leadId) {
-    if (!leadId) return;
+// Gemeinsamer Lader für BEIDE Einstiege:
+//   - 🏢-Icon auf der Terminkarte -> scope 'past' (nur Gelaufenes)
+//   - Firma in der Suche anklicken -> scope 'all' (Kontakte + alle Aktivitäten)
+async function loadCompanyOverview(anchorLeadId, scope) {
+    if (!anchorLeadId) return;
 
-    document.getElementById('histTitle').textContent = 'Bisherige Termine';
+    document.getElementById('histTitle').textContent = 'Wird geladen…';
     document.getElementById('histSub').textContent = '';
     document.getElementById('histContent').innerHTML =
-        '<div class="cal-empty">⏳ Lade Historie…</div>';
+        '<div class="cal-empty">⏳ Lade Übersicht…</div>';
     histOverlay.classList.add('active');
 
     try {
-        const res = await apiRequest(`/leads/${leadId}/appointments?scope=past`);
+        const res = await apiRequest(`/leads/${anchorLeadId}/appointments?scope=${scope}`);
         const result = await res.json();
         if (!result.success) throw new Error(result.error);
 
-        // Titel zeigt die FIRMA, nicht den einzelnen Ansprechpartner
         const lead = result.lead;
         const heading = result.company
             || `${lead?.first_name || ''} ${lead?.last_name || ''}`.trim()
@@ -2896,7 +3167,9 @@ async function openLeadHistory(leadId) {
 
         renderHistory(result.data || [], {
             company: result.company,
-            contactCount: result.contactCount || 1
+            contactCount: result.contactCount || 1,
+            contacts: result.contacts || [],
+            scope
         });
     } catch (error) {
         document.getElementById('histContent').innerHTML =
@@ -2904,13 +3177,52 @@ async function openLeadHistory(leadId) {
     }
 }
 
+// Einstieg 1: Gebäude-Icon auf der Terminkarte (nur gelaufene Termine)
+function openLeadHistory(leadId) {
+    return loadCompanyOverview(leadId, 'past');
+}
+
+// Einstieg 2: Firma in der Suche anklicken (Kontakte + alle Aktivitäten)
+function openCompanyOverview(companyName) {
+    const anchor = allLeads.find(l => (l.company || '').trim().toLowerCase() === companyName.trim().toLowerCase());
+    if (!anchor) return;
+    return loadCompanyOverview(anchor.id, 'all');
+}
+
 function renderHistory(items, meta = {}) {
     const box = document.getElementById('histContent');
     const sub = document.getElementById('histSub');
 
+    const contacts = meta.contacts || [];
+    const contactCount = meta.contactCount || contacts.length || 1;
+
+    // Kontakte-Block: nur bei der "alle Aktivitäten"-Ansicht relevant,
+    // beim 🏢-Icon (nur Vergangenes) würde er nur Rauschen hinzufügen.
+    const contactsHtml = (meta.scope === 'all' && contacts.length > 0) ? `
+        <div class="hist-contacts-label">👥 ${contacts.length} Kontakt${contacts.length === 1 ? '' : 'e'}</div>
+        <div class="hist-contacts">
+            ${contacts.map(c => {
+                const name = `${c.title ? c.title + ' ' : ''}${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Unbenannt';
+                const num = c.mobile || c.phone;
+                return `
+                <div class="hist-contact">
+                    <div>
+                        <div class="hist-contact-name">${escapeHtml(name)}</div>
+                        ${c.position ? `<div class="hist-contact-pos">${escapeHtml(c.position)}</div>` : ''}
+                    </div>
+                    <div class="hist-contact-actions">
+                        ${num ? `<button onclick="dialNumber('${escapeHtml(num)}')">${c.mobile ? '📱' : '📞'}</button>` : ''}
+                        ${c.email ? `<button onclick="window.location.href='mailto:${escapeHtml(c.email)}'">✉️</button>` : ''}
+                    </div>
+                </div>`;
+            }).join('')}
+        </div>
+    ` : '';
+
     if (items.length === 0) {
         sub.textContent = '';
-        box.innerHTML = '<div class="cal-empty">📭 Noch keine vergangenen Termine bei diesem Kontakt.</div>';
+        box.innerHTML = contactsHtml
+            + `<div class="cal-empty">📭 ${meta.scope === 'all' ? 'Noch keine Termine bei dieser Firma.' : 'Noch keine vergangenen Termine bei diesem Kontakt.'}</div>`;
         return;
     }
 
@@ -2919,17 +3231,16 @@ function renderHistory(items, meta = {}) {
     const totalMin = withDuration.reduce((sum, a) => sum + minutesBetween(a.actual_start, a.actual_end), 0);
     const last = items[0];
 
-    const contacts = meta.contactCount || 1;
     sub.textContent = `${items.length} Termin${items.length === 1 ? '' : 'e'}`
-        + (contacts > 1 ? ` · ${contacts} Ansprechpartner` : '');
+        + (contactCount > 1 ? ` · ${contactCount} Ansprechpartner` : '');
 
-    const summaryParts = [`Letzter Besuch: ${new Date(last.starts_at).toLocaleDateString('de-DE')}`];
+    const summaryParts = [`Letzter Termin: ${new Date(last.starts_at).toLocaleDateString('de-DE')}`];
     if (withDuration.length > 0) {
         const h = Math.floor(totalMin / 60), m = totalMin % 60;
         summaryParts.push(`Erfasste Zeit: ${h > 0 ? h + ' Std ' : ''}${m} Min`);
     }
 
-    box.innerHTML = `
+    box.innerHTML = contactsHtml + `
         <div class="hist-summary">${summaryParts.map(escapeHtml).join('<br>')}</div>
         ${items.map(a => {
             const d = new Date(a.starts_at);
@@ -2973,6 +3284,66 @@ function closeHistory() { histOverlay.classList.remove('active'); }
 
 document.getElementById('histCloseBtn').addEventListener('click', closeHistory);
 histOverlay.addEventListener('click', (e) => { if (e.target === histOverlay) closeHistory(); });
+
+// ============================================================
+// 19f. PUSH-ERINNERUNGEN
+// ============================================================
+// Voraussetzung auf iOS: die PWA muss über "Zum Home-Bildschirm"
+// installiert sein - im normalen Safari-Tab blockiert iOS Push
+// komplett, unabhängig vom Code hier.
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = atob(base64);
+    return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+function isStandalonePwa() {
+    return window.matchMedia('(display-mode: standalone)').matches
+        || window.navigator.standalone === true;
+}
+
+async function setupPushReminders() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    if (!hasFeature('calendar')) return;
+
+    try {
+        const reg = await navigator.serviceWorker.register('/sw.js');
+
+        const existing = await reg.pushManager.getSubscription();
+        if (existing) return;   // schon abonniert
+
+        if (Notification.permission === 'denied') return;
+
+        // iOS erlaubt Push NUR in der installierten (Home-Bildschirm) PWA.
+        // Im normalen Browser-Tab macht ein Berechtigungsdialog dort keinen
+        // Sinn und würde nur verwirren.
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        if (isIOS && !isStandalonePwa()) return;
+
+        const keyRes = await apiRequest('/push/public-key');
+        const keyResult = await keyRes.json();
+        if (!keyResult.success) return;   // Push serverseitig nicht konfiguriert
+
+        const permission = Notification.permission === 'granted'
+            ? 'granted'
+            : await Notification.requestPermission();
+        if (permission !== 'granted') return;
+
+        const subscription = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(keyResult.key)
+        });
+
+        await apiRequest('/push/subscribe', {
+            method: 'POST',
+            body: JSON.stringify({ subscription: subscription.toJSON() })
+        });
+    } catch (error) {
+        console.warn('Push-Einrichtung übersprungen:', error.message);
+    }
+}
 
 // ============================================================
 // 19e. ZIELVERFOLGUNG (Gamification)
@@ -3128,7 +3499,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = getUser();
     if (user && getToken()) showApp(user);
     else showLogin();
-    console.log('🚀 LeadCapture PWA v12.0.0 geladen (Zielverfolgung + Mobilnummer)');
+    console.log('🚀 LeadCapture PWA v13.0.0 geladen (Push, Firmensuche, Freitext-Lead-Suche)');
 });
 </script>
 </body>
