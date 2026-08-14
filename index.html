@@ -11,12 +11,28 @@
     <style>
         /* ===== RESET & GRUNDLAGEN ===== */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
-        body { background: #f5f7fa; min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; padding: 12px; }
-        .container { background: white; max-width: 480px; width: 100%; border-radius: 24px; padding: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+        html { -webkit-text-size-adjust: 100%; }
+        body {
+            background: #f5f7fa;
+            min-height: 100dvh;              /* dvh: beruecksichtigt ein-/ausblendende Browserleisten */
+            display: flex; justify-content: center; align-items: flex-start;
+            padding: clamp(0px, 2vw, 16px);
+            padding-bottom: max(env(safe-area-inset-bottom), 12px);
+            padding-left:  max(env(safe-area-inset-left), clamp(0px, 2vw, 16px));
+            padding-right: max(env(safe-area-inset-right), clamp(0px, 2vw, 16px));
+        }
+        .container {
+            background: white;
+            width: 100%;
+            max-width: 520px;
+            border-radius: clamp(0px, 4vw, 24px);
+            padding: clamp(12px, 3.5vw, 24px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+        }
 
         /* ===== HEADER ===== */
         .header { display: flex; justify-content: space-between; align-items: center; padding: 8px 0 16px 0; border-bottom: 1px solid #eef2f7; }
-        .header h1 { font-size: 22px; font-weight: 700; color: #1a1a1a; }
+        .header h1 { font-size: clamp(18px, 5.5vw, 24px); font-weight: 700; color: #1a1a1a; }
         .header h1 span { color: #0066AA; }
         .header-actions { display: flex; gap: 12px; align-items: center; }
         .user-badge { background: #E8F4FD; color: #0066AA; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
@@ -28,13 +44,27 @@
         .btn-logout { background: #0066AA; color: white; border: none; border-radius: 8px; padding: 4px 14px; font-size: 12px; cursor: pointer; }
 
         /* ===== KACHEL-GRID ===== */
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
-        .grid-card { background: white; border-radius: 16px; padding: 16px; text-align: center; box-shadow: 0 2px 8px rgba(0,102,170,0.08); border: 1px solid #eef2f7; cursor: pointer; transition: all 0.2s; }
+        /* auto-fit + minmax: 2 Spalten auf dem Handy, 3-4 auf Tablet/Desktop,
+           1 Spalte auf sehr schmalen Geraeten - ohne feste Breakpoints */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
+            gap: clamp(8px, 2.5vw, 14px);
+            margin: 16px 0;
+        }
+        .grid-card {
+            background: white; border-radius: 16px;
+            padding: clamp(12px, 3vw, 18px);
+            text-align: center; box-shadow: 0 2px 8px rgba(0,102,170,0.08);
+            border: 1px solid #eef2f7; cursor: pointer; transition: all 0.2s;
+            display: flex; flex-direction: column; justify-content: center;
+            min-height: 96px;
+        }
         .grid-card:active { transform: scale(0.96); background: #E8F4FD; }
-        .grid-card .icon { font-size: 32px; margin-bottom: 6px; display: block; }
-        .grid-card .label { font-size: 13px; font-weight: 600; color: #1a1a1a; }
-        .grid-card .sub { font-size: 11px; color: #6b7a8f; margin-top: 2px; }
-        /*.grid-card.map-card { grid-column: span 2; background: #E8F4FD; border-color: #0066AA; }
+        .grid-card .icon { font-size: clamp(24px, 7vw, 34px); margin-bottom: 4px; display: block; line-height: 1; }
+        .grid-card .label { font-size: clamp(12px, 3.4vw, 14px); font-weight: 600; color: #1a1a1a; }
+        .grid-card .sub { font-size: clamp(10px, 2.8vw, 12px); color: #6b7a8f; margin-top: 2px; }
+        .grid-card.map-card { background: #E8F4FD; border-color: #0066AA; }
 
         /* ===== VIEWS ===== */
         .view { display: none; margin-top: 12px; }
@@ -49,12 +79,14 @@
         .search-bar input:focus { border-color: #0066AA; }
         .search-bar button { background: #0066AA; color: white; border: none; border-radius: 12px; padding: 10px 16px; font-weight: 600; cursor: pointer; }
         .search-toolbar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
-        .search-toolbar select { flex: 1; min-width: 150px; padding: 8px 10px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 13px; background: white; }
+        .search-toolbar select { flex: 1 1 150px; min-width: 0; padding: 10px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 14px; background: white; }
         .search-toolbar button { padding: 8px 14px; border: none; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; background: #E8F4FD; color: #0066AA; }
         .search-mode-toggle { display: flex; gap: 6px; margin-bottom: 10px; }
         .smt-btn {
-            flex: 1; padding: 8px 0; border: 1.5px solid #e2e8f0; border-radius: 10px;
-            background: #fff; color: #4a5568; font-size: 13px; font-weight: 600; cursor: pointer;
+            flex: 1 1 0; min-width: 0; padding: 10px 4px;
+            border: 1.5px solid #e2e8f0; border-radius: 10px;
+            background: #fff; color: #4a5568;
+            font-size: clamp(12px, 3.2vw, 14px); font-weight: 600; cursor: pointer;
         }
         .smt-btn.active { background: #0066AA; border-color: #0066AA; color: #fff; }
         .company-card {
@@ -88,7 +120,7 @@
         /* ===== LEAD DETAIL MODAL ===== */
         #leadDetailOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: none; justify-content: center; align-items: center; padding: 16px; }
         #leadDetailOverlay.active { display: flex; }
-        #leadDetailModal { background: white; max-width: 440px; width: 100%; max-height: 90vh; border-radius: 20px; padding: 20px; overflow-y: auto; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+        #leadDetailModal { background: white; max-width: 480px; width: 100%; max-height: 90dvh; border-radius: 20px; padding: clamp(16px, 4vw, 22px); overflow-y: auto; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
         #leadDetailModal .close-btn { position: absolute; top: 12px; right: 16px; background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7a8f; }
         #leadDetailModal .detail-name { font-size: 22px; font-weight: 700; color: #1a1a1a; padding-right: 28px; }
         #leadDetailModal .detail-company { font-size: 16px; color: #0066AA; font-weight: 500; margin-bottom: 4px; }
@@ -147,7 +179,7 @@
         .histogram-controls { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
         .histogram-controls select { padding: 6px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13px; background: white; }
         .histogram-wrapper { background: #f8fafc; border-radius: 12px; padding: 16px; overflow-x: auto; min-height: 200px; }
-        .histogram { display: flex; align-items: flex-end; height: 180px; gap: 3px; min-width: 100%; }
+        .histogram { display: flex; align-items: flex-end; height: clamp(150px, 26dvh, 220px); gap: 3px; min-width: 100%; }
         .histogram .bar { flex: 1; min-width: 12px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; cursor: pointer; }
         .histogram .bar .fill { width: 100%; border-radius: 2px 2px 0 0; min-height: 3px; background: #0066AA; transition: height 0.3s; }
         .histogram .bar .value { font-size: 8px; color: #4a5568; margin-bottom: 2px; }
@@ -172,7 +204,7 @@
         .empty-leads { color: #a0aec0; text-align: center; padding: 12px; }
 
         /* ===== KARTE ===== */
-        #map { height: 350px; border-radius: 12px; margin-top: 12px; border: 1px solid #eef2f7; }
+        #map { height: clamp(280px, 45dvh, 420px); border-radius: 12px; margin-top: 12px; border: 1px solid #eef2f7; }
         .map-controls { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
         .map-controls button { padding: 6px 14px; border: none; border-radius: 8px; font-size: 12px; cursor: pointer; background: #E8F4FD; color: #0066AA; }
         .map-controls select { padding: 6px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 12px; background: white; }
@@ -213,15 +245,15 @@
         .cal-day.selected { background: rgba(255,255,255,0.25); }
         .cal-day.today .cal-daynum { text-decoration: underline; font-weight: 800; }
         .cal-day.weekend { color: #ffc7c7; }
-        .cal-dayname { font-size: 10px; opacity: 0.85; }
-        .cal-daynum { font-size: 17px; font-weight: 600; margin-top: 1px; }
+        .cal-dayname { font-size: clamp(9px, 2.6vw, 11px); opacity: 0.85; }
+        .cal-daynum { font-size: clamp(15px, 4.5vw, 19px); font-weight: 600; margin-top: 1px; }
         .cal-badge {
             position: absolute; top: 2px; right: 4px; min-width: 15px; height: 15px;
             background: #dc2626; color: #fff; border-radius: 8px; font-size: 9px; font-weight: 700;
             display: flex; align-items: center; justify-content: center; padding: 0 3px;
         }
         .cal-toolbar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-        .cal-toolbar .btn { padding: 8px 12px; font-size: 13px; flex: 1; min-width: 90px; }
+        .cal-toolbar .btn { padding: 10px 12px; font-size: clamp(12px, 3.2vw, 14px); flex: 1 1 90px; min-width: 0; }
 
         /* Terminkarten */
         .appt-card {
@@ -234,18 +266,24 @@
         .appt-body { cursor: pointer; border-radius: 8px; margin: -4px; padding: 4px; transition: background 0.15s; }
         .appt-body:active { background: #E8F4FD; }
         /* Gebäude-Icon oben rechts: Termin-Historie der Firma */
-        .appt-history-btn {
+        /* Zwei Icons oben rechts: Kontakt-Historie (links) + Firmen-Historie (rechts) */
+        .appt-hist-group {
             position: absolute; top: 8px; right: 8px; z-index: 2;
+            display: flex; gap: 6px;
+        }
+        .appt-history-btn {
             width: 34px; height: 34px; border: none; border-radius: 9px;
             background: #E8F4FD; color: #0066AA; font-size: 17px;
             cursor: pointer; line-height: 1; display: flex;
-            align-items: center; justify-content: center;
+            align-items: center; justify-content: center; padding: 0;
         }
         .appt-history-btn:active { background: #cfe6f8; }
+        .appt-history-btn.contact { background: #eef2f7; }
+        .appt-history-btn.contact:active { background: #dde5ef; }
         .appt-card.status-erledigt { border-top-color: #22c55e; opacity: 0.75; }
         .appt-card.status-laufend  { border-top-color: #f59e0b; }
         .appt-card.status-abgesagt { border-top-color: #a0aec0; opacity: 0.6; }
-        .appt-card .appt-company { font-size: 15px; font-weight: 600; color: #1a1a1a; padding-right: 40px; }
+        .appt-card .appt-company { font-size: 15px; font-weight: 600; color: #1a1a1a; padding-right: 82px; }
         .appt-card .appt-contact { font-size: 14px; color: #0066AA; margin-bottom: 8px; }
         .appt-card .appt-sep { border-top: 1px solid #eef2f7; margin: 8px 0; }
         .appt-field { margin-bottom: 6px; }
@@ -272,23 +310,53 @@
         }
         #apptOverlay.active { display: flex; }
         #apptModal {
-            background: #fff; max-width: 440px; width: 100%; max-height: 90vh;
-            border-radius: 20px; padding: 20px; overflow-y: auto; position: relative;
+            background: #fff; max-width: 480px; width: 100%; max-height: 90dvh;
+            border-radius: 20px; padding: clamp(16px, 4vw, 22px); overflow-y: auto; position: relative;
             box-shadow: 0 20px 60px rgba(0,0,0,0.2);
         }
         /* Datum/Dauer/Von/Bis liegen in derselben Zeile eines 2-Spalten-Grids.
            OHNE min-width:0 zwingt der native <select> bzw. <input type="date">
            seine Content-Breite auf die Grid-Spalte auf -> das erzeugte genau
            das gemeldete Überlappen/ungleiche Breiten-Problem. */
+        #apptModal .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;              /* gap gehoert ans GRID, an den Feldern wirkungslos */
+            align-items: end;
+        }
         #apptModal .form-grid > .form-group { min-width: 0; }
         #apptModal .form-grid input,
-        #apptModal .form-grid select {
+        #apptModal .form-grid select,
+        #apptModal .form-grid textarea {
             width: 100%;
+            max-width: 100%;
+            min-width: 0;
             box-sizing: border-box;
-            height: 40px;           /* exakt gleiche Höhe für input[type=date] und select */
-            font-size: 14px;
+            font-size: 16px;        /* < 16px laesst iOS beim Fokus hineinzoomen */
             line-height: 1.2;
-            gap: 12px;
+            padding: 0 10px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            background-color: #fff;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        #apptModal .form-grid input,
+        #apptModal .form-grid select {
+            height: 44px;           /* identische Hoehe fuer date, time und select */
+        }
+        #apptModal .form-grid textarea {
+            padding: 10px;
+            min-height: 60px;
+            resize: vertical;
+        }
+        /* Eigener Pfeil, da appearance:none den nativen entfernt */
+        #apptModal .form-grid select {
+            padding-right: 32px;
+            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%230066AA' stroke-width='2' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 11px;
         }
 
         /* Lead-Suche im Termin-Modal */
@@ -326,7 +394,7 @@
         }
         .goal-head { display: flex; justify-content: space-between; align-items: flex-start; }
         .goal-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.85; }
-        .goal-count { font-size: 24px; font-weight: 700; line-height: 1.15; }
+        .goal-count { font-size: clamp(20px, 6vw, 26px); font-weight: 700; line-height: 1.15; }
         .goal-count .goal-of { font-size: 13px; font-weight: 400; opacity: 0.9; }
         .goal-streak {
             background: rgba(255,255,255,0.2); border-radius: 20px;
@@ -363,8 +431,8 @@
         }
         #histOverlay.active { display: flex; }
         #histModal {
-            background: #fff; max-width: 440px; width: 100%; max-height: 85vh;
-            border-radius: 20px; padding: 20px; overflow-y: auto; position: relative;
+            background: #fff; max-width: 480px; width: 100%; max-height: 85dvh;
+            border-radius: 20px; padding: clamp(16px, 4vw, 22px); overflow-y: auto; position: relative;
             box-shadow: 0 20px 60px rgba(0,0,0,0.2);
         }
         #histModal .close-btn {
@@ -418,7 +486,9 @@
             position: relative;
             width: 82%;
             aspect-ratio: 85 / 55;      /* Standard-Visitenkartenformat, bei Bedarf anpassen */
-            max-width: 480px;
+            /* Im Querformat sonst hoeher als der Bildschirm:
+               Breite so begrenzen, dass die Hoehe unter 74dvh bleibt. */
+            max-width: min(480px, calc(74dvh * 85 / 55));
             border-radius: 14px;
             box-shadow: 0 0 0 9999px rgba(0,0,0,0.55);
             pointer-events: none;
@@ -445,10 +515,105 @@
             background: rgba(255,255,255,0.15); color: #fff; border: none;
             border-radius: 20px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
         }
+        /* Tap-to-Focus: Ring an der angetippten Stelle */
+        #focusRing {
+            position: absolute; width: 74px; height: 74px; margin: -37px 0 0 -37px;
+            border: 2px solid #ffd54a; border-radius: 50%;
+            pointer-events: none; opacity: 0; z-index: 5;
+        }
+        #focusRing.show { animation: focusPulse 0.85s ease-out; }
+        @keyframes focusPulse {
+            0%   { opacity: 1; transform: scale(1.5); }
+            60%  { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(1); }
+        }
+        #cameraFocusHint {
+            position: absolute; left: 0; right: 0;
+            bottom: calc(max(env(safe-area-inset-bottom), 24px) + 96px);
+            text-align: center; color: rgba(255,255,255,0.9); font-size: 12px;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.7); padding: 0 16px; z-index: 4;
+        }
 
-        /* ===== RESPONSIVE ===== */
-        @media (max-width: 400px) { .grid-card { padding: 12px; } .grid-card .icon { font-size: 28px; } .grid-card .label { font-size: 12px; } }
-        @media (min-width: 481px) { .container { padding: 24px; } }
+        /* ============================================================
+           RESPONSIVE
+           ============================================================
+           Grundlayout arbeitet bereits mit clamp() und auto-fit, die
+           Breakpoints unten regeln nur noch die Sonderfaelle. */
+
+        /* --- Modale: auf dem Handy als Vollbild-Blatt, nicht als schwebende Box --- */
+        @media (max-width: 560px) {
+            #leadDetailOverlay, #apptOverlay, #histOverlay { padding: 0; align-items: flex-end; }
+            #leadDetailModal, #apptModal, #histModal {
+                max-width: 100%;
+                max-height: 92dvh;
+                border-radius: 20px 20px 0 0;
+                padding-bottom: max(env(safe-area-inset-bottom), 20px);
+            }
+            /* Termin-Modal: bei wenig Platz je Feld eine ganze Zeile,
+               damit Datum/Dauer/Von/Bis garantiert nicht gequetscht werden */
+            #apptModal .form-grid { gap: 10px; }
+        }
+        @media (max-width: 360px) {
+            #apptModal .form-grid { grid-template-columns: 1fr; }
+            #apptModal .form-grid > .form-group.full { grid-column: span 1; }
+        }
+
+        /* --- Sehr schmale Geraete --- */
+        @media (max-width: 340px) {
+            .grid { grid-template-columns: 1fr; }
+            .cal-daynum { font-size: 15px; }
+            .cal-dayname { font-size: 9px; }
+            .detail-actions .btn { min-width: 100%; }
+        }
+
+        /* --- Tablet: mehr Platz, groessere Karte --- */
+        @media (min-width: 700px) {
+            .container { max-width: 720px; }
+            #map { height: 460px; }
+            .histogram { height: 220px; }
+        }
+
+        /* --- Desktop: zweispaltige Formulare bleiben, mehr Luft --- */
+        @media (min-width: 1024px) {
+            .container { max-width: 860px; }
+            .grid { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+            #map { height: 540px; }
+        }
+
+        /* --- Querformat auf dem Handy: Hoehen begrenzen, sonst passt nichts --- */
+        @media (max-height: 500px) and (orientation: landscape) {
+            .grid-card { min-height: 72px; padding: 8px; }
+            .grid-card .icon { font-size: 20px; margin-bottom: 2px; }
+            .grid-card .sub { display: none; }
+            #map { height: 240px; }
+            .histogram { height: 130px; }
+            #leadDetailModal, #apptModal, #histModal { max-height: 96dvh; }
+        }
+
+        /* --- Touch-Geraete: groessere Trefferflaechen --- */
+        @media (hover: none) and (pointer: coarse) {
+            .cal-day { padding: 8px 2px; }
+            .appt-actions button { padding: 12px 0; }
+            .lead-card .actions button { padding: 8px 12px; font-size: 12px; }
+            .search-bar input, .search-bar button { min-height: 44px; }
+            /* iOS zoomt beim Fokus hinein, wenn die Schrift < 16px ist */
+            input, select, textarea { font-size: 16px; }
+        }
+
+        /* --- Nutzer mit reduzierter Bewegung --- */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* --- Druck: nur Inhalte, keine Bedienelemente --- */
+        @media print {
+            .header-actions, .cal-toolbar, .appt-actions,
+            .search-toolbar, .grid { display: none !important; }
+            .container { box-shadow: none; max-width: 100%; }
+        }
     </style>
 </head>
 <body>
@@ -860,7 +1025,17 @@
                 <label for="apptDescription">Notizen</label>
                 <textarea id="apptDescription" rows="2"></textarea>
             </div>
+            <div class="form-group full">
+                <label for="apptReminder">Erinnerung</label>
+                <select id="apptReminder">
+                    <option value="0">keine</option>
+                    <option value="15">15 Min vorher</option>
+                    <option value="30" selected>30 Min vorher</option>
+                    <option value="60">1 Std vorher</option>
+                    <option value="1440">1 Tag vorher</option>
+                </select>
             </div>
+        </div>
 
         <div class="error" id="apptError"></div>
 
@@ -879,6 +1054,8 @@
     <video id="cameraVideo" autoplay playsinline muted></video>
     <div id="cameraGuide"></div>
     <div id="cameraHint">Visitenkarte im Rahmen ausrichten</div>
+    <div id="focusRing"></div>
+    <div id="cameraFocusHint">Zum Scharfstellen auf die Karte tippen</div>
     <div id="cameraControls">
         <button id="cameraCancelBtn" class="cam-btn">Abbrechen</button>
         <button id="cameraShutterBtn" class="cam-shutter" aria-label="Aufnehmen"></button>
@@ -1891,6 +2068,7 @@ async function openCamera() {
         cameraVideo.srcObject = cameraStream;
         await cameraVideo.play();
         cameraOverlay.classList.add('active');
+        await enableContinuousFocus();
     } catch (error) {
         console.error('Kamera-Fehler:', error);
         showError('Kamera konnte nicht gestartet werden: ' + (error.message || 'Zugriff verweigert'));
@@ -1902,7 +2080,102 @@ function closeCamera() {
     cameraStream = null;
     cameraVideo.srcObject = null;
     cameraOverlay.classList.remove('active');
+    document.getElementById('cameraFocusHint').textContent = 'Zum Scharfstellen auf die Karte tippen';
 }
+
+// ============================================================
+// TAP-TO-FOCUS
+// ============================================================
+// Ursache fuer unscharfe Bilder: viele Android-Kameras stellen ohne
+// Aufforderung auf die Bildmitte oder unendlich scharf. Eine
+// Visitenkarte im Nahbereich bleibt dann verschwommen.
+//
+// Loesung: nach dem Start dauerhaften Autofokus anfordern und beim
+// Antippen gezielt auf den Punkt fokussieren (pointsOfInterest).
+// Chrome/Android koennen das; iOS Safari unterstuetzt es nicht -
+// dort greift der Fallback (iOS fokussiert selbst zuverlaessig).
+
+function cameraTrack() {
+    return cameraStream?.getVideoTracks()[0] || null;
+}
+
+// Fordert dauerhaften Autofokus an, sofern das Geraet ihn kann
+async function enableContinuousFocus() {
+    const track = cameraTrack();
+    if (!track?.getCapabilities) return false;
+    try {
+        const caps = track.getCapabilities();
+        if (caps.focusMode?.includes('continuous')) {
+            await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+            return true;
+        }
+    } catch (err) {
+        console.warn('Autofokus nicht setzbar:', err.message);
+    }
+    return false;
+}
+
+// Zeigt den Fokus-Ring an der angetippten Stelle
+function showFocusRing(clientX, clientY) {
+    const ring = document.getElementById('focusRing');
+    const rect = cameraOverlay.getBoundingClientRect();
+    ring.style.left = `${clientX - rect.left}px`;
+    ring.style.top  = `${clientY - rect.top}px`;
+    ring.classList.remove('show');
+    void ring.offsetWidth;   // Neustart der Animation erzwingen
+    ring.classList.add('show');
+}
+
+async function focusAt(clientX, clientY) {
+    showFocusRing(clientX, clientY);
+
+    const track = cameraTrack();
+    const hint = document.getElementById('cameraFocusHint');
+    if (!track?.getCapabilities) return;
+
+    let caps = {};
+    try { caps = track.getCapabilities(); } catch { return; }
+
+    // Antippunkt in 0..1 relativ zum ANGEZEIGTEN Video umrechnen.
+    // Wegen object-fit:cover ist der sichtbare Ausschnitt kleiner als
+    // das Kamerabild - sonst zeigt der Fokuspunkt auf die falsche Stelle.
+    const rect = cameraVideo.getBoundingClientRect();
+    const vw = cameraVideo.videoWidth, vh = cameraVideo.videoHeight;
+    if (!vw || !vh) return;
+
+    const scale = Math.max(rect.width / vw, rect.height / vh);
+    const shownW = vw * scale, shownH = vh * scale;
+    const offX = rect.left + (rect.width - shownW) / 2;
+    const offY = rect.top + (rect.height - shownH) / 2;
+
+    const x = Math.min(1, Math.max(0, (clientX - offX) / shownW));
+    const y = Math.min(1, Math.max(0, (clientY - offY) / shownH));
+
+    const advanced = [];
+    if (caps.pointsOfInterest) advanced.push({ pointsOfInterest: [{ x, y }] });
+    if (caps.focusMode?.includes('single-shot')) advanced.push({ focusMode: 'single-shot' });
+    else if (caps.focusMode?.includes('continuous')) advanced.push({ focusMode: 'continuous' });
+
+    if (advanced.length === 0) {
+        hint.textContent = 'Dieses Geraet stellt automatisch scharf';
+        return;
+    }
+
+    try {
+        await track.applyConstraints({ advanced });
+        hint.textContent = 'Scharfgestellt';
+        setTimeout(() => { hint.textContent = 'Zum Scharfstellen auf die Karte tippen'; }, 1600);
+    } catch (err) {
+        console.warn('Fokus fehlgeschlagen:', err.message);
+    }
+}
+
+// Tippen auf das Videobild fokussiert. Die Bedienelemente sind
+// ausgenommen, sonst wuerde der Ausloeser mitfokussieren.
+cameraOverlay.addEventListener('click', (e) => {
+    if (e.target.closest('#cameraControls')) return;
+    focusAt(e.clientX, e.clientY);
+});
 
 // Rechnet die Rahmenposition (CSS-Pixel) in Koordinaten des
 // nativen Kamerabilds um -- nötig wegen object-fit: cover, da
@@ -1970,6 +2243,7 @@ document.getElementById('cameraSwitchBtn').addEventListener('click', async () =>
         cameraVideo.srcObject = cameraStream;
         await cameraVideo.play();
         cameraOverlay.classList.add('active');
+        await enableContinuousFocus();
     } catch (error) { showError('Kamera konnte nicht gewechselt werden.'); }
 });
 
@@ -2735,8 +3009,12 @@ function renderAppointments() {
 
         return `
         <div class="appt-card status-${escapeHtml(a.status)}">
-            ${lead ? `<button class="appt-history-btn" title="Bisherige Termine"
-                onclick="openLeadHistory('${a.lead_id}')">&#127970;</button>` : ''}
+            ${lead ? `<div class="appt-hist-group">
+                <button class="appt-history-btn contact" title="Bisherige Termine mit ${escapeHtml(contact || 'diesem Kontakt')}"
+                    onclick="openContactHistory('${a.lead_id}')">&#128100;</button>
+                <button class="appt-history-btn" title="Bisherige Termine bei ${escapeHtml(company)}"
+                    onclick="openLeadHistory('${a.lead_id}')">&#127970;</button>
+            </div>` : ''}
 
             <!-- Der obere Bereich oeffnet den Termin zum Bearbeiten.
                  Die Aktionsleiste darunter liegt bewusst ausserhalb,
@@ -2964,47 +3242,17 @@ async function openApptModal(id = null, presetLeadId = null) {
     editingApptId = id;
 
     const modalTitle = document.getElementById('apptModalTitle');
-    const deleteRow = document.getElementById('apptDeleteRow');
-    const errorBox = document.getElementById('apptError');
+    const deleteRow  = document.getElementById('apptDeleteRow');
+    const errBox     = document.getElementById('apptError');
 
-    // ------------------------------------------------------------
-    // 1. MODAL SOFORT ÖFFNEN
-    // ------------------------------------------------------------
-    // Ganz wichtig:
-    // Das Modal darf NICHT auf loadLeads() warten.
-    // Dadurch reagiert +Termin sofort.
-    // ------------------------------------------------------------
-    errorBox.style.display = 'none';
-
-    modalTitle.textContent = id
-        ? 'Termin bearbeiten'
-        : 'Neuer Termin';
-
+    // Modal SOFORT oeffnen - nicht auf loadLeads() warten,
+    // damit "+ Termin" ohne Verzoegerung reagiert.
+    errBox.style.display = 'none';
+    modalTitle.textContent = id ? 'Termin bearbeiten' : 'Neuer Termin';
     deleteRow.style.display = id ? 'flex' : 'none';
-
     apptOverlay.classList.add('active');
 
-
-    // ------------------------------------------------------------
-    // 2. TERMIN BEARBEITEN
-    // ------------------------------------------------------------
-    if (id) {
-
-        const a = calAppointments.find(x => x.id === id);
-
-        if (!a) {
-            console.error('❌ Termin nicht gefunden:', id);
-            errorBox.textContent = '❌ Termin konnte nicht geladen werden.';
-            errorBox.style.display = 'block';
-            return;
-        }
-
-        // Lead zunächst direkt aus dem Termin übernehmen
-        apptLeadHidden.value = a.lead_id || '';
-
-        // Falls Supabase den Lead mitliefert
-        const lead = a.leads || null;
-
+    const showLead = (lead) => {
         if (lead) {
             apptLeadSelectedText.textContent = leadLabel(lead);
             apptLeadSelected.style.display = 'flex';
@@ -3014,170 +3262,80 @@ async function openApptModal(id = null, presetLeadId = null) {
             apptLeadSearch.style.display = '';
             apptLeadSearch.value = '';
         }
+    };
 
-        // Felder füllen
-        document.getElementById('apptTitle').value =
-            a.title || '';
-
-        document.getElementById('apptMainItem').value =
-            a.main_item || '';
-
-        document.getElementById('apptLocation').value =
-            a.location || '';
-
-        document.getElementById('apptDescription').value =
-            a.description || '';
-
-        const reminderField =
-            document.getElementById('apptReminder');
-
-        if (reminderField) {
-            reminderField.value =
-                String(a.reminder_minutes ?? 30);
+    // ---------- Bestehenden Termin bearbeiten ----------
+    if (id) {
+        const a = calAppointments.find(x => x.id === id);
+        if (!a) {
+            errBox.textContent = 'Termin konnte nicht geladen werden.';
+            errBox.style.display = 'block';
+            return;
         }
 
-        const s = new Date(a.starts_at);
-        const e = new Date(a.ends_at);
+        apptLeadHidden.value = a.lead_id || '';
+        showLead(a.leads || null);
 
-        document.getElementById('apptDate').value =
-            dateKey(s);
+        document.getElementById('apptTitle').value       = a.title || '';
+        document.getElementById('apptMainItem').value    = a.main_item || '';
+        document.getElementById('apptLocation').value    = a.location || '';
+        document.getElementById('apptDescription').value = a.description || '';
 
-        document.getElementById('apptStart').value =
-            s.toTimeString().slice(0, 5);
+        const reminderField = document.getElementById('apptReminder');
+        if (reminderField) reminderField.value = String(a.reminder_minutes ?? 30);
 
-        document.getElementById('apptEnd').value =
-            e.toTimeString().slice(0, 5);
+        const s = new Date(a.starts_at), e = new Date(a.ends_at);
+        document.getElementById('apptDate').value  = dateKey(s);
+        document.getElementById('apptStart').value = s.toTimeString().slice(0, 5);
+        document.getElementById('apptEnd').value   = e.toTimeString().slice(0, 5);
 
-
-        // --------------------------------------------------------
-        // Leads im Hintergrund nachladen
-        // --------------------------------------------------------
-        if (allLeads.length === 0) {
+        // Leads im Hintergrund nachladen, falls der Name noch fehlt
+        if (allLeads.length === 0 && a.lead_id) {
             try {
                 await loadLeads();
-
-                const loadedLead =
-                    allLeads.find(l => l.id === a.lead_id);
-
-                if (loadedLead) {
-                    apptLeadSelectedText.textContent =
-                        leadLabel(loadedLead);
-
-                    apptLeadSelected.style.display = 'flex';
-                    apptLeadSearch.style.display = 'none';
-                }
-
-            } catch (err) {
-                console.warn(
-                    '⚠️ Leads konnten nicht nachgeladen werden:',
-                    err
-                );
-            }
+                showLead(allLeads.find(l => l.id === a.lead_id) || null);
+            } catch (err) { console.warn('Leads nicht nachladbar:', err); }
         }
-
         return;
     }
 
-
-    // ------------------------------------------------------------
-    // 3. NEUER TERMIN
-    // ------------------------------------------------------------
-
-    // Formular zurücksetzen
+    // ---------- Neuen Termin anlegen ----------
     apptLeadHidden.value = '';
+    showLead(null);
 
-    apptLeadSelected.style.display = 'none';
-    apptLeadSearch.style.display = '';
-    apptLeadSearch.value = '';
-
-    document.getElementById('apptTitle').value = '';
-    document.getElementById('apptMainItem').value = '';
-    document.getElementById('apptLocation').value = '';
+    document.getElementById('apptTitle').value       = '';
+    document.getElementById('apptMainItem').value    = '';
+    document.getElementById('apptLocation').value    = '';
     document.getElementById('apptDescription').value = '';
 
-    const reminderField =
-        document.getElementById('apptReminder');
+    const reminderField = document.getElementById('apptReminder');
+    if (reminderField) reminderField.value = '30';
 
-    if (reminderField) {
-        reminderField.value = '30';
-    }
+    document.getElementById('apptDate').value = dateKey(calSelectedDate);
 
-    // Datum = aktuell ausgewählter Kalendertag
-    document.getElementById('apptDate').value =
-        dateKey(calSelectedDate);
-
-    // Standard: nächste volle Stunde
+    // Standard: naechste volle Stunde, 60 Minuten
     const start = new Date();
-
     start.setMinutes(0, 0, 0);
     start.setHours(start.getHours() + 1);
+    document.getElementById('apptStart').value = start.toTimeString().slice(0, 5);
+    const end = new Date(start.getTime() + 60 * 60000);
+    document.getElementById('apptEnd').value = end.toTimeString().slice(0, 5);
+    document.getElementById('apptDuration').value = '60';
 
-    document.getElementById('apptStart').value =
-        start.toTimeString().slice(0, 5);
-
-    const end =
-        new Date(start.getTime() + 60 * 60000);
-
-    document.getElementById('apptEnd').value =
-        end.toTimeString().slice(0, 5);
-
-
-    // ------------------------------------------------------------
-    // 4. Falls aus einem Lead heraus ein Termin angelegt wird
-    // ------------------------------------------------------------
+    // Aus einem Lead heraus angelegt -> vorbelegen
     if (presetLeadId) {
-
         apptLeadHidden.value = presetLeadId;
-
-        if (allLeads.length > 0) {
-
-            const lead =
-                allLeads.find(l => l.id === presetLeadId);
-
-            if (lead) {
-                selectApptLead(lead);
-            }
-
-        } else {
-
-            // Leads im Hintergrund laden
-            try {
-
-                await loadLeads();
-
-                const lead =
-                    allLeads.find(l => l.id === presetLeadId);
-
-                if (lead) {
-                    selectApptLead(lead);
-                }
-
-            } catch (err) {
-
-                console.warn(
-                    '⚠️ Lead konnte nicht geladen werden:',
-                    err
-                );
-
-            }
+        let lead = allLeads.find(l => l.id === presetLeadId);
+        if (!lead && allLeads.length === 0) {
+            try { await loadLeads(); lead = allLeads.find(l => l.id === presetLeadId); }
+            catch (err) { console.warn('Lead nicht ladbar:', err); }
         }
-
+        if (lead) selectApptLead(lead);
         return;
     }
 
-
-    // ------------------------------------------------------------
-    // 5. Leads im Hintergrund laden
-    // ------------------------------------------------------------
     if (allLeads.length === 0) {
-        try {
-            await loadLeads();
-        } catch (err) {
-            console.warn(
-                '⚠️ Leads konnten nicht geladen werden:',
-                err
-            );
-        }
+        try { await loadLeads(); } catch (err) { console.warn('Leads nicht ladbar:', err); }
     }
 }
 
@@ -3228,7 +3386,7 @@ document.getElementById('apptSaveBtn').addEventListener('click', async () => {
         mainItem: document.getElementById('apptMainItem').value.trim(),
         location: document.getElementById('apptLocation').value.trim(),
         description: document.getElementById('apptDescription').value.trim(),
-       reminderMinutes: parseInt(document.getElementById('apptReminder')?.value || '30',10),
+        reminderMinutes: parseInt(document.getElementById('apptReminder').value, 10),
         startsAt: startsAt.toISOString(),
         endsAt: endsAt.toISOString()
     };
@@ -3245,10 +3403,12 @@ document.getElementById('apptSaveBtn').addEventListener('click', async () => {
         const result = await res.json();
         if (!result.success) throw new Error(result.error);
 
-        closeApptModal();
-        // Zum Tag des Termins springen, falls verschoben
-        calSelectedDate = new Date(startsAt);
+        // WICHTIG: wasNew MUSS vor closeApptModal() ermittelt werden –
+        // closeApptModal() setzt editingApptId auf null, dadurch galt
+        // vorher jede Bearbeitung faelschlich als neuer Termin und
+        // loeste die Gamification-Meldung aus.
         const wasNew = !editingApptId;
+
         closeApptModal();
         // Zum Tag des Termins springen, falls verschoben
         calSelectedDate = new Date(startsAt);
@@ -3300,7 +3460,9 @@ const histOverlay = document.getElementById('histOverlay');
 // Gemeinsamer Lader für BEIDE Einstiege:
 //   - 🏢-Icon auf der Terminkarte -> scope 'past' (nur Gelaufenes)
 //   - Firma in der Suche anklicken -> scope 'all' (Kontakte + alle Aktivitäten)
-async function loadCompanyOverview(anchorLeadId, scope) {
+// mode: 'company' = alle Ansprechpartner der Firma (Gebaeude-Icon)
+//       'contact' = nur dieser eine Kontakt (Personen-Icon)
+async function loadCompanyOverview(anchorLeadId, scope, mode = 'company') {
     if (!anchorLeadId) return;
 
     document.getElementById('histTitle').textContent = 'Wird geladen…';
@@ -3310,21 +3472,25 @@ async function loadCompanyOverview(anchorLeadId, scope) {
     histOverlay.classList.add('active');
 
     try {
-        const res = await apiRequest(`/leads/${anchorLeadId}/appointments?scope=${scope}`);
+        const res = await apiRequest(`/leads/${anchorLeadId}/appointments?scope=${scope}&mode=${mode}`);
         const result = await res.json();
         if (!result.success) throw new Error(result.error);
 
         const lead = result.lead;
-        const heading = result.company
-            || `${lead?.first_name || ''} ${lead?.last_name || ''}`.trim()
-            || 'Ohne Firma';
-        document.getElementById('histTitle').textContent = '🏢 ' + heading;
+        const personName = `${lead?.first_name || ''} ${lead?.last_name || ''}`.trim();
+
+        // Im Kontakt-Modus steht die Person im Titel, im Firmen-Modus die Firma
+        document.getElementById('histTitle').textContent = mode === 'contact'
+            ? '👤 ' + (personName || 'Unbenannt')
+            : '🏢 ' + (result.company || personName || 'Ohne Firma');
 
         renderHistory(result.data || [], {
             company: result.company,
             contactCount: result.contactCount || 1,
             contacts: result.contacts || [],
-            scope
+            scope,
+            mode,
+            personName
         });
     } catch (error) {
         document.getElementById('histContent').innerHTML =
@@ -3332,16 +3498,21 @@ async function loadCompanyOverview(anchorLeadId, scope) {
     }
 }
 
-// Einstieg 1: Gebäude-Icon auf der Terminkarte (nur gelaufene Termine)
+// Einstieg 1: Gebaeude-Icon -> alle Ansprechpartner der Firma
 function openLeadHistory(leadId) {
-    return loadCompanyOverview(leadId, 'past');
+    return loadCompanyOverview(leadId, 'past', 'company');
 }
 
-// Einstieg 2: Firma in der Suche anklicken (Kontakte + alle Aktivitäten)
+// Einstieg 2: Personen-Icon -> nur dieser eine Kontakt
+function openContactHistory(leadId) {
+    return loadCompanyOverview(leadId, 'past', 'contact');
+}
+
+// Einstieg 3: Firma in der Suche anklicken (Kontakte + alle Aktivitaeten)
 function openCompanyOverview(companyName) {
     const anchor = allLeads.find(l => (l.company || '').trim().toLowerCase() === companyName.trim().toLowerCase());
     if (!anchor) return;
-    return loadCompanyOverview(anchor.id, 'all');
+    return loadCompanyOverview(anchor.id, 'all', 'company');
 }
 
 function renderHistory(items, meta = {}) {
@@ -3377,7 +3548,13 @@ function renderHistory(items, meta = {}) {
     if (items.length === 0) {
         sub.textContent = '';
         box.innerHTML = contactsHtml
-            + `<div class="cal-empty">📭 ${meta.scope === 'all' ? 'Noch keine Termine bei dieser Firma.' : 'Noch keine vergangenen Termine bei diesem Kontakt.'}</div>`;
+            + `<div class="cal-empty">📭 ${
+                meta.mode === 'contact'
+                    ? `Noch keine vergangenen Termine mit ${meta.personName || 'diesem Kontakt'}.`
+                    : meta.scope === 'all'
+                        ? 'Noch keine Termine bei dieser Firma.'
+                        : 'Noch keine vergangenen Termine bei dieser Firma.'
+            }</div>`;
         return;
     }
 
@@ -3387,7 +3564,9 @@ function renderHistory(items, meta = {}) {
     const last = items[0];
 
     sub.textContent = `${items.length} Termin${items.length === 1 ? '' : 'e'}`
-        + (contactCount > 1 ? ` · ${contactCount} Ansprechpartner` : '');
+        + (meta.mode === 'contact'
+            ? ' · nur dieser Kontakt'
+            : contactCount > 1 ? ` · ${contactCount} Ansprechpartner` : '');
 
     const summaryParts = [`Letzter Termin: ${new Date(last.starts_at).toLocaleDateString('de-DE')}`];
     if (withDuration.length > 0) {
@@ -3654,7 +3833,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = getUser();
     if (user && getToken()) showApp(user);
     else showLogin();
-    console.log('🚀 LeadCapture PWA v13.0.0 geladen (Push, Firmensuche, Freitext-Lead-Suche)');
+    console.log('🚀 LeadCapture PWA v14.0.0 geladen (Tap-to-Focus, responsiv, Kontakt-Historie)');
 });
 </script>
 </body>
