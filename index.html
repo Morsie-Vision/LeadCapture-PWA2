@@ -303,6 +303,198 @@
         .appt-actions button:disabled { background: #e2e8f0; color: #a0aec0; cursor: default; }
         .cal-empty { text-align: center; color: #a0aec0; padding: 28px 12px; font-size: 14px; }
 
+
+        /* ===== HOME-BUTTON ===== */
+        .home-btn {
+            position: fixed;
+            top: max(14px, env(safe-area-inset-top));
+            right: max(14px, env(safe-area-inset-right));
+            width: 42px;
+            height: 42px;
+            border: 1px solid #dce6ef;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.97);
+            color: #0066AA;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.10);
+            font-size: 25px;
+            line-height: 1;
+            cursor: pointer;
+            z-index: 1900;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: transform .15s, background .15s;
+        }
+        .home-btn:active { transform: scale(.92); background: #E8F4FD; }
+
+        /* ===== START-DASHBOARD ===== */
+        .dashboard-panel {
+            margin-top: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .dashboard-section {
+            background: #fff;
+            border: 1px solid #e8edf3;
+            border-radius: 16px;
+            padding: 14px;
+            box-shadow: 0 3px 12px rgba(0,102,170,0.06);
+        }
+        .dashboard-section-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        .dashboard-kicker {
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: .8px;
+            color: #7a8796;
+        }
+        .dashboard-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-top: 2px;
+        }
+        .dashboard-link {
+            border: none;
+            background: #E8F4FD;
+            color: #0066AA;
+            border-radius: 9px;
+            padding: 7px 10px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .dashboard-action {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 0;
+            border-top: 1px solid #eef2f7;
+        }
+        .dashboard-action:first-child { border-top: none; }
+        .dashboard-action-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 34px;
+            font-size: 16px;
+        }
+        .dashboard-action.todo .dashboard-action-icon { background: #fff7e6; color: #b7791f; }
+        .dashboard-action.appointment .dashboard-action-icon { background: #E8F4FD; color: #0066AA; }
+        .dashboard-action-main { flex: 1; min-width: 0; }
+        .dashboard-action-title {
+            font-size: 13px;
+            font-weight: 650;
+            color: #1a1a1a;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .dashboard-action-meta { font-size: 11px; color: #6b7a8f; margin-top: 2px; }
+        .dashboard-empty { color: #a0aec0; font-size: 13px; padding: 8px 0 4px; text-align: center; }
+        .dashboard-goal-number { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+        .dashboard-goal-current { font-size: 26px; font-weight: 800; color: #0066AA; }
+        .dashboard-goal-target { font-size: 12px; color: #6b7a8f; }
+        .dashboard-goal-bar { height: 10px; background: #edf2f7; border-radius: 99px; overflow: hidden; }
+        .dashboard-goal-fill { height: 100%; background: #0066AA; border-radius: 99px; transition: width .3s ease; }
+        .dashboard-goal-text { margin-top: 7px; font-size: 12px; color: #6b7a8f; }
+        .dashboard-goal-streak { margin-top: 8px; font-size: 12px; color: #0066AA; font-weight: 700; }
+
+        /* ===== FOLLOW-UP / TODO ===== */
+        .todo-card {
+            background: #fffdf7;
+            border: 1px dashed #e2c47a;
+            border-left: 4px solid #d69e2e;
+            border-radius: 12px;
+            padding: 11px 12px;
+            margin-bottom: 8px;
+            position: relative;
+        }
+        .todo-card.done { opacity: .55; }
+        .todo-card-inner { display: flex; align-items: flex-start; gap: 10px; }
+        .todo-check {
+            width: 22px;
+            height: 22px;
+            border: 2px solid #d69e2e;
+            border-radius: 7px;
+            background: #fff;
+            cursor: pointer;
+            flex: 0 0 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            color: white;
+        }
+        .todo-check.checked { background: #d69e2e; }
+        .todo-card-main { flex: 1; min-width: 0; cursor: pointer; }
+        .todo-card-title { font-size: 14px; font-weight: 650; color: #1a1a1a; }
+        .todo-card-company { font-size: 12px; color: #b7791f; margin-top: 2px; }
+        .todo-card-meta { font-size: 11px; color: #7a8796; margin-top: 5px; }
+        .todo-card-note { font-size: 12px; color: #4a5568; margin-top: 7px; white-space: pre-wrap; }
+        .todo-card-menu { border:none; background:none; color:#7a8796; cursor:pointer; font-size:18px; padding:0 2px; }
+
+        /* ===== QUESTIONNAIRE BUILDER ===== */
+        .questionnaire-toolbar {
+            background: #f8fafc;
+            border: 1px solid #eef2f7;
+            border-radius: 14px;
+            padding: 10px;
+            margin-bottom: 12px;
+        }
+        .questionnaire-toolbar-row { display:flex; gap:8px; align-items:center; }
+        .questionnaire-toolbar select { flex:1; min-width:0; }
+        .questionnaire-toolbar .btn { flex:0 0 auto; padding:8px 11px; font-size:12px; }
+        .question-builder {
+            background:#f8fafc;
+            border:1px solid #e8edf3;
+            border-radius:14px;
+            padding:12px;
+            margin-bottom:10px;
+        }
+        .question-builder-head { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px; }
+        .question-builder-number {
+            width:28px; height:28px; border-radius:9px; background:#E8F4FD; color:#0066AA;
+            display:flex; align-items:center; justify-content:center; font-weight:800; font-size:12px; flex:0 0 28px;
+        }
+        .question-builder-title { flex:1; font-size:12px; font-weight:700; color:#6b7a8f; }
+        .question-builder-actions { display:flex; gap:4px; }
+        .question-builder-actions button { border:none; background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:6px 8px; cursor:pointer; }
+        .question-builder input, .question-builder select { font-size:14px; padding:10px 12px; }
+        .question-type-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:7px; margin-top:8px; }
+        .question-type-btn { border:1px solid #e2e8f0; background:#fff; color:#4a5568; border-radius:10px; padding:9px 6px; font-size:12px; font-weight:700; cursor:pointer; }
+        .question-type-btn.active { background:#0066AA; border-color:#0066AA; color:#fff; }
+        .option-editor { margin-top:10px; padding-top:10px; border-top:1px solid #e8edf3; }
+        .option-row { display:flex; gap:6px; align-items:center; margin-top:6px; }
+        .option-row input { flex:1; }
+        .option-row button { width:36px; height:36px; border:none; background:#fee2e2; color:#dc2626; border-radius:9px; cursor:pointer; }
+        .builder-add { width:100%; margin:6px 0 12px; border:1.5px dashed #b8d8ec; background:#f7fcff; color:#0066AA; border-radius:12px; padding:13px; font-weight:700; cursor:pointer; }
+        .builder-save-row { display:flex; gap:8px; margin-top:12px; }
+        .builder-save-row .btn { min-width:0; }
+
+        /* ===== FOLLOW-UP MODAL ===== */
+        #todoOverlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1550; display:none; align-items:center; justify-content:center; padding:16px; }
+        #todoOverlay.active { display:flex; }
+        #todoModal { width:100%; max-width:480px; background:#fff; border-radius:20px; padding:20px; position:relative; box-shadow:0 20px 60px rgba(0,0,0,.2); max-height:90dvh; overflow-y:auto; }
+        #todoModal .close-btn { position:absolute; top:12px; right:16px; background:none; border:none; font-size:24px; cursor:pointer; color:#6b7a8f; }
+        #todoModal .form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; align-items:end; }
+        #todoModal .form-grid > .form-group { min-width:0; }
+        #todoModal .form-grid input, #todoModal .form-grid select, #todoModal .form-grid textarea { width:100%; max-width:100%; min-width:0; box-sizing:border-box; font-size:16px; line-height:1.2; padding:0 10px; border:1.5px solid #e2e8f0; border-radius:10px; background:#fff; }
+        #todoModal .form-grid input, #todoModal .form-grid select { height:44px; }
+        #todoModal .form-grid textarea { padding:10px; min-height:80px; }
+        .todo-modal-title { font-size:20px; font-weight:750; color:#1a1a1a; padding-right:40px; }
+        .todo-modal-subtitle { font-size:12px; color:#6b7a8f; margin:2px 0 14px; }
+        .todo-actions { display:flex; gap:8px; margin-top:14px; }
+
         /* Termin-Modal */
         #apptOverlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1500;
@@ -665,6 +857,7 @@
 
     <!-- APP (nach Login) -->
     <div id="appContainer" style="display:none;">
+        <button id="homeBtn" class="home-btn" aria-label="Zur Startseite" title="Startseite">⌂</button>
 
         <!-- KACHEL-GRID -->
         <div class="grid" id="mainGrid">
@@ -679,6 +872,29 @@
                 <span class="tile-badge" id="calendarTodayBadge" style="display:none;">0</span>
             </div>
             <div class="grid-card map-card" data-view="map" data-feature="map"><span class="icon">🗺️</span><div class="label">Karte</div><div class="sub">alle Leads auf einer Karte</div></div>
+        </div>
+
+        <div id="dashboardPanel" class="dashboard-panel" style="display:none;">
+            <div class="dashboard-section" id="dashboardActionsSection">
+                <div class="dashboard-section-head">
+                    <div>
+                        <div class="dashboard-kicker">VERTRIEB</div>
+                        <div class="dashboard-title">🎯 Nächste Aktionen</div>
+                    </div>
+                    <button class="dashboard-link" id="dashboardCalendarBtn">Kalender →</button>
+                </div>
+                <div id="dashboardActions"></div>
+            </div>
+
+            <div class="dashboard-section" id="dashboardGoalSection">
+                <div class="dashboard-section-head">
+                    <div>
+                        <div class="dashboard-kicker">DEINE WOCHE</div>
+                        <div class="dashboard-title">🔥 Wochenziel</div>
+                    </div>
+                </div>
+                <div id="dashboardGoal"></div>
+            </div>
         </div>
 
         <!-- VIEW: SCAN -->
@@ -781,21 +997,24 @@
         <!-- VIEW: QUESTIONNAIRE -->
         <div class="view" id="view-questionnaire">
             <div class="view-header"><button class="back" data-view="main">←</button><h2>📝 Fragebogen</h2></div>
-            <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:center;">
-                <select id="questionnaireTemplateSelect" style="flex:1; padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; background:white;">
-                    <option value="">Vorlage wählen...</option>
-                </select>
-                <button class="btn btn-secondary" id="loadTemplateBtn" style="flex:0; padding:6px 12px; font-size:12px;">📂 Laden</button>
-                <button class="btn btn-primary" id="saveTemplateBtn" style="flex:0; padding:6px 12px; font-size:12px;">💾 Speichern</button>
-                <button class="btn btn-danger" id="deleteTemplateBtn" style="flex:0; padding:6px 12px; font-size:12px;">🗑️</button>
+
+            <div class="questionnaire-toolbar">
+                <div class="questionnaire-toolbar-row">
+                    <select id="questionnaireTemplateSelect">
+                        <option value="">Neuen Fragebogen erstellen</option>
+                    </select>
+                    <button class="btn btn-secondary" id="deleteTemplateBtn" title="Vorlage löschen">🗑️</button>
+                </div>
             </div>
-            <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
-                <button class="btn btn-primary" id="addQuestionBtn">➕ Frage hinzufügen</button>
-                <button class="btn btn-success" id="saveQuestionnaireTemplateBtn">💾 Als Vorlage</button>
-                <button class="btn btn-secondary" id="resetQuestionnaireBtn">🔄 Zurücksetzen</button>
-            </div>
+
             <div id="questionnaireEditor"></div>
-            <div class="empty-leads" id="emptyQuestions">Keine Fragen definiert. Klicke auf "Frage hinzufügen".</div>
+            <button class="builder-add" id="addQuestionBtn">＋ Frage hinzufügen</button>
+            <div class="empty-leads" id="emptyQuestions">Noch keine Fragen. Füge deine erste Frage hinzu.</div>
+
+            <div class="builder-save-row">
+                <button class="btn btn-secondary" id="resetQuestionnaireBtn">🔄 Zurücksetzen</button>
+                <button class="btn btn-primary" id="saveQuestionnaireTemplateBtn">💾 Fragebogen speichern</button>
+            </div>
         </div>
 
         <!-- VIEW: STATS -->
@@ -866,6 +1085,7 @@
             <div class="cal-toolbar">
                 <button class="btn btn-secondary" id="calTodayBtn">Heute</button>
                 <button class="btn btn-primary" id="calNewBtn">➕ Termin</button>
+                <button class="btn btn-secondary" id="calNewTodoBtn">✓ Follow-up</button>
                 <button class="btn btn-secondary" id="calSubscribeBtn">🔗 Abo-Link</button>
             </div>
 
@@ -1025,16 +1245,6 @@
                 <label for="apptDescription">Notizen</label>
                 <textarea id="apptDescription" rows="2"></textarea>
             </div>
-            <div class="form-group full">
-                <label for="apptReminder">Erinnerung</label>
-                <select id="apptReminder">
-                    <option value="0">keine</option>
-                    <option value="15">15 Min vorher</option>
-                    <option value="30" selected>30 Min vorher</option>
-                    <option value="60">1 Std vorher</option>
-                    <option value="1440">1 Tag vorher</option>
-                </select>
-            </div>
         </div>
 
         <div class="error" id="apptError"></div>
@@ -1045,6 +1255,43 @@
         </div>
         <div class="actions" id="apptDeleteRow" style="display:none;">
             <button class="btn btn-danger" id="apptDeleteBtn">🗑️ Termin löschen</button>
+        </div>
+    </div>
+</div>
+
+<!-- FOLLOW-UP-MODAL -->
+<div id="todoOverlay">
+    <div id="todoModal">
+        <button class="close-btn" id="todoCloseBtn">×</button>
+        <div class="todo-modal-title">✓ Follow-up</div>
+        <div class="todo-modal-subtitle">Nächste Vertriebsaktion festhalten</div>
+
+        <div class="form-grid">
+            <div class="form-group full">
+                <label for="todoTitle">Was ist zu tun? *</label>
+                <input type="text" id="todoTitle" placeholder="z. B. Angebot nachfassen">
+            </div>
+            <div class="form-group full">
+                <label for="todoLead">Lead</label>
+                <select id="todoLead"><option value="">Kein Lead</option></select>
+            </div>
+            <div class="form-group">
+                <label for="todoDate">Datum *</label>
+                <input type="date" id="todoDate">
+            </div>
+            <div class="form-group">
+                <label for="todoTime">Uhrzeit</label>
+                <input type="time" id="todoTime">
+            </div>
+            <div class="form-group full">
+                <label for="todoNote">Notiz</label>
+                <textarea id="todoNote" rows="3" placeholder="Was soll beim Follow-up passieren?"></textarea>
+            </div>
+        </div>
+
+        <div class="todo-actions">
+            <button class="btn btn-secondary" id="todoCancelBtn">Abbrechen</button>
+            <button class="btn btn-primary" id="todoSaveBtn">✓ Follow-up speichern</button>
         </div>
     </div>
 </div>
@@ -1356,6 +1603,9 @@ function showView(viewId) {
     const view = document.getElementById(`view-${viewId}`);
     if (view) view.classList.add('active');
     document.getElementById('mainGrid').style.display = viewId === 'main' ? 'grid' : 'none';
+    const homeBtn = document.getElementById('homeBtn');
+    if (homeBtn) homeBtn.style.display = viewId === 'main' ? 'none' : 'flex';
+    if (viewId === 'main') renderDashboard();
     if (viewId === 'map') { initMap(); loadMapData(); }
     if (viewId === 'stats') { loadHistogram(); loadLeads(); }
     if (viewId === 'questionnaire') { loadTemplates(); loadActiveTemplate(); }
@@ -1376,6 +1626,8 @@ document.querySelectorAll('.grid-card').forEach(card => {
 document.querySelectorAll('.back').forEach(btn => {
     btn.addEventListener('click', () => showView('main'));
 });
+document.getElementById('homeBtn')?.addEventListener('click', () => showView('main'));
+document.getElementById('dashboardCalendarBtn')?.addEventListener('click', () => showView('calendar'));
 
 // ============================================================
 // 8. APP ANZEIGEN / LOGOUT
@@ -1383,6 +1635,7 @@ document.querySelectorAll('.back').forEach(btn => {
 function showApp(user, features) {
     loginContainer.style.display = 'none';
     appContainer.style.display = 'block';
+    renderDashboard();
     userInfo.style.display = 'flex';
     userName.textContent = user.fullName || user.email;
     tenantName.textContent = user.tenant?.name || 'Unbekannt';
@@ -2438,6 +2691,7 @@ function saveTemplate(name) {
     activeTemplateName = name.trim();
     persistActiveQuestions();
     updateTemplateSelect();
+    renderQuestionnaireEditor();
     alert(`✅ Vorlage "${name.trim()}" gespeichert!`);
 }
 function loadTemplate(name) {
@@ -2464,8 +2718,7 @@ function deleteTemplate(name) {
     updateTemplateSelect(); renderQuestionnaireEditor();
     alert(`🗑️ Vorlage "${name}" gelöscht.`);
 }
-document.getElementById('saveTemplateBtn').addEventListener('click', () => { const name = prompt('📝 Name für die Vorlage:'); if (name) saveTemplate(name); });
-document.getElementById('loadTemplateBtn').addEventListener('click', () => { const name = document.getElementById('questionnaireTemplateSelect').value; if (name) loadTemplate(name); });
+document.getElementById('questionnaireTemplateSelect').addEventListener('change', (e) => { if (e.target.value) loadTemplate(e.target.value); else { questionTemplate = []; activeTemplateName = ''; persistActiveQuestions(); renderQuestionnaireEditor(); } });
 document.getElementById('deleteTemplateBtn').addEventListener('click', () => { const name = document.getElementById('questionnaireTemplateSelect').value; if (name) deleteTemplate(name); });
 
 // ============================================================
@@ -2475,6 +2728,11 @@ const questionEditor = document.getElementById('questionnaireEditor');
 const emptyQuestions = document.getElementById('emptyQuestions');
 const VALID_TYPES = ['text', 'textarea', 'select'];
 
+function persistQuestionnaireEditor() {
+    persistActiveQuestions();
+    updateScanTemplateSelect();
+}
+
 function renderQuestionnaireEditor() {
     if (questionTemplate.length === 0) {
         questionEditor.innerHTML = '';
@@ -2483,84 +2741,138 @@ function renderQuestionnaireEditor() {
     }
     emptyQuestions.style.display = 'none';
     questionEditor.innerHTML = questionTemplate.map((q, index) => `
-        <div class="question-item">
-            <div class="q-header">
-                <div>
-                    <div class="q-label">${escapeHtml(q.label)}</div>
-                    <div class="q-type">${escapeHtml(q.type)} · ID: ${escapeHtml(q.id)}</div>
-                    ${q.type === 'select' && q.options?.length ? `<div class="q-options">▾ ${escapeHtml(q.options.join(' · '))}</div>` : ''}
+        <div class="question-builder">
+            <div class="question-builder-head">
+                <div class="question-builder-number">${index + 1}</div>
+                <div class="question-builder-title">Frage ${index + 1}</div>
+                <div class="question-builder-actions">
+                    <button type="button" onclick="moveQuestion(${index}, -1)" title="Nach oben" ${index === 0 ? 'disabled' : ''}>↑</button>
+                    <button type="button" onclick="moveQuestion(${index}, 1)" title="Nach unten" ${index === questionTemplate.length - 1 ? 'disabled' : ''}>↓</button>
+                    <button type="button" onclick="removeQuestion(${index})" title="Frage löschen">🗑️</button>
                 </div>
-                <div class="q-actions"><button onclick="removeQuestion(${index})">🗑️</button><button onclick="editQuestion(${index})">✏️</button></div>
             </div>
+
+            <div class="form-group full">
+                <label>Frage</label>
+                <input type="text" value="${escapeHtml(q.label || '')}" placeholder="z. B. Welche Produkte interessieren Sie?" oninput="updateQuestionLabel(${index}, this.value)">
+            </div>
+
+            <div class="question-type-row">
+                <button type="button" class="question-type-btn ${q.type === 'text' ? 'active' : ''}" onclick="setQuestionType(${index}, 'text')">✏️ Kurztext</button>
+                <button type="button" class="question-type-btn ${q.type === 'textarea' ? 'active' : ''}" onclick="setQuestionType(${index}, 'textarea')">📝 Langtext</button>
+                <button type="button" class="question-type-btn ${q.type === 'select' ? 'active' : ''}" onclick="setQuestionType(${index}, 'select')">🔽 Auswahl</button>
+            </div>
+
+            ${q.type === 'select' ? `
+                <div class="option-editor">
+                    <div style="font-size:11px; font-weight:700; color:#6b7a8f;">Antwortmöglichkeiten</div>
+                    ${(q.options || []).map((opt, optIndex) => `
+                        <div class="option-row">
+                            <input type="text" value="${escapeHtml(opt)}" placeholder="Option" oninput="updateQuestionOption(${index}, ${optIndex}, this.value)">
+                            <button type="button" onclick="removeQuestionOption(${index}, ${optIndex})">×</button>
+                        </div>
+                    `).join('')}
+                    <button type="button" class="btn btn-secondary" style="margin-top:8px; padding:8px 10px; font-size:12px;" onclick="addQuestionOption(${index})">＋ Option</button>
+                </div>
+            ` : ''}
         </div>
     `).join('');
 }
 
-function askForOptions(existing) {
-    const raw = prompt('Auswahloptionen (mit Komma getrennt):', existing ? existing.join(', ') : '');
-    if (raw === null) return null;
-    const opts = raw.split(',').map(s => s.trim()).filter(Boolean);
-    if (opts.length === 0) { alert('❌ Mindestens eine Option nötig.'); return null; }
-    return opts;
+function createQuestion() {
+    questionTemplate.push({ id: `q_${Date.now()}_${Math.random().toString(36).slice(2,7)}`, label: '', type: 'text' });
+    persistQuestionnaireEditor();
+    renderQuestionnaireEditor();
+    setTimeout(() => {
+        const inputs = questionEditor.querySelectorAll('input[type="text"]');
+        inputs[inputs.length - 1]?.focus();
+    }, 0);
 }
 
-function addQuestion() {
-    const id = prompt('Frage-ID (z.B. "needs"):')?.trim(); if (!id) return;
-    if (questionTemplate.some(q => q.id === id)) { alert('❌ Diese ID existiert bereits.'); return; }
-    const label = prompt('Fragen-Text:')?.trim(); if (!label) return;
-    let type = prompt('Typ: text / textarea / select', 'text')?.trim().toLowerCase() || 'text';
-    if (!VALID_TYPES.includes(type)) { alert(`❌ Unbekannter Typ "${type}". Erlaubt: ${VALID_TYPES.join(', ')}`); return; }
+function updateQuestionLabel(index, value) {
+    if (!questionTemplate[index]) return;
+    questionTemplate[index].label = value;
+    persistActiveQuestions();
+}
 
-    const question = { id, label, type };
-    if (type === 'select') {
-        const opts = askForOptions();
-        if (!opts) return;
-        question.options = opts;
-    }
-    questionTemplate.push(question);
-    persistActiveQuestions();
-    renderQuestionnaireEditor();
-    updateScanTemplateSelect();
-}
-function removeQuestion(index) {
-    if (!confirm('Frage löschen?')) return;
-    questionTemplate.splice(index, 1);
-    persistActiveQuestions();
-    renderQuestionnaireEditor();
-    updateScanTemplateSelect();
-}
-function editQuestion(index) {
+function setQuestionType(index, type) {
     const q = questionTemplate[index];
-    const newLabel = prompt('Fragen-Text:', q.label)?.trim(); if (newLabel) q.label = newLabel;
-    const newType = prompt('Typ (text/textarea/select):', q.type)?.trim().toLowerCase();
-    if (newType) {
-        if (!VALID_TYPES.includes(newType)) alert(`❌ Unbekannter Typ "${newType}". Typ bleibt "${q.type}".`);
-        else q.type = newType;
-    }
-    if (q.type === 'select') {
-        const opts = askForOptions(q.options);
-        if (opts) q.options = opts;
-        else if (!q.options?.length) { alert('❌ Select ohne Optionen – Typ auf "text" gesetzt.'); q.type = 'text'; }
-    } else delete q.options;
-
-    persistActiveQuestions();
+    if (!q || !VALID_TYPES.includes(type)) return;
+    q.type = type;
+    if (type === 'select' && !Array.isArray(q.options)) q.options = ['Ja', 'Nein'];
+    if (type !== 'select') delete q.options;
+    persistQuestionnaireEditor();
     renderQuestionnaireEditor();
-    updateScanTemplateSelect();
 }
-document.getElementById('addQuestionBtn').addEventListener('click', addQuestion);
+
+function updateQuestionOption(index, optionIndex, value) {
+    if (!questionTemplate[index]?.options) return;
+    questionTemplate[index].options[optionIndex] = value;
+    persistActiveQuestions();
+}
+
+function addQuestionOption(index) {
+    if (!questionTemplate[index]) return;
+    questionTemplate[index].options ||= [];
+    questionTemplate[index].options.push('');
+    persistQuestionnaireEditor();
+    renderQuestionnaireEditor();
+}
+
+function removeQuestionOption(index, optionIndex) {
+    if (!questionTemplate[index]?.options) return;
+    questionTemplate[index].options.splice(optionIndex, 1);
+    if (questionTemplate[index].options.length === 0) questionTemplate[index].options.push('');
+    persistQuestionnaireEditor();
+    renderQuestionnaireEditor();
+}
+
+function moveQuestion(index, direction) {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= questionTemplate.length) return;
+    [questionTemplate[index], questionTemplate[newIndex]] = [questionTemplate[newIndex], questionTemplate[index]];
+    persistQuestionnaireEditor();
+    renderQuestionnaireEditor();
+}
+
+function removeQuestion(index) {
+    if (!questionTemplate[index]) return;
+    const label = questionTemplate[index].label || `Frage ${index + 1}`;
+    if (!confirm(`"${label}" wirklich löschen?`)) return;
+    questionTemplate.splice(index, 1);
+    persistQuestionnaireEditor();
+    renderQuestionnaireEditor();
+}
+
+document.getElementById('addQuestionBtn').addEventListener('click', createQuestion);
 document.getElementById('saveQuestionnaireTemplateBtn').addEventListener('click', () => {
-    const name = prompt('📝 Name für die Vorlage:', activeTemplateName || '');
-    if (name) saveTemplate(name);
+    const cleaned = questionTemplate
+        .map(q => ({ ...q, label: String(q.label || '').trim(), options: q.options?.map(v => String(v || '').trim()).filter(Boolean) }))
+        .filter(q => q.label);
+
+    if (!cleaned.length) {
+        alert('❌ Füge zuerst mindestens eine Frage hinzu.');
+        return;
+    }
+    if (cleaned.some(q => q.type === 'select' && (!q.options || !q.options.length))) {
+        alert('❌ Jede Auswahlfrage braucht mindestens eine Antwortmöglichkeit.');
+        return;
+    }
+    questionTemplate = cleaned;
+    const name = prompt('Name für den Fragebogen:', activeTemplateName || '');
+    if (!name?.trim()) return;
+    saveTemplate(name.trim());
+    renderQuestionnaireEditor();
 });
+
 document.getElementById('resetQuestionnaireBtn').addEventListener('click', () => {
-    if (confirm('⚠️ Alle Fragen zurücksetzen? (Gespeicherte Vorlagen bleiben erhalten)')) {
+    if (confirm('Alle aktuellen Fragen zurücksetzen? Gespeicherte Vorlagen bleiben erhalten.')) {
         questionTemplate = [];
         activeTemplateName = '';
         localStorage.setItem(ACTIVE_TEMPLATE_KEY, '');
         persistActiveQuestions();
         updateTemplateSelect();
         renderQuestionnaireEditor();
-        alert('✅ Fragen zurückgesetzt.');
     }
 });
 
@@ -2881,6 +3193,7 @@ document.getElementById('mapCityFilter').addEventListener('change', () => displa
 let calSelectedDate = new Date();   // aktuell gewählter Tag
 let calWeekStart = null;            // Montag der angezeigten Woche
 let calAppointments = [];           // Termine des gewählten Tages
+let calTodos = [];                  // Follow-ups des gewählten Tages
 let calCounts = {};                 // { 'YYYY-MM-DD': anzahl }
 let editingApptId = null;
 
@@ -2957,22 +3270,40 @@ function renderWeekStrip() {
         + ` · KW ${weekNo}`;
 }
 
-// --- Termine des gewählten Tages laden ---
+// --- Termine und Follow-ups des gewählten Tages laden ---
 async function loadDayAppointments() {
     const list = document.getElementById('calList');
     const dayStart = new Date(calSelectedDate); dayStart.setHours(0, 0, 0, 0);
     const dayEnd = new Date(calSelectedDate); dayEnd.setHours(23, 59, 59, 999);
+    const day = dateKey(calSelectedDate);
 
     try {
-        const res = await apiRequest(
-            `/appointments?from=${encodeURIComponent(dayStart.toISOString())}&to=${encodeURIComponent(dayEnd.toISOString())}`
-        );
-        const result = await res.json();
-        if (!result.success) throw new Error(result.error);
+        const [apptRes, todoRes] = await Promise.all([
+            apiRequest(`/appointments?from=${encodeURIComponent(dayStart.toISOString())}&to=${encodeURIComponent(dayEnd.toISOString())}`),
+            apiRequest(`/todos?from=${encodeURIComponent(day)}&to=${encodeURIComponent(day)}`)
+        ]);
+        const apptResult = await apptRes.json();
+        const todoResult = await todoRes.json();
+        if (!apptResult.success) throw new Error(apptResult.error);
+        if (!todoResult.success) throw new Error(todoResult.error);
 
-        calAppointments = result.data || [];
+        calAppointments = apptResult.data || [];
+        calTodos = todoResult.data || [];
         renderAppointments();
     } catch (error) {
+        // Falls der Kalender bereits funktioniert und nur die neue Todo-Tabelle
+        // noch nicht angelegt wurde, den Tag trotzdem mit Terminen anzeigen.
+        try {
+            const res = await apiRequest(`/appointments?from=${encodeURIComponent(dayStart.toISOString())}&to=${encodeURIComponent(dayEnd.toISOString())}`);
+            const result = await res.json();
+            if (result.success) {
+                calAppointments = result.data || [];
+                calTodos = [];
+                renderAppointments();
+                console.warn('Follow-ups konnten nicht geladen werden:', error.message);
+                return;
+            }
+        } catch (_) {}
         list.innerHTML = `<div class="cal-empty">❌ ${escapeHtml(error.message)}</div>`;
     }
 }
@@ -2993,13 +3324,32 @@ async function loadWeekCounts() {
 
 function renderAppointments() {
     const list = document.getElementById('calList');
+    const items = [];
 
-    if (calAppointments.length === 0) {
-        list.innerHTML = '<div class="cal-empty">📭 Keine Termine an diesem Tag</div>';
-        return;
-    }
+    (calTodos || []).forEach(todo => {
+        const lead = todo.leads;
+        const company = lead?.company || `${lead?.first_name || ''} ${lead?.last_name || ''}`.trim();
+        const due = todo.due_time ? ` · ${String(todo.due_time).slice(0, 5)}` : '';
+        items.push(`
+            <div class="todo-card ${todo.status === 'done' ? 'done' : ''}">
+                <div class="todo-card-inner">
+                    <button class="todo-check ${todo.status === 'done' ? 'checked' : ''}"
+                        onclick="toggleTodo('${todo.id}', '${todo.status === 'done' ? 'open' : 'done'}')"
+                        title="${todo.status === 'done' ? 'Als offen markieren' : 'Erledigen'}">
+                        ${todo.status === 'done' ? '✓' : ''}
+                    </button>
+                    <div class="todo-card-main" onclick="openTodoModal('${todo.id}')">
+                        <div class="todo-card-title">${escapeHtml(todo.title)}</div>
+                        ${company ? `<div class="todo-card-company">${escapeHtml(company)}</div>` : ''}
+                        <div class="todo-card-meta">Follow-up${escapeHtml(due)}${todo.status === 'done' ? ' · erledigt' : ''}</div>
+                        ${todo.note ? `<div class="todo-card-note">${escapeHtml(todo.note)}</div>` : ''}
+                    </div>
+                    <button class="todo-card-menu" onclick="deleteTodo('${todo.id}')" title="Follow-up löschen">⋮</button>
+                </div>
+            </div>`);
+    });
 
-    list.innerHTML = calAppointments.map(a => {
+    (calAppointments || []).forEach(a => {
         const lead = a.leads;
         const company = lead?.company || a.location || '—';
         const contact = lead ? `${lead.first_name || ''} ${lead.last_name || ''}`.trim() : '';
@@ -3007,7 +3357,7 @@ function renderAppointments() {
         const running = a.status === 'laufend';
         const done = a.status === 'erledigt';
 
-        return `
+        items.push(`
         <div class="appt-card status-${escapeHtml(a.status)}">
             ${lead ? `<div class="appt-hist-group">
                 <button class="appt-history-btn contact" title="Bisherige Termine mit ${escapeHtml(contact || 'diesem Kontakt')}"
@@ -3015,55 +3365,126 @@ function renderAppointments() {
                 <button class="appt-history-btn" title="Bisherige Termine bei ${escapeHtml(company)}"
                     onclick="openLeadHistory('${a.lead_id}')">&#127970;</button>
             </div>` : ''}
-
-            <!-- Der obere Bereich oeffnet den Termin zum Bearbeiten.
-                 Die Aktionsleiste darunter liegt bewusst ausserhalb,
-                 damit START/Anrufen/Mailen nicht das Modal oeffnen. -->
             <div class="appt-body" onclick="openApptModal('${a.id}')">
                 <div class="appt-company">${escapeHtml(company)}</div>
                 ${contact ? `<div class="appt-contact">${escapeHtml(contact)}</div>` : ''}
                 <div class="appt-sep"></div>
-
-                ${a.main_item ? `
-                <div class="appt-field">
-                    <div class="lbl">Thema</div>
-                    <div class="val">${escapeHtml(a.main_item)}</div>
-                </div>` : ''}
-
-                <div class="appt-field">
-                    <div class="lbl">Geplant</div>
-                    <div class="val">${escapeHtml(planned)}</div>
-                </div>
-
+                ${a.main_item ? `<div class="appt-field"><div class="lbl">Thema</div><div class="val">${escapeHtml(a.main_item)}</div></div>` : ''}
+                <div class="appt-field"><div class="lbl">Geplant</div><div class="val">${escapeHtml(planned)}</div></div>
                 <div class="appt-field appt-times">
-                    <div>
-                        <div class="lbl">Startzeit (ist)</div>
-                        <div class="val">${a.actual_start ? fmtTime(a.actual_start) : '\u2013'}</div>
-                    </div>
-                    <div>
-                        <div class="lbl">Endzeit (ist)</div>
-                        <div class="val">${a.actual_end ? fmtTime(a.actual_end) : '\u2013'}</div>
-                    </div>
+                    <div><div class="lbl">Startzeit (ist)</div><div class="val">${a.actual_start ? fmtTime(a.actual_start) : '\u2013'}</div></div>
+                    <div><div class="lbl">Endzeit (ist)</div><div class="val">${a.actual_end ? fmtTime(a.actual_end) : '\u2013'}</div></div>
                 </div>
             </div>
-
             <div class="appt-actions">
-                <!-- START/STOP-Button auf Wunsch auskommentiert (nicht gelöscht).
-                     Gamification zählt einfach ab dem ANLEGEN eines Termins,
-                     der Status spielt dafür keine Rolle mehr. Zum Reaktivieren
-                     des manuellen Buttons den Block unten wieder einkommentieren.
-                ${done
-                    ? `<button class="act-main" disabled>ERLEDIGT</button>`
-                    : running
-                        ? `<button class="act-main stop" onclick="stopAppointment('${a.id}')">STOP</button>`
-                        : `<button class="act-main" onclick="startAppointment('${a.id}')">START</button>`}
-                -->
                 <button class="act-icon" ${(lead?.mobile || lead?.phone) ? `onclick="dialNumber('${escapeHtml(lead.mobile || lead.phone)}')"` : 'disabled'}>${lead?.mobile ? '&#128241;' : '&#128222;'}</button>
                 <button class="act-icon" ${lead?.email ? `onclick="window.location.href='mailto:${escapeHtml(lead.email)}'"` : 'disabled'}>&#9993;</button>
                 <button class="act-icon" ${(a.latitude && a.longitude) ? `onclick="openMaps(${a.latitude},${a.longitude})"` : 'disabled'}>&#128205;</button>
             </div>
-        </div>`;
-    }).join('');
+        </div>`);
+    });
+
+    list.innerHTML = items.length ? items.join('') : '<div class="cal-empty">📭 Keine Termine oder Follow-ups an diesem Tag</div>';
+}
+
+function formatTodoDate(todo) {
+    if (!todo) return '';
+    const d = todo.due_date ? new Date(`${todo.due_date}T00:00:00`) : null;
+    const date = d ? d.toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit' }) : '';
+    const time = todo.due_time ? String(todo.due_time).slice(0,5) : '';
+    return [date, time].filter(Boolean).join(' · ');
+}
+
+async function loadDashboardTodos() {
+    const today = dateKey(new Date());
+    const to = dateKey(addDays(new Date(), 14));
+    const res = await apiRequest(`/todos?from=${encodeURIComponent(today)}&to=${encodeURIComponent(to)}`);
+    const result = await res.json();
+    if (!result.success) throw new Error(result.error);
+    return (result.data || []).filter(t => t.status !== 'done');
+}
+
+async function renderDashboardActions() {
+    const container = document.getElementById('dashboardActions');
+    if (!container || !hasFeature('calendar')) return;
+    const actions = [];
+
+    try {
+        const todos = await loadDashboardTodos();
+        todos.slice(0, 4).forEach(todo => {
+            const company = todo.leads?.company || `${todo.leads?.first_name || ''} ${todo.leads?.last_name || ''}`.trim();
+            actions.push({
+                type: 'todo',
+                title: todo.title,
+                meta: [company, formatTodoDate(todo)].filter(Boolean).join(' · ')
+            });
+        });
+    } catch (error) {
+        console.warn('Dashboard Follow-ups:', error);
+    }
+
+    try {
+        const from = new Date();
+        const to = addDays(from, 14);
+        const res = await apiRequest(`/appointments?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`);
+        const result = await res.json();
+        if (result.success) {
+            (result.data || []).filter(a => new Date(a.starts_at) >= new Date()).slice(0, 4).forEach(a => {
+                const company = a.leads?.company || a.title || 'Termin';
+                actions.push({ type:'appointment', title:company, meta:`${a.leads ? `${a.leads.first_name || ''} ${a.leads.last_name || ''}`.trim() + ' · ' : ''}${new Date(a.starts_at).toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit' })} · ${fmtTime(a.starts_at)}` });
+            });
+        }
+    } catch (error) {
+        console.warn('Dashboard Termine:', error);
+    }
+
+    const sorted = actions.slice(0, 6);
+    container.innerHTML = sorted.length ? sorted.map(action => `
+        <div class="dashboard-action ${action.type}">
+            <div class="dashboard-action-icon">${action.type === 'todo' ? '✓' : '📅'}</div>
+            <div class="dashboard-action-main">
+                <div class="dashboard-action-title">${escapeHtml(action.title)}</div>
+                <div class="dashboard-action-meta">${escapeHtml(action.meta || '')}</div>
+            </div>
+        </div>
+    `).join('') : '<div class="dashboard-empty">🎉 Keine offenen Aktionen</div>';
+}
+
+async function renderDashboardGoal() {
+    const container = document.getElementById('dashboardGoal');
+    if (!container || !hasFeature('gamification')) return;
+    try {
+        await loadGoalStats();
+        const data = goalStats;
+        if (!data) { container.innerHTML = ''; return; }
+        const current = data.currentWeek?.count || 0;
+        const goal = data.goal || 0;
+        const progress = data.currentWeek?.progress || 0;
+        const remaining = data.currentWeek?.remaining || 0;
+        container.innerHTML = `
+            <div class="dashboard-goal-number"><div class="dashboard-goal-current">${current}</div><div class="dashboard-goal-target">von ${goal} Terminen</div></div>
+            <div class="dashboard-goal-bar"><div class="dashboard-goal-fill" style="width:${Math.min(100, progress)}%"></div></div>
+            <div class="dashboard-goal-text">${remaining > 0 ? `Noch ${remaining} ${remaining === 1 ? 'Termin' : 'Termine'} bis zum Wochenziel` : '🎉 Wochenziel erreicht!'}</div>
+            ${data.streak > 0 ? `<div class="dashboard-goal-streak">🔥 ${data.streak} Wochen Serie</div>` : ''}
+        `;
+    } catch (error) {
+        console.warn('Dashboard Ziel:', error);
+        container.innerHTML = '';
+    }
+}
+
+function renderDashboard() {
+    const panel = document.getElementById('dashboardPanel');
+    const actionsSection = document.getElementById('dashboardActionsSection');
+    const goalSection = document.getElementById('dashboardGoalSection');
+    if (!panel) return;
+    const hasCalendar = hasFeature('calendar');
+    const hasGamification = hasFeature('gamification');
+    actionsSection.style.display = hasCalendar ? '' : 'none';
+    goalSection.style.display = hasGamification ? '' : 'none';
+    panel.style.display = (hasCalendar || hasGamification) ? 'flex' : 'none';
+    if (hasCalendar) renderDashboardActions();
+    if (hasGamification) renderDashboardGoal();
 }
 
 function openMaps(lat, lon) {
@@ -3281,9 +3702,6 @@ async function openApptModal(id = null, presetLeadId = null) {
         document.getElementById('apptLocation').value    = a.location || '';
         document.getElementById('apptDescription').value = a.description || '';
 
-        const reminderField = document.getElementById('apptReminder');
-        if (reminderField) reminderField.value = String(a.reminder_minutes ?? 30);
-
         const s = new Date(a.starts_at), e = new Date(a.ends_at);
         document.getElementById('apptDate').value  = dateKey(s);
         document.getElementById('apptStart').value = s.toTimeString().slice(0, 5);
@@ -3307,9 +3725,6 @@ async function openApptModal(id = null, presetLeadId = null) {
     document.getElementById('apptMainItem').value    = '';
     document.getElementById('apptLocation').value    = '';
     document.getElementById('apptDescription').value = '';
-
-    const reminderField = document.getElementById('apptReminder');
-    if (reminderField) reminderField.value = '30';
 
     document.getElementById('apptDate').value = dateKey(calSelectedDate);
 
@@ -3386,7 +3801,6 @@ document.getElementById('apptSaveBtn').addEventListener('click', async () => {
         mainItem: document.getElementById('apptMainItem').value.trim(),
         location: document.getElementById('apptLocation').value.trim(),
         description: document.getElementById('apptDescription').value.trim(),
-        reminderMinutes: parseInt(document.getElementById('apptReminder').value, 10),
         startsAt: startsAt.toISOString(),
         endsAt: endsAt.toISOString()
     };
@@ -3443,6 +3857,111 @@ document.getElementById('apptDeleteBtn').addEventListener('click', async () => {
         await loadCalendar();
     } catch (error) { alert('❌ Fehler: ' + error.message); }
 });
+
+
+let editingTodoId = null;
+
+function populateTodoLeads(selectedId = '') {
+    const select = document.getElementById('todoLead');
+    if (!select) return;
+    select.innerHTML = '<option value="">Kein Lead</option>';
+    (allLeads || []).forEach(lead => {
+        const opt = document.createElement('option');
+        opt.value = lead.id;
+        opt.textContent = leadLabel(lead);
+        if (lead.id === selectedId) opt.selected = true;
+        select.appendChild(opt);
+    });
+}
+
+async function openTodoModal(id = null) {
+    editingTodoId = id;
+    const overlay = document.getElementById('todoOverlay');
+    overlay.classList.add('active');
+
+    if (allLeads.length === 0) {
+        try { await loadLeads(); } catch (error) { console.warn('Leads nicht ladbar:', error); }
+    }
+
+    let todo = null;
+    if (id) {
+        todo = calTodos.find(x => x.id === id) || null;
+        if (!todo) {
+            try {
+                const day = dateKey(calSelectedDate);
+                const res = await apiRequest(`/todos?from=${encodeURIComponent(day)}&to=${encodeURIComponent(day)}`);
+                const result = await res.json();
+                if (result.success) todo = (result.data || []).find(x => x.id === id) || null;
+            } catch (error) { console.warn('Follow-up nicht ladbar:', error); }
+        }
+    }
+
+    document.getElementById('todoTitle').value = todo?.title || '';
+    document.getElementById('todoNote').value = todo?.note || '';
+    document.getElementById('todoDate').value = todo?.due_date || dateKey(calSelectedDate);
+    document.getElementById('todoTime').value = todo?.due_time ? String(todo.due_time).slice(0,5) : '';
+    populateTodoLeads(todo?.lead_id || '');
+}
+
+function closeTodoModal() {
+    document.getElementById('todoOverlay').classList.remove('active');
+    editingTodoId = null;
+}
+
+async function saveTodoFromModal() {
+    const title = document.getElementById('todoTitle').value.trim();
+    const dueDate = document.getElementById('todoDate').value;
+    const dueTime = document.getElementById('todoTime').value;
+    const note = document.getElementById('todoNote').value.trim();
+    const leadId = document.getElementById('todoLead').value || null;
+    if (!title || !dueDate) { alert('Bitte Titel und Datum angeben.'); return; }
+
+    const btn = document.getElementById('todoSaveBtn');
+    btn.disabled = true; btn.textContent = '⏳ Speichere...';
+    try {
+        const payload = { title, dueDate, dueTime: dueTime || null, note, leadId };
+        const path = editingTodoId ? `/todos/${editingTodoId}` : '/todos';
+        const res = await apiRequest(path, { method: editingTodoId ? 'PUT' : 'POST', body: JSON.stringify({ todo: payload }) });
+        const result = await res.json();
+        if (!result.success) throw new Error(result.error || 'Speichern fehlgeschlagen');
+        closeTodoModal();
+        calSelectedDate = new Date(`${dueDate}T00:00:00`);
+        calWeekStart = startOfWeek(calSelectedDate);
+        await loadCalendar();
+        renderDashboard();
+    } catch (error) {
+        alert('❌ ' + error.message);
+    } finally {
+        btn.disabled = false; btn.textContent = '✓ Follow-up speichern';
+    }
+}
+
+async function toggleTodo(id, status) {
+    try {
+        const res = await apiRequest(`/todos/${id}`, { method:'PUT', body:JSON.stringify({ todo:{ status } }) });
+        const result = await res.json();
+        if (!result.success) throw new Error(result.error);
+        await loadDayAppointments();
+        renderDashboard();
+    } catch (error) { alert('❌ Fehler: ' + error.message); }
+}
+
+async function deleteTodo(id) {
+    if (!confirm('Dieses Follow-up wirklich löschen?')) return;
+    try {
+        const res = await apiRequest(`/todos/${id}`, { method:'DELETE' });
+        const result = await res.json();
+        if (!result.success) throw new Error(result.error);
+        await loadDayAppointments();
+        renderDashboard();
+    } catch (error) { alert('❌ Fehler: ' + error.message); }
+}
+
+document.getElementById('calNewTodoBtn').addEventListener('click', () => openTodoModal());
+document.getElementById('todoCloseBtn').addEventListener('click', closeTodoModal);
+document.getElementById('todoCancelBtn').addEventListener('click', closeTodoModal);
+document.getElementById('todoSaveBtn').addEventListener('click', saveTodoFromModal);
+document.getElementById('todoOverlay').addEventListener('click', (e) => { if (e.target.id === 'todoOverlay') closeTodoModal(); });
 
 document.getElementById('calNewBtn').addEventListener('click', () => openApptModal());
 document.getElementById('apptCloseBtn').addEventListener('click', closeApptModal);
