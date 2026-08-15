@@ -81,6 +81,7 @@
         .search-toolbar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
         .search-toolbar select { flex: 1 1 150px; min-width: 0; padding: 10px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 14px; background: white; }
         .search-toolbar button { padding: 8px 14px; border: none; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; background: #E8F4FD; color: #0066AA; }
+        .search-toolbar button.active { background: #0066AA; color: #fff; }
         .search-mode-toggle { display: flex; gap: 6px; margin-bottom: 10px; }
         .smt-btn {
             flex: 1 1 0; min-width: 0; padding: 10px 4px;
@@ -326,6 +327,7 @@
             transition: transform .15s, background .15s;
         }
         .home-btn:active { transform: scale(.92); background: #E8F4FD; }
+        .home-btn svg { width: 22px; height: 22px; flex-shrink: 0; }
 
         /* ===== START-DASHBOARD ===== */
         .dashboard-panel {
@@ -857,7 +859,12 @@
 
     <!-- APP (nach Login) -->
     <div id="appContainer" style="display:none;">
-        <button id="homeBtn" class="home-btn" aria-label="Zur Startseite" title="Startseite">⌂</button>
+        <button id="homeBtn" class="home-btn" aria-label="Zur Startseite" title="Startseite">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 11.5 12 4l9 7.5"/>
+                <path d="M5.5 10v9a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1v-9"/>
+            </svg>
+        </button>
 
         <!-- KACHEL-GRID -->
         <div class="grid" id="mainGrid">
@@ -1942,16 +1949,40 @@ searchBtn.addEventListener('click', () => {
     if (!term) {
         searchResults.innerHTML = '<div class="empty-leads">🔍 Gib einen Suchbegriff ein oder klicke „Alle anzeigen"</div>';
         searchResultInfo.textContent = '';
-        searchActive = false;
+        setShowAllState(false);
         return;
     }
+    setShowAllState(false);   // gezielte Suche ist nicht "alle" – Button-Beschriftung zuruecksetzen
     runSearch(term);
 });
 searchInput.addEventListener('keyup', (e) => { if (e.key === 'Enter') searchBtn.click(); });
 
-// „Alle anzeigen": leert das Suchfeld und listet den gesamten Bestand
+// „Alle anzeigen" / „Alle ausblenden": echter Umschalter, mit eigenem
+// Merker getrennt von searchActive (das steuert nur, ob ueberhaupt
+// etwas gerendert wird). Sonst wuerde nach einer gezielten Textsuche
+// der Button "Alle anzeigen" zeigen, aber beim Klick faelschlich
+// "ausblenden" statt "alle zeigen" ausloesen.
+let showAllActive = false;
+
+function setShowAllState(active) {
+    showAllActive = active;
+    showAllBtn.textContent = active ? '🙈 Alle ausblenden' : '📋 Alle anzeigen';
+    showAllBtn.classList.toggle('active', active);
+}
+
 showAllBtn.addEventListener('click', () => {
+    if (showAllActive) {
+        // Ausblenden: Suchfeld leeren, Ergebnisliste zuruecksetzen
+        searchInput.value = '';
+        currentSearchTerm = '';
+        searchActive = false;
+        setShowAllState(false);
+        searchResults.innerHTML = '<div class="empty-leads">Gib einen Suchbegriff ein oder klicke „Alle anzeigen"</div>';
+        searchResultInfo.textContent = '';
+        return;
+    }
     searchInput.value = '';
+    setShowAllState(true);
     runSearch('');
 });
 
