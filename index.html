@@ -470,7 +470,7 @@
         .question-builder-actions { display:flex; gap:4px; }
         .question-builder-actions button { border:none; background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:6px 8px; cursor:pointer; }
         .question-builder input, .question-builder select { font-size:14px; padding:10px 12px; }
-        .question-type-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:7px; margin-top:8px; }
+        .question-type-row { display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-top:8px; }
         .question-type-btn { border:1px solid #e2e8f0; background:#fff; color:#4a5568; border-radius:10px; padding:9px 6px; font-size:12px; font-weight:700; cursor:pointer; }
         .question-type-btn.active { background:#0066AA; border-color:#0066AA; color:#fff; }
         .option-editor { margin-top:10px; padding-top:10px; border-top:1px solid #e8edf3; }
@@ -1605,7 +1605,14 @@ function showView(viewId) {
     document.getElementById('mainGrid').style.display = viewId === 'main' ? 'grid' : 'none';
     const homeBtn = document.getElementById('homeBtn');
     if (homeBtn) homeBtn.style.display = viewId === 'main' ? 'none' : 'flex';
-    if (viewId === 'main') renderDashboard();
+
+    // Wochenziel + nächste Aktionen ausschließlich auf Startseite und Kalender.
+    const dashboardPanel = document.getElementById('dashboardPanel');
+    if (dashboardPanel) {
+        const showDashboard = viewId === 'main' || viewId === 'calendar';
+        dashboardPanel.style.display = showDashboard ? 'flex' : 'none';
+        if (showDashboard) renderDashboard();
+    }
     if (viewId === 'map') { initMap(); loadMapData(); }
     if (viewId === 'stats') { loadHistogram(); loadLeads(); }
     if (viewId === 'questionnaire') { loadTemplates(); loadActiveTemplate(); }
@@ -2563,9 +2570,7 @@ function renderScanQuestionnaire() {
     scanQuestionnaireForm.innerHTML = scanQuestions.map(q => {
         const fieldId = `scanq_${escapeHtml(q.id)}`;
         let field;
-        if (q.type === 'textarea') {
-            field = `<textarea id="${fieldId}" rows="2"></textarea>`;
-        } else if (q.type === 'select') {
+        if (q.type === 'select') {
             const opts = (q.options || []).map(o => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('');
             field = `<select id="${fieldId}"><option value="">Bitte wählen...</option>${opts}</select>`;
         } else {
@@ -2652,18 +2657,27 @@ function getActiveQuestions() {
     catch { return []; }
 }
 
+function normalizeQuestion(q) {
+    const normalized = { ...q };
+    if (normalized.type === 'textarea' || normalized.type === 'short_text' || normalized.type === 'long_text') normalized.type = 'text';
+    return normalized;
+}
+function normalizeQuestionList(list) {
+    return (Array.isArray(list) ? list : []).map(normalizeQuestion);
+}
 function loadTemplates() {
     const saved = localStorage.getItem(TEMPLATE_STORAGE_KEY);
-    templates = saved ? JSON.parse(saved) : {};
+    const raw = saved ? JSON.parse(saved) : {};
+    templates = Object.fromEntries(Object.entries(raw).map(([name, questions]) => [name, normalizeQuestionList(questions)]));
     return templates;
 }
 function loadActiveTemplate() {
     const saved = localStorage.getItem(ACTIVE_TEMPLATE_KEY);
     activeTemplateName = saved || '';
     if (activeTemplateName && templates[activeTemplateName]) {
-        questionTemplate = JSON.parse(JSON.stringify(templates[activeTemplateName]));
+        questionTemplate = normalizeQuestionList(JSON.parse(JSON.stringify(templates[activeTemplateName])));
     } else {
-        questionTemplate = getActiveQuestions();
+        questionTemplate = normalizeQuestionList(getActiveQuestions());
     }
     persistActiveQuestions();
     renderQuestionnaireEditor();
@@ -2696,7 +2710,7 @@ function saveTemplate(name) {
 }
 function loadTemplate(name) {
     if (!name || !templates[name]) { alert('❌ Vorlage nicht gefunden.'); return; }
-    questionTemplate = JSON.parse(JSON.stringify(templates[name]));
+    questionTemplate = normalizeQuestionList(JSON.parse(JSON.stringify(templates[name])));
     activeTemplateName = name;
     localStorage.setItem(ACTIVE_TEMPLATE_KEY, name);
     persistActiveQuestions();
@@ -2726,7 +2740,7 @@ document.getElementById('deleteTemplateBtn').addEventListener('click', () => { c
 // ============================================================
 const questionEditor = document.getElementById('questionnaireEditor');
 const emptyQuestions = document.getElementById('emptyQuestions');
-const VALID_TYPES = ['text', 'textarea', 'select'];
+const VALID_TYPES = ['text', 'select'];
 
 function persistQuestionnaireEditor() {
     persistActiveQuestions();
@@ -2758,8 +2772,7 @@ function renderQuestionnaireEditor() {
             </div>
 
             <div class="question-type-row">
-                <button type="button" class="question-type-btn ${q.type === 'text' ? 'active' : ''}" onclick="setQuestionType(${index}, 'text')">✏️ Kurztext</button>
-                <button type="button" class="question-type-btn ${q.type === 'textarea' ? 'active' : ''}" onclick="setQuestionType(${index}, 'textarea')">📝 Langtext</button>
+                <button type="button" class="question-type-btn ${q.type === 'text' ? 'active' : ''}" onclick="setQuestionType(${index}, 'text')">✏️ Freitext</button>
                 <button type="button" class="question-type-btn ${q.type === 'select' ? 'active' : ''}" onclick="setQuestionType(${index}, 'select')">🔽 Auswahl</button>
             </div>
 
@@ -2932,9 +2945,7 @@ function renderLeadQuestionnaire() {
         const val = answers[q.id] || '';
         const fieldId = `q_${escapeHtml(q.id)}`;
         let field;
-        if (q.type === 'textarea') {
-            field = `<textarea id="${fieldId}" rows="2">${escapeHtml(val)}</textarea>`;
-        } else if (q.type === 'select') {
+        if (q.type === 'select') {
             const opts = (q.options || []).map(o =>
                 `<option value="${escapeHtml(o)}"${o === val ? ' selected' : ''}>${escapeHtml(o)}</option>`
             ).join('');
