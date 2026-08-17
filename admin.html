@@ -71,6 +71,11 @@
         border:1px solid var(--line); border-radius:6px; padding:4px 9px;
     }
     .mode b { color: var(--text); font-weight:600; }
+    .mode select {
+        background: var(--bg); color: var(--text); border: 1px solid var(--line);
+        border-radius: 6px; padding: 4px 8px; font: inherit; font-size: 12px; cursor: pointer;
+    }
+    .mode select:focus { outline: 2px solid var(--blue); outline-offset: -1px; }
 
     /* --- Wartende Mandanten --- */
     .pending {
@@ -98,7 +103,18 @@
     }
     thead th.mod { text-align:center; }
     tbody tr:hover { background: rgba(63,159,224,.05); }
-    td.tenant { min-width: 210px; }
+    /* Mandantenspalte beim Querscrollen stehenlassen – sonst
+       verschwindet der Name und man weiss nicht mehr, welche
+       Zeile man gerade schaltet. */
+    th.tenant-col, td.tenant {
+        position: sticky; left: 0; z-index: 2;
+        min-width: 200px; max-width: 260px;
+    }
+    td.tenant { background: var(--panel); }
+    tbody tr:hover td.tenant { background: #202a38; }
+    thead th.tenant-col { z-index: 3; background: var(--panel-2); }
+    td.tenant b { overflow-wrap: anywhere; }
+    td.tenant span { display:block; overflow-wrap: anywhere; }
     td.tenant b { display:block; font-weight:600; }
     td.tenant span { color: var(--muted); font-size:12px; font-variant-numeric: tabular-nums; }
     td.mod { text-align:center; padding: 6px; }
@@ -174,7 +190,15 @@
         <div id="msg"></div>
 
         <div class="bar">
-            <span class="mode">Registrierung: <b id="regMode">–</b></span>
+            <label class="mode" style="display:flex; align-items:center; gap:8px;">
+                Registrierung:
+                <select id="regModeSelect">
+                    <option value="approval">approval – erst nach Freigabe</option>
+                    <option value="trial">trial – Testphase mit Ablauf</option>
+                    <option value="open">open – sofort nutzbar</option>
+                    <option value="closed">closed – gesperrt</option>
+                </select>
+            </label>
             <span class="mode"><b id="tenantCount">0</b> Mandanten</span>
             <div class="spacer"></div>
             <button class="ghost" id="reloadBtn">Neu laden</button>
@@ -282,6 +306,29 @@ $('logoutBtn').addEventListener('click', () => {
     $('gate').style.display = 'block';
     $('key').value = '';
 });
+// Registrierungsmodus umschalten. Bei 'open' und 'closed' kurz
+// nachfragen – beides hat spuerbare Folgen fuer Neukunden.
+$('regModeSelect').addEventListener('change', async (e) => {
+    const mode = e.target.value;
+    const warn = {
+        open:   'Bei "open" kann sich jeder selbst registrieren und erhaelt sofort die Standardmodule. Fortfahren?',
+        closed: 'Bei "closed" ist die Selbstregistrierung komplett gesperrt. Neue Mandanten legst dann nur du an. Fortfahren?'
+    }[mode];
+
+    if (warn && !confirm(warn)) { await load(); return; }   // Auswahl zuruecksetzen
+
+    try {
+        await api('/admin/settings/registration-mode', {
+            method: 'PUT',
+            body: JSON.stringify({ mode })
+        });
+        showMsg(`Registrierung steht jetzt auf "${mode}".`);
+    } catch (err) {
+        showMsg(err.message, 'err');
+        await load();   // tatsaechlichen Stand wiederherstellen
+    }
+});
+
 $('reloadBtn').addEventListener('click', () => {
     pendingChanges.clear();
     load().catch(err => showMsg(err.message, 'err'));
@@ -292,7 +339,7 @@ async function load() {
     const result = await api('/admin/licences');
     catalog = result.catalog || [];
     tenants = result.data || [];
-    $('regMode').textContent = result.registrationMode || '–';
+    if (result.registrationMode) $('regModeSelect').value = result.registrationMode;
     $('tenantCount').textContent = tenants.length;
     render();
 }
@@ -327,7 +374,7 @@ function cellState(tenant, feature) {
 function render() {
     // Kopfzeile
     $('head').innerHTML =
-        '<th>Mandant</th>' +
+        '<th class="tenant-col">Mandant</th>' +
         catalog.map(f => `<th class="mod" title="${esc(f.description || '')}">${esc(f.name)}</th>`).join('') +
         '<th></th>';
 
