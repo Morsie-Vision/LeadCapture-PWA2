@@ -1399,6 +1399,11 @@ async function apiRequest(endpoint, options = {}, isRetry = false) {
             const clone = response.clone();
             try {
                 const body = await clone.json();
+                // Mandant wartet noch auf Freigabe -> klare Meldung
+                // statt Logout mit "Session abgelaufen".
+                if (body?.code === 'TENANT_NOT_ACTIVATED') {
+                    throw new Error(body.error || 'Ihr Zugang wurde noch nicht freigeschaltet.');
+                }
                 if (body?.code === 'FEATURE_NOT_LICENSED') {
                     // Lizenzlage hat sich geändert -> Kacheln aktualisieren
                     if (body.feature) {
@@ -1440,6 +1445,25 @@ async function login(email, password) {
     setRefreshToken(result.data.refreshToken);
     setUser(result.data.user);
     return result.data;
+}
+
+// Liefert die VOLLSTAENDIGE Antwort inkl. pendingApproval-Flag.
+// register() unten bleibt fuer Aufrufer erhalten, die nur data brauchen.
+async function registerRaw(email, password, fullName, tenantName) {
+    const response = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, fullName, tenantName })
+    });
+    const result = await response.json();
+    if (!result.success) throw new Error(result.error || 'Registrierung fehlgeschlagen');
+
+    // Nur anmelden, wenn der Zugang auch schon nutzbar ist
+    if (!result.pendingApproval && result.data?.token) {
+        setToken(result.data.token);
+        setRefreshToken(result.data.refreshToken);
+        setUser(result.data.user);
+    }
+    return result;
 }
 
 async function register(email, password, fullName, tenantName) {
@@ -1535,8 +1559,25 @@ registerForm.addEventListener('submit', async (e) => {
     registerError.style.display = 'none';
     registerBtn.disabled = true; registerBtn.textContent = '⏳ ...';
     try {
-        const data = await register(registerEmail.value, registerPassword.value, registerFullName.value, registerTenantName.value);
-        showApp(data.user, data.features);
+        const result = await registerRaw(registerEmail.value, registerPassword.value, registerFullName.value, registerTenantName.value);
+
+        // Bei REGISTRATION_MODE=approval ist der Zugang noch gesperrt –
+        // dann gar nicht erst in die App wechseln, sondern erklaeren.
+        if (result.pendingApproval) {
+            registerError.style.display = 'none';
+            document.getElementById('registerFormContainer').innerHTML = `
+                <h2 style="font-size:20px; margin-bottom:12px;">✅ Registrierung eingegangen</h2>
+                <p style="font-size:14px; color:#4a5568; line-height:1.6;">
+                    ${escapeHtml(result.message || 'Ihr Zugang wird geprueft.')}
+                </p>
+                <p style="font-size:13px; color:#6b7a8f; margin-top:14px;">
+                    Sie koennen sich anmelden, sobald die Freigabe erfolgt ist.
+                </p>
+                <button class="btn btn-secondary" style="margin-top:16px; width:100%;"
+                    onclick="location.reload()">Zurueck zur Anmeldung</button>`;
+            return;
+        }
+        showApp(result.data.user, result.data.features);
     } catch (error) {
         registerError.textContent = error.message || 'Registrierung fehlgeschlagen';
         registerError.style.display = 'block';
@@ -4394,7 +4435,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = getUser();
     if (user && getToken()) showApp(user);
     else showLogin();
-    console.log('🚀 LeadCapture PWA v14.0.0 geladen (Tap-to-Focus, responsiv, Kontakt-Historie)');
+    console.log('🚀 LeadCapture PWA v16.0.0 geladen (Registrierungsmodi)');
 });
 </script>
 </body>
