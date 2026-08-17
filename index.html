@@ -672,10 +672,16 @@
             display: none; align-items: center; justify-content: center; overflow: hidden;
         }
         #cameraOverlay.active { display: flex; }
+        /* Der Darstellungsmodus wird zur Laufzeit gewaehlt
+           (siehe chooseVideoFit): "cover" sieht besser aus, schneidet
+           aber Sensorflaeche weg. Bei 16:9-Kameras auf hochformatigen
+           Bildschirmen kostet das so viel Aufloesung, dass die Karte
+           unlesbar wird - dort greift "contain" mit schwarzen Balken. */
         #cameraVideo {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: cover; background: #000;
+            object-fit: contain; background: #000;
         }
+        #cameraVideo.fit-cover { object-fit: cover; }
         #cameraGuide {
             position: relative;
             width: 82%;
@@ -725,6 +731,33 @@
         }
         #cameraOverlay.qr-mode #qrStatus { display: block; }
         #cameraOverlay.qr-mode #cameraFocusHint { display: none; }
+        #cameraOverlay.qr-mode #lensPicker { display: none !important; }
+
+        /* Objektivwahl (Weitwinkel / Haupt / Tele) */
+        #lensPicker {
+            position: absolute; left: 0; right: 0;
+            top: calc(max(env(safe-area-inset-top), 16px) + 40px);
+            display: flex; justify-content: center; gap: 8px; z-index: 5; padding: 0 16px;
+        }
+        .lens-btn {
+            background: rgba(0,0,0,0.55); color: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 18px; padding: 7px 14px; font-size: 12px; font-weight: 600; cursor: pointer;
+        }
+        .lens-btn.active { background: #fff; color: #111; border-color: #fff; }
+
+        /* Zoom-Regler: Abstand halten statt nah herangehen */
+        #zoomWrap {
+            position: absolute; left: 0; right: 0;
+            bottom: calc(max(env(safe-area-inset-bottom), 24px) + 108px);
+            display: flex; align-items: center; gap: 10px; z-index: 5;
+            padding: 8px 20px; color: #fff;
+        }
+        #zoomWrap .zoom-lbl, #zoomValue {
+            font-size: 12px; font-weight: 600; text-shadow: 0 1px 4px rgba(0,0,0,.7);
+            white-space: nowrap; min-width: 38px;
+        }
+        #zoomSlider { flex: 1; accent-color: #fff; height: 28px; }
+        #cameraOverlay.qr-mode #zoomWrap { display: none !important; }
 
         .cam-btn {
             background: rgba(255,255,255,0.15); color: #fff; border: none;
@@ -1334,6 +1367,12 @@
     <div id="cameraGuide"></div>
     <div id="cameraHint">Visitenkarte im Rahmen ausrichten</div>
     <div id="qrStatus"></div>
+    <div id="lensPicker" style="display:none;"></div>
+    <div id="zoomWrap" style="display:none;">
+        <span class="zoom-lbl">Zoom</span>
+        <input type="range" id="zoomSlider" min="1" max="4" step="0.1" value="2">
+        <span id="zoomValue">2.0×</span>
+    </div>
     <div id="focusRing"></div>
     <div id="cameraFocusHint">Zum Scharfstellen auf die Karte tippen</div>
     <div id="cameraControls">
@@ -2409,6 +2448,9 @@ const CARD_ASPECT_RATIO = 85 / 55;  // Standard-Visitenkartenformat, bei Bedarf 
 const CAPTURE_PADDING = 1.06;       // 6% Toleranz, falls Ausrichtung leicht daneben liegt
 
 let cameraStream = null;
+let preferredCameraId = null;      // gewaehltes Objektiv
+let availableCameras = [];         // alle Rueckkameras
+const CAMERA_PREF_KEY = 'leadcapture_camera_id';
 const cameraOverlay = document.getElementById('cameraOverlay');
 const cameraVideo = document.getElementById('cameraVideo');
 const cameraGuide = document.getElementById('cameraGuide');
@@ -2420,7 +2462,14 @@ async function openCamera() {
     }
     try {
         cameraStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+            video: {
+                facingMode: { ideal: 'environment' },
+                // So hoch wie das Geraet hergibt – je mehr Sensorpixel,
+                // desto lesbarer die Kleinschrift auf der Karte.
+                width:  { ideal: 3840 },
+                height: { ideal: 2160 },
+                ...(preferredCameraId ? { deviceId: { exact: preferredCameraId } } : {})
+            },
             audio: false
         });
         cameraVideo.srcObject = cameraStream;
@@ -2429,14 +2478,93 @@ async function openCamera() {
         cameraOverlay.classList.toggle('qr-mode', captureMode === 'qr');
         document.getElementById('cameraHint').textContent = captureMode === 'qr'
             ? 'QR-Code im Rahmen ausrichten'
-            : 'Visitenkarte im Rahmen ausrichten';
+            : 'Karte ca. 30 cm entfernt halten · mit Zoom formatfüllend einstellen';
+
+        // Erst JETZT sind die Kamerabezeichnungen lesbar – vor der
+        // erteilten Berechtigung liefert enumerateDevices leere Labels.
+        availableCameras = await listRearCameras();
+        if (!preferredCameraId) {
+            const best = pickBestCamera(availableCameras);
+            if (best && best !== cameraStream.getVideoTracks()[0]?.getSettings()?.deviceId) {
+                preferredCameraId = best;
+                try { localStorage.setItem(CAMERA_PREF_KEY, best); } catch {}
+                // Mit der besseren Linse neu oeffnen
+                cameraStream.getTracks().forEach(t => t.stop());
+                return openCamera();
+            }
+            preferredCameraId = best;
+        }
+        renderLensPicker();
+        logCameraCapabilities();
 
         await enableContinuousFocus();
+        await setupZoom();
+        chooseVideoFit();
         if (captureMode === 'qr') startQrLoop();
     } catch (error) {
         console.error('Kamera-Fehler:', error);
         showError('Kamera konnte nicht gestartet werden: ' + (error.message || 'Zugriff verweigert'));
     }
+}
+
+// ------------------------------------------------------------
+// OBJEKTIVWAHL (Samsung & Co. haben mehrere Rueckkameras)
+// ------------------------------------------------------------
+// facingMode:'environment' liefert oft die ULTRAWEITWINKEL-Linse.
+// Die kann im Nahbereich haeufig gar nicht scharfstellen – eine
+// Visitenkarte bleibt dann dauerhaft unscharf, egal wie oft man
+// antippt. Deshalb: alle Rueckkameras auflisten und die Hauptkamera
+// bevorzugen, mit Umschaltmoeglichkeit fuer den Nutzer.
+
+function isUltraWide(label) {
+    return /ultra|wide.?angle|weitwinkel|0\.5/i.test(label || '');
+}
+function isTelephoto(label) {
+    return /tele|zoom|3x|5x/i.test(label || '');
+}
+
+async function listRearCameras() {
+    if (!navigator.mediaDevices?.enumerateDevices) return [];
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const cams = devices.filter(d => d.kind === 'videoinput');
+
+    // Ohne erteilte Berechtigung sind die Bezeichnungen leer –
+    // dann laesst sich nicht unterscheiden, welche Linse welche ist.
+    const rear = cams.filter(d => !/front|user|selfie/i.test(d.label || ''));
+    return rear.length > 0 ? rear : cams;
+}
+
+function pickBestCamera(cams) {
+    if (cams.length === 0) return null;
+    // Erste Wahl: eine Kamera, die weder Ultraweitwinkel noch Tele ist
+    const main = cams.find(c => !isUltraWide(c.label) && !isTelephoto(c.label));
+    if (main) return main.deviceId;
+    // Sonst wenigstens keine Ultraweitwinkel-Linse
+    const notWide = cams.find(c => !isUltraWide(c.label));
+    return (notWide || cams[0]).deviceId;
+}
+
+function renderLensPicker() {
+    const box = document.getElementById('lensPicker');
+    if (availableCameras.length < 2) { box.style.display = 'none'; return; }
+
+    box.style.display = 'flex';
+    box.innerHTML = availableCameras.map((c, i) => {
+        const label = isUltraWide(c.label) ? 'Weitwinkel'
+                    : isTelephoto(c.label) ? 'Tele'
+                    : `Objektiv ${i + 1}`;
+        const active = c.deviceId === preferredCameraId ? ' active' : '';
+        return `<button class="lens-btn${active}" data-cam="${c.deviceId}">${label}</button>`;
+    }).join('');
+
+    box.querySelectorAll('.lens-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            preferredCameraId = btn.dataset.cam;
+            try { localStorage.setItem(CAMERA_PREF_KEY, preferredCameraId); } catch {}
+            closeCamera();
+            await openCamera();
+        });
+    });
 }
 
 function closeCamera() {
@@ -2465,6 +2593,25 @@ function cameraTrack() {
     return cameraStream?.getVideoTracks()[0] || null;
 }
 
+// Einmal beim Laden: zuletzt gewaehltes Objektiv wiederherstellen
+try { preferredCameraId = localStorage.getItem(CAMERA_PREF_KEY) || null; } catch {}
+
+// Diagnose: zeigt in der Browserkonsole, was das Geraet tatsaechlich
+// kann. Hilft, wenn Bilder trotz allem unscharf bleiben.
+function logCameraCapabilities() {
+    const track = cameraTrack();
+    if (!track?.getCapabilities) { console.log('📷 Keine Kamera-Faehigkeiten abrufbar'); return; }
+    try {
+        const caps = track.getCapabilities();
+        const set = track.getSettings();
+        console.log('📷 Kamera:', set.deviceId?.slice(0, 12), '· Aufloesung', set.width + 'x' + set.height);
+        console.log('   Fokus-Modi:', caps.focusMode || 'nicht meldbar');
+        console.log('   Fokuspunkt:', caps.pointsOfInterest ? 'ja' : 'nein');
+        console.log('   Max. Aufloesung:', caps.width?.max + 'x' + caps.height?.max);
+        console.log('   Zoom:', caps.zoom ? `${caps.zoom.min}–${caps.zoom.max}` : 'nicht verfuegbar');
+    } catch (err) { console.warn('Faehigkeiten nicht lesbar:', err.message); }
+}
+
 // Fordert dauerhaften Autofokus an, sofern das Geraet ihn kann
 async function enableContinuousFocus() {
     const track = cameraTrack();
@@ -2480,6 +2627,100 @@ async function enableContinuousFocus() {
     }
     return false;
 }
+
+// ------------------------------------------------------------
+// DARSTELLUNGSMODUS AUTOMATISCH WAEHLEN
+// ------------------------------------------------------------
+// "cover" fuellt den Bildschirm und sieht besser aus, verwirft aber
+// alles, was ausserhalb liegt. Bei einer 16:9-Kamera auf einem
+// hochformatigen Bildschirm sind das rund 74% der Sensorbreite -
+// auf der Karte bleiben dann zu wenige Pixel fuer Kleinschrift.
+// Bei 4:3-Kameras (typisch iPhone) faellt der Verlust kaum ins
+// Gewicht, dort darf es formatfuellend bleiben.
+//
+// Statt fester Regeln pro Geraet wird hier gerechnet: reicht
+// "cover" fuer eine lesbare Karte, wird es genutzt - sonst nicht.
+
+const MIN_CARD_PIXELS = 1200;   // Erfahrungswert fuer 6-8pt-Schrift
+let currentVideoFit = 'contain';
+
+function cardWidthForFit(fit) {
+    const vw = cameraVideo.videoWidth, vh = cameraVideo.videoHeight;
+    const rect = cameraVideo.getBoundingClientRect();
+    if (!vw || !vh || !rect.width) return 0;
+
+    const scale = fit === 'cover'
+        ? Math.max(rect.width / vw, rect.height / vh)
+        : Math.min(rect.width / vw, rect.height / vh);
+
+    const guideW = cameraGuide.getBoundingClientRect().width;
+    return guideW / scale;
+}
+
+function chooseVideoFit() {
+    const coverWidth = cardWidthForFit('cover');
+    // Zoom vergroessert die Karte im Bild zusaetzlich
+    const zoomFactor = zoomCaps ? Number(document.getElementById('zoomSlider').value) / zoomCaps.min : 1;
+    const effective = coverWidth * zoomFactor;
+
+    currentVideoFit = effective >= MIN_CARD_PIXELS ? 'cover' : 'contain';
+    cameraVideo.classList.toggle('fit-cover', currentVideoFit === 'cover');
+
+    console.log(`🖼️ Darstellung: ${currentVideoFit} (Karte waere bei cover ${Math.round(effective)}px breit)`);
+    return currentVideoFit;
+}
+
+// ------------------------------------------------------------
+// ZOOM STATT NAH HERANGEHEN
+// ------------------------------------------------------------
+// Samsung gibt fuer die Hauptlinse eine Naheinstellgrenze von rund
+// 30 cm an. Haelt man die Visitenkarte naeher, KANN die Kamera nicht
+// scharfstellen - das ist eine optische Grenze, kein Fokusfehler.
+// Samsungs eigene Empfehlung: Abstand halten und zoomen.
+// Genau das machen wir hier automatisch.
+
+let zoomCaps = null;
+
+async function setupZoom() {
+    const track = cameraTrack();
+    const slider = document.getElementById('zoomSlider');
+    const wrap = document.getElementById('zoomWrap');
+    if (!track?.getCapabilities) { wrap.style.display = 'none'; return; }
+
+    let caps;
+    try { caps = track.getCapabilities(); } catch { wrap.style.display = 'none'; return; }
+
+    if (!caps.zoom) { zoomCaps = null; wrap.style.display = 'none'; return; }
+
+    zoomCaps = caps.zoom;
+    slider.min = zoomCaps.min;
+    slider.max = Math.min(zoomCaps.max, zoomCaps.min * 4);   // 4x reicht voellig
+    slider.step = zoomCaps.step || 0.1;
+
+    // Startwert: leicht herangezoomt, damit die Karte auch aus
+    // ~30 cm Abstand den Rahmen fuellt.
+    const start = Math.min(slider.max, zoomCaps.min * 2);
+    slider.value = start;
+    wrap.style.display = 'flex';
+
+    await applyZoom(start);
+}
+
+async function applyZoom(value) {
+    const track = cameraTrack();
+    if (!track || !zoomCaps) return;
+    try {
+        await track.applyConstraints({ advanced: [{ zoom: Number(value) }] });
+        document.getElementById('zoomValue').textContent = Number(value).toFixed(1) + '×';
+    } catch (err) {
+        console.warn('Zoom nicht setzbar:', err.message);
+    }
+}
+
+document.getElementById('zoomSlider').addEventListener('input', async (e) => {
+    await applyZoom(e.target.value);
+    chooseVideoFit();   // mehr Zoom kann formatfuellende Darstellung wieder erlauben
+});
 
 // Zeigt den Fokus-Ring an der angetippten Stelle
 function showFocusRing(clientX, clientY) {
@@ -2509,7 +2750,11 @@ async function focusAt(clientX, clientY) {
     const vw = cameraVideo.videoWidth, vh = cameraVideo.videoHeight;
     if (!vw || !vh) return;
 
-    const scale = Math.max(rect.width / vw, rect.height / vh);
+    // Denselben Modus nutzen, den die Darstellung gerade verwendet –
+    // sonst zeigt der Fokuspunkt auf die falsche Stelle.
+    const scale = currentVideoFit === 'cover'
+        ? Math.max(rect.width / vw, rect.height / vh)
+        : Math.min(rect.width / vw, rect.height / vh);
     const shownW = vw * scale, shownH = vh * scale;
     const offX = rect.left + (rect.width - shownW) / 2;
     const offY = rect.top + (rect.height - shownH) / 2;
@@ -2552,7 +2797,10 @@ function computeCropRegion() {
     const containerRect = cameraVideo.getBoundingClientRect();
     const guideRect = cameraGuide.getBoundingClientRect();
 
-    const scale = Math.max(containerRect.width / videoW, containerRect.height / videoH);
+    // min() = object-fit: contain (vorher max() fuer cover)
+    const scale = currentVideoFit === 'cover'
+        ? Math.max(containerRect.width / videoW, containerRect.height / videoH)
+        : Math.min(containerRect.width / videoW, containerRect.height / videoH);
     const displayedW = videoW * scale;
     const displayedH = videoH * scale;
     const videoLeft = containerRect.left + (containerRect.width - displayedW) / 2;
@@ -2579,17 +2827,73 @@ function computeCropRegion() {
     return { srcX, srcY, srcW, srcH };
 }
 
-function captureCard() {
+// Nimmt nach Moeglichkeit ein echtes Foto in Sensoraufloesung auf.
+// Ein Videobild hat nur Vorschauqualitaet – auf der Karte landeten
+// damit zu wenige Pixel, um Kleinschrift zu lesen. takePhoto()
+// liefert je nach Geraet ein Vielfaches davon.
+async function grabFullResolutionFrame() {
+    const track = cameraTrack();
+    if (!track || typeof window.ImageCapture !== 'function') return null;
+
+    try {
+        const capture = new window.ImageCapture(track);
+        const blob = await capture.takePhoto();
+        const bitmap = await createImageBitmap(blob);
+        // Nur nutzen, wenn das Foto wirklich groesser ist als die Vorschau
+        if (bitmap.width <= cameraVideo.videoWidth) { bitmap.close?.(); return null; }
+        return bitmap;
+    } catch (err) {
+        console.warn('Vollbild-Aufnahme nicht moeglich, nutze Videobild:', err.message);
+        return null;
+    }
+}
+
+async function captureCard() {
+    const shutter = document.getElementById('cameraShutterBtn');
+    shutter.disabled = true;
+
+    // Rahmen als ANTEIL des Videobilds merken – so laesst er sich
+    // auf ein Foto mit abweichender Groesse uebertragen.
     const { srcX, srcY, srcW, srcH } = computeCropRegion();
+    const vW = cameraVideo.videoWidth, vH = cameraVideo.videoHeight;
+    const fracW = srcW / vW, fracH = srcH / vH;
+
+    const photo = await grabFullResolutionFrame();
+    const source = photo || cameraVideo;
+    const sw = photo ? photo.width  : vW;
+    const sh = photo ? photo.height : vH;
+
+    let cx, cy, cw, ch;
+    if (photo) {
+        // Zentriert anwenden: das Foto kann ein anderes Seitenverhaeltnis
+        // haben als die Vorschau, der Rahmen liegt aber immer mittig.
+        cw = sw * fracW;
+        ch = sh * fracH;
+        const target = CARD_ASPECT_RATIO;
+        if (cw / ch > target) cw = ch * target; else ch = cw / target;
+        cx = (sw - cw) / 2;
+        cy = (sh - ch) / 2;
+    } else {
+        cx = srcX; cy = srcY; cw = srcW; ch = srcH;
+    }
 
     const canvas = document.createElement('canvas');
-    canvas.width = srcW;
-    canvas.height = srcH;
-    canvas.getContext('2d').drawImage(cameraVideo, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
+    canvas.width = Math.round(cw);
+    canvas.height = Math.round(ch);
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(source, cx, cy, cw, ch, 0, 0, canvas.width, canvas.height);
+
+    console.log(`📐 Ausschnitt ${canvas.width}x${canvas.height} px` +
+                (photo ? ` (Foto ${sw}x${sh})` : ` (Videobild ${sw}x${sh})`));
+    photo?.close?.();
 
     closeCamera();
+    shutter.disabled = false;
 
-    const dataUrl = downscaleCanvas(canvas, 1600, 0.85);
+    // 2000px statt 1600: die Karte darf jetzt mehr Detail behalten,
+    // die Datei bleibt durch JPEG-Kompression trotzdem klein genug.
+    const dataUrl = downscaleCanvas(canvas, 2000, 0.9);
     processCapturedImage(dataUrl);
 }
 
@@ -2611,6 +2915,8 @@ document.getElementById('cameraSwitchBtn').addEventListener('click', async () =>
         cameraOverlay.classList.add('active');
         cameraOverlay.classList.toggle('qr-mode', captureMode === 'qr');
         await enableContinuousFocus();
+        await setupZoom();
+        chooseVideoFit();
         if (captureMode === 'qr') startQrLoop();
     } catch (error) { showError('Kamera konnte nicht gewechselt werden.'); }
 });
@@ -4679,7 +4985,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = getUser();
     if (user && getToken()) showApp(user);
     else showLogin();
-    console.log('🚀 LeadCapture PWA v17.0.0 geladen (QR-Scan)');
+    console.log('🚀 LeadCapture PWA v20.0.0 geladen (Schaerfe-Fix, Objektivwahl)');
 });
 </script>
 </body>
