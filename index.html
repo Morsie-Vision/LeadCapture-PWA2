@@ -705,6 +705,27 @@
             background: #fff; border: 4px solid rgba(255,255,255,0.4); cursor: pointer;
         }
         .cam-shutter:active { background: #E8F4FD; }
+        /* Aufnahmeart waehlen */
+        .capture-modes { display: flex; gap: 8px; margin-bottom: 12px; }
+        .cap-mode {
+            flex: 1 1 0; min-width: 0; padding: 10px 4px;
+            border: 1.5px solid #e2e8f0; border-radius: 12px; background: #fff;
+            color: #4a5568; font-size: clamp(12px, 3.2vw, 14px); font-weight: 600; cursor: pointer;
+        }
+        .cap-mode.active { background: #0066AA; border-color: #0066AA; color: #fff; }
+
+        /* QR-Modus: quadratischer Rahmen statt Kartenformat */
+        #cameraOverlay.qr-mode #cameraGuide { aspect-ratio: 1 / 1; width: 68%; max-width: min(340px, 68dvh); }
+        #cameraOverlay.qr-mode #cameraControls .cam-shutter { display: none; }
+        #qrStatus {
+            position: absolute; left: 0; right: 0;
+            bottom: calc(max(env(safe-area-inset-bottom), 24px) + 96px);
+            text-align: center; color: #ffd54a; font-size: 13px; font-weight: 600;
+            text-shadow: 0 1px 4px rgba(0,0,0,.7); padding: 0 16px; z-index: 4; display: none;
+        }
+        #cameraOverlay.qr-mode #qrStatus { display: block; }
+        #cameraOverlay.qr-mode #cameraFocusHint { display: none; }
+
         .cam-btn {
             background: rgba(255,255,255,0.15); color: #fff; border: none;
             border-radius: 20px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
@@ -868,7 +889,7 @@
 
         <!-- KACHEL-GRID -->
         <div class="grid" id="mainGrid">
-            <div class="grid-card" data-view="scan" data-feature="scan"><span class="icon">📸</span><div class="label">Visitenkarte</div><div class="sub">scannen &amp; erfassen</div></div>
+            <div class="grid-card" data-view="scan" data-feature="scan"><span class="icon">📸</span><div class="label">Lead aufnehmen</div><div class="sub">Visitenkarte oder QR-Code</div></div>
             <div class="grid-card" data-view="search" data-feature="leads"><span class="icon">🔍</span><div class="label">Suche</div><div class="sub">Leads finden</div></div>
             <div class="grid-card" data-view="questionnaire" data-feature="questionnaire"><span class="icon">📝</span><div class="label">Fragebogen</div><div class="sub">erstellen &amp; verwalten</div></div>
             <div class="grid-card" data-view="stats" data-feature="stats"><span class="icon">📊</span><div class="label">Statistik</div><div class="sub">Histogramm</div></div>
@@ -906,7 +927,11 @@
 
         <!-- VIEW: SCAN -->
         <div class="view" id="view-scan">
-            <div class="view-header"><button class="back" data-view="main">←</button><h2>📸 Visitenkarte scannen</h2></div>
+            <div class="view-header"><button class="back" data-view="main">←</button><h2>📸 Lead aufnehmen</h2></div>
+            <div class="capture-modes">
+                <button type="button" class="cap-mode active" id="modeCardBtn">📇 Visitenkarte</button>
+                <button type="button" class="cap-mode" id="modeQrBtn">▣ QR-Code</button>
+            </div>
             <div class="upload-area" id="uploadArea">
                 <div class="icon">📸</div><p>Visitenkarte scannen</p><small>Live-Kamera mit Rahmen · JPG, PNG, PDF (max. 10MB)</small>
             </div>
@@ -1308,6 +1333,7 @@
     <video id="cameraVideo" autoplay playsinline muted></video>
     <div id="cameraGuide"></div>
     <div id="cameraHint">Visitenkarte im Rahmen ausrichten</div>
+    <div id="qrStatus"></div>
     <div id="focusRing"></div>
     <div id="cameraFocusHint">Zum Scharfstellen auf die Karte tippen</div>
     <div id="cameraControls">
@@ -2328,7 +2354,7 @@ async function processCapturedImage(dataUrl, { showPreview = true } = {}) {
     } else {
         previewContainer.style.display = 'none';
     }
-    setStatus('OCR läuft, danach DeepSeek-Analyse...', true);
+    setStatus('Scan läuft...', true);
     try {
         const response = await apiRequest('/process-image', {
             method: 'POST',
@@ -2400,7 +2426,13 @@ async function openCamera() {
         cameraVideo.srcObject = cameraStream;
         await cameraVideo.play();
         cameraOverlay.classList.add('active');
+        cameraOverlay.classList.toggle('qr-mode', captureMode === 'qr');
+        document.getElementById('cameraHint').textContent = captureMode === 'qr'
+            ? 'QR-Code im Rahmen ausrichten'
+            : 'Visitenkarte im Rahmen ausrichten';
+
         await enableContinuousFocus();
+        if (captureMode === 'qr') startQrLoop();
     } catch (error) {
         console.error('Kamera-Fehler:', error);
         showError('Kamera konnte nicht gestartet werden: ' + (error.message || 'Zugriff verweigert'));
@@ -2408,10 +2440,12 @@ async function openCamera() {
 }
 
 function closeCamera() {
+    stopQrLoop();
     cameraStream?.getTracks().forEach(t => t.stop());
     cameraStream = null;
     cameraVideo.srcObject = null;
     cameraOverlay.classList.remove('active');
+    cameraOverlay.classList.remove('qr-mode');
     document.getElementById('cameraFocusHint').textContent = 'Zum Scharfstellen auf die Karte tippen';
 }
 
@@ -2575,9 +2609,280 @@ document.getElementById('cameraSwitchBtn').addEventListener('click', async () =>
         cameraVideo.srcObject = cameraStream;
         await cameraVideo.play();
         cameraOverlay.classList.add('active');
+        cameraOverlay.classList.toggle('qr-mode', captureMode === 'qr');
         await enableContinuousFocus();
+        if (captureMode === 'qr') startQrLoop();
     } catch (error) { showError('Kamera konnte nicht gewechselt werden.'); }
 });
+
+// ============================================================
+// 12c. QR-CODE ERFASSEN
+// ============================================================
+// Erkennung ueber die native BarcodeDetector-Schnittstelle
+// (Chrome/Android/Edge). Safari und Firefox kennen sie nicht -
+// dort wird jsQR nachgeladen, aber erst beim ersten QR-Scan,
+// damit die App normal nicht damit belastet wird.
+
+let captureMode = 'card';        // 'card' | 'qr'
+let qrLoopActive = false;
+let jsQrLoading = null;
+
+function unescapeVCard(v) {
+    return String(v || '')
+        .replace(/\\n/gi, '\n').replace(/\\,/g, ',')
+        .replace(/\\;/g, ';').replace(/\\\\/g, '\\').trim();
+}
+
+function parseVCard(text) {
+    const out = { address: {} };
+    // Gefaltete Zeilen (RFC 6350) zusammenfuehren, sonst brechen lange Werte
+    const lines = text.replace(/\r\n[ \t]/g, '').replace(/\n[ \t]/g, '').split(/\r?\n/);
+
+    for (const line of lines) {
+        const idx = line.indexOf(':');
+        if (idx < 0) continue;
+        const rawKey = line.slice(0, idx);
+        const value = unescapeVCard(line.slice(idx + 1));
+        if (!value) continue;
+
+        const parts = rawKey.split(';');
+        const key = parts[0].toUpperCase().replace(/^ITEM\d+\./, '');
+        const params = parts.slice(1).join(';').toUpperCase();
+
+        switch (key) {
+            case 'N': {
+                const n = value.split(';');
+                if (n[1]) out.firstName = n[1].trim();
+                if (n[0]) out.lastName = n[0].trim();
+                if (n[3]) out.title = n[3].trim();
+                break;
+            }
+            case 'FN': out._fullName = value; break;
+            case 'ORG': out.company = value.split(';')[0].trim(); break;
+            case 'TITLE': out.position = value; break;
+            case 'EMAIL': if (!out.email) out.email = value; break;
+            case 'TEL': {
+                if (/FAX/.test(params))              { if (!out.fax) out.fax = value; }
+                else if (/CELL|MOBILE/.test(params)) { if (!out.mobile) out.mobile = value; }
+                else                                 { if (!out.phone) out.phone = value; }
+                break;
+            }
+            case 'ADR': {
+                const a = value.split(';');
+                if (a[2]) out.address.street  = a[2].trim();
+                if (a[3]) out.address.city    = a[3].trim();
+                if (a[4]) out.address.state   = a[4].trim();
+                if (a[5]) out.address.zip     = a[5].trim();
+                if (a[6]) out.address.country = a[6].trim();
+                break;
+            }
+            case 'URL':
+                if (/linkedin/i.test(value)) out.linkedin = value;
+                else if (!out.website) out.website = value;
+                break;
+            case 'NOTE': out.note = value; break;
+        }
+    }
+
+    // Nur FN vorhanden -> in Vor- und Nachname aufteilen
+    if (!out.firstName && !out.lastName && out._fullName) {
+        const p = out._fullName.split(/\s+/);
+        out.lastName = p.pop() || '';
+        out.firstName = p.join(' ');
+    }
+    delete out._fullName;
+    return out;
+}
+
+function parseMeCard(text) {
+    const out = { address: {} };
+    const body = text.replace(/^MECARD:/i, '').replace(/;;\s*$/, '');
+    for (const f of body.split(/(?<!\\);/)) {
+        const idx = f.indexOf(':');
+        if (idx < 0) continue;
+        const key = f.slice(0, idx).toUpperCase();
+        const value = f.slice(idx + 1).replace(/\\;/g, ';').trim();
+        if (!value) continue;
+
+        switch (key) {
+            case 'N': {
+                const n = value.split(',');
+                if (n.length > 1) { out.lastName = n[0].trim(); out.firstName = n[1].trim(); }
+                else {
+                    const p = value.split(/\s+/);
+                    out.lastName = p.pop() || '';
+                    out.firstName = p.join(' ');
+                }
+                break;
+            }
+            case 'ORG': out.company = value; break;
+            case 'TEL': if (!out.phone) out.phone = value; break;
+            case 'TEL-AV': case 'TELAV': if (!out.mobile) out.mobile = value; break;
+            case 'EMAIL': if (!out.email) out.email = value; break;
+            case 'URL': if (!out.website) out.website = value; break;
+            case 'ADR': {
+                const a = value.split(',');
+                if (a[2]) out.address.street  = a[2].trim();
+                if (a[3]) out.address.city    = a[3].trim();
+                if (a[5]) out.address.zip     = a[5].trim();
+                if (a[6]) out.address.country = a[6].trim();
+                break;
+            }
+            case 'NOTE': out.note = value; break;
+        }
+    }
+    return out;
+}
+
+function parseQrPayload(text) {
+    const t = String(text || '').trim();
+    if (!t) return null;
+    if (/^BEGIN:VCARD/i.test(t)) return { kind: 'Visitenkarte (vCard)', data: parseVCard(t) };
+    if (/^MECARD:/i.test(t))     return { kind: 'Visitenkarte (MECARD)', data: parseMeCard(t) };
+    if (/^https?:\/\//i.test(t)) {
+        const data = { address: {} };
+        if (/linkedin\.com/i.test(t)) data.linkedin = t; else data.website = t;
+        return { kind: 'Weblink', data };
+    }
+    if (/^mailto:/i.test(t)) return { kind: 'E-Mail', data: { address: {}, email: t.replace(/^mailto:/i, '') } };
+    if (/^tel:/i.test(t))    return { kind: 'Telefonnummer', data: { address: {}, phone: t.replace(/^tel:/i, '') } };
+    return { kind: 'Text', data: { address: {}, note: t } };
+}
+
+// jsQR nur laden, wenn die native Erkennung fehlt
+function ensureJsQr() {
+    if (window.jsQR) return Promise.resolve(true);
+    if (jsQrLoading) return jsQrLoading;
+    jsQrLoading = new Promise((resolve) => {
+        const el = document.createElement('script');
+        el.src = 'https://unpkg.com/jsqr@1.4.0/dist/jsQR.js';
+        el.onload = () => resolve(!!window.jsQR);
+        el.onerror = () => resolve(false);
+        document.head.appendChild(el);
+    });
+    return jsQrLoading;
+}
+
+async function makeQrReader() {
+    // 1. Bevorzugt: native Erkennung, ohne Zusatzbibliothek
+    if ('BarcodeDetector' in window) {
+        try {
+            const formats = await window.BarcodeDetector.getSupportedFormats();
+            if (formats.includes('qr_code')) {
+                const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+                return async (video) => {
+                    const found = await detector.detect(video);
+                    return found.length > 0 ? found[0].rawValue : null;
+                };
+            }
+        } catch { /* faellt unten auf jsQR zurueck */ }
+    }
+    // 2. Rueckfallebene: jsQR ueber Canvas
+    const ok = await ensureJsQr();
+    if (!ok) return null;
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    return async (video) => {
+        const w = video.videoWidth, h = video.videoHeight;
+        if (!w || !h) return null;
+        // Auf halbe Groesse herunterrechnen – schneller und reicht fuer QR
+        canvas.width = Math.round(w / 2);
+        canvas.height = Math.round(h / 2);
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const res = window.jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+        return res?.data || null;
+    };
+}
+
+async function startQrLoop() {
+    const status = document.getElementById('qrStatus');
+    status.textContent = 'Suche QR-Code…';
+
+    const read = await makeQrReader();
+    if (!read) {
+        status.textContent = 'QR-Erkennung auf diesem Geraet nicht verfuegbar';
+        return;
+    }
+
+    qrLoopActive = true;
+    let lastTry = 0;
+
+    const tick = async (now) => {
+        if (!qrLoopActive || !cameraStream) return;
+        // Etwa 8 Versuche pro Sekunde – mehr kostet nur Akku
+        if (now - lastTry > 120) {
+            lastTry = now;
+            try {
+                const value = await read(cameraVideo);
+                if (value) { qrLoopActive = false; handleQrResult(value); return; }
+            } catch { /* einzelne Frames duerfen fehlschlagen */ }
+        }
+        requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+}
+
+function stopQrLoop() { qrLoopActive = false; }
+
+function handleQrResult(rawValue) {
+    const parsed = parseQrPayload(rawValue);
+    closeCamera();
+
+    if (!parsed) { showError('Der QR-Code war leer.'); return; }
+
+    // Kurz rueckmelden – sonst wirkt das Schliessen wie ein Abbruch
+    if (navigator.vibrate) navigator.vibrate(60);
+
+    if (parsed.kind.startsWith('Visitenkarte')) {
+        fillForm(parsed.data);
+        setStatus(`✅ ${parsed.kind} uebernommen – bitte pruefen und speichern.`, true);
+        setTimeout(() => setStatus('', false), 3500);
+        return;
+    }
+
+    // Kein Kontaktformat: nur die erkannten Einzelfelder ergaenzen,
+    // vorhandene Eingaben nicht ueberschreiben
+    const d = parsed.data;
+    let filled = 0;
+    const setIfEmpty = (field, value) => {
+        if (value && fields[field] && !fields[field].value.trim()) { fields[field].value = value; filled++; }
+    };
+    setIfEmpty('website', d.website);
+    setIfEmpty('linkedin', d.linkedin);
+    setIfEmpty('email', d.email);
+    setIfEmpty('phone', d.phone);
+
+    if (filled > 0) {
+        setStatus(`✅ ${parsed.kind} uebernommen.`, true);
+        setTimeout(() => setStatus('', false), 3000);
+    } else if (d.note) {
+        alert(`QR-Code enthaelt keine Kontaktdaten:\n\n${d.note.slice(0, 300)}`);
+    } else {
+        showError('Im QR-Code standen keine verwertbaren Kontaktdaten.');
+    }
+}
+
+// --- Umschalter Visitenkarte / QR ---
+document.getElementById('modeCardBtn').addEventListener('click', () => setCaptureMode('card'));
+document.getElementById('modeQrBtn').addEventListener('click', () => setCaptureMode('qr'));
+
+function setCaptureMode(mode) {
+    captureMode = mode;
+    document.getElementById('modeCardBtn').classList.toggle('active', mode === 'card');
+    document.getElementById('modeQrBtn').classList.toggle('active', mode === 'qr');
+
+    const area = document.getElementById('uploadArea');
+    area.querySelector('.icon').textContent = mode === 'qr' ? '▣' : '📸';
+    area.querySelector('p').textContent = mode === 'qr' ? 'QR-Code scannen' : 'Visitenkarte scannen';
+    area.querySelector('small').textContent = mode === 'qr'
+        ? 'vCard, MECARD, Weblink oder Telefonnummer'
+        : 'Live-Kamera mit Rahmen · JPG, PNG, PDF (max. 10MB)';
+
+    document.getElementById('galleryLink').style.display = mode === 'qr' ? 'none' : '';
+    document.getElementById('uploadBtn').textContent = mode === 'qr' ? '▣ QR scannen' : '📷 Kamera öffnen';
+}
 
 // ============================================================
 // 13. SCAN: FRAGEBOGEN DIREKT AUSFÜLLEN
@@ -3599,7 +3904,6 @@ async function loadCalendar() {
     await loadDayAppointments();
     updateTodayBadge();
     loadGoalStats();
-    setupPushReminders();
 }
 
 async function updateTodayBadge() {
@@ -4222,66 +4526,6 @@ document.getElementById('histCloseBtn').addEventListener('click', closeHistory);
 histOverlay.addEventListener('click', (e) => { if (e.target === histOverlay) closeHistory(); });
 
 // ============================================================
-// 19f. PUSH-ERINNERUNGEN
-// ============================================================
-// Voraussetzung auf iOS: die PWA muss über "Zum Home-Bildschirm"
-// installiert sein - im normalen Safari-Tab blockiert iOS Push
-// komplett, unabhängig vom Code hier.
-
-function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-    const raw = atob(base64);
-    return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
-}
-
-function isStandalonePwa() {
-    return window.matchMedia('(display-mode: standalone)').matches
-        || window.navigator.standalone === true;
-}
-
-async function setupPushReminders() {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-    if (!hasFeature('calendar')) return;
-
-    try {
-        const reg = await navigator.serviceWorker.register('/sw.js');
-
-        const existing = await reg.pushManager.getSubscription();
-        if (existing) return;   // schon abonniert
-
-        if (Notification.permission === 'denied') return;
-
-        // iOS erlaubt Push NUR in der installierten (Home-Bildschirm) PWA.
-        // Im normalen Browser-Tab macht ein Berechtigungsdialog dort keinen
-        // Sinn und würde nur verwirren.
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-        if (isIOS && !isStandalonePwa()) return;
-
-        const keyRes = await apiRequest('/push/public-key');
-        const keyResult = await keyRes.json();
-        if (!keyResult.success) return;   // Push serverseitig nicht konfiguriert
-
-        const permission = Notification.permission === 'granted'
-            ? 'granted'
-            : await Notification.requestPermission();
-        if (permission !== 'granted') return;
-
-        const subscription = await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(keyResult.key)
-        });
-
-        await apiRequest('/push/subscribe', {
-            method: 'POST',
-            body: JSON.stringify({ subscription: subscription.toJSON() })
-        });
-    } catch (error) {
-        console.warn('Push-Einrichtung übersprungen:', error.message);
-    }
-}
-
-// ============================================================
 // 19e. ZIELVERFOLGUNG (Gamification)
 // ============================================================
 // Gezählt werden ERLEDIGTE Termine der laufenden Woche.
@@ -4435,7 +4679,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = getUser();
     if (user && getToken()) showApp(user);
     else showLogin();
-    console.log('🚀 LeadCapture PWA v16.0.0 geladen (Registrierungsmodi)');
+    console.log('🚀 LeadCapture PWA v17.0.0 geladen (QR-Scan)');
 });
 </script>
 </body>
