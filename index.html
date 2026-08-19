@@ -81,6 +81,7 @@
         .search-toolbar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
         .search-toolbar select { flex: 1 1 150px; min-width: 0; padding: 10px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 14px; background: white; }
         .search-toolbar button { padding: 8px 14px; border: none; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; background: #E8F4FD; color: #0066AA; }
+        .search-toolbar button.active { background: #0066AA; color: #fff; }
         .search-mode-toggle { display: flex; gap: 6px; margin-bottom: 10px; }
         .smt-btn {
             flex: 1 1 0; min-width: 0; padding: 10px 4px;
@@ -212,6 +213,56 @@
         .map-warn { margin-top: 6px; font-size: 12px; color: #b45309; background: #fef3c7; padding: 8px 10px; border-radius: 8px; text-align: center; display: none; }
         .map-warn button { margin-top: 6px; padding: 6px 14px; border: none; border-radius: 8px; background: #0066AA; color: white; font-size: 12px; cursor: pointer; }
 
+        /* ===== TEAM ===== */
+        .team-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+        .tt-btn {
+            flex: 1 1 0; min-width: 0; padding: 10px 4px;
+            border: 1.5px solid #e2e8f0; border-radius: 10px; background: #fff;
+            color: #4a5568; font-size: clamp(12px,3.2vw,14px); font-weight: 600; cursor: pointer;
+        }
+        .tt-btn.active { background: #0066AA; border-color: #0066AA; color: #fff; }
+
+        .team-total {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+            gap: 8px;
+        }
+        .tt-kpi {
+            background: #fff; border: 1px solid #eef2f7; border-radius: 12px;
+            padding: 12px 10px; text-align: center;
+        }
+        .tt-kpi .num { font-size: clamp(20px,6vw,26px); font-weight: 700; color: #0066AA; line-height: 1.1; }
+        .tt-kpi .lbl { font-size: 11px; color: #6b7a8f; margin-top: 2px; }
+
+        .tm-row {
+            background: #fff; border: 1px solid #eef2f7; border-radius: 12px;
+            padding: 11px 12px; margin-bottom: 8px;
+        }
+        .tm-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+        .tm-name { font-size: 14px; font-weight: 600; color: #1a1a1a; overflow-wrap: anywhere; }
+        .tm-role {
+            font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+            padding: 2px 7px; border-radius: 10px; background: #E8F4FD; color: #0066AA; white-space: nowrap;
+        }
+        .tm-role.member { background: #f1f5f9; color: #64748b; }
+        .tm-role.off { background: #fee2e2; color: #dc2626; }
+        .tm-nums { display: flex; gap: 14px; margin-top: 6px; flex-wrap: wrap; }
+        .tm-nums div { font-size: 12px; color: #4a5568; }
+        .tm-nums b { font-size: 15px; color: #1a1a1a; font-weight: 700; }
+        .tm-bar { height: 5px; background: #eef2f7; border-radius: 3px; margin-top: 8px; overflow: hidden; }
+        .tm-bar span { display: block; height: 100%; background: #0066AA; border-radius: 3px; }
+        .tm-actions { display: flex; gap: 6px; margin-top: 9px; flex-wrap: wrap; }
+        .tm-actions button {
+            padding: 5px 10px; border: none; border-radius: 7px; font-size: 11px;
+            font-weight: 600; cursor: pointer; background: #E8F4FD; color: #0066AA;
+        }
+        .tm-actions button.danger { background: #fee2e2; color: #dc2626; }
+
+        .team-limit {
+            background: #E8F4FD; border-radius: 10px; padding: 9px 12px; margin-bottom: 10px;
+            font-size: 12.5px; color: #0066AA; font-weight: 600;
+        }
+        .team-limit.full { background: #fef3c7; color: #b45309; }
+
         .leads-filter-bar {
             display: flex; justify-content: space-between; align-items: center;
             background: #E8F4FD; border-radius: 10px; padding: 8px 12px;
@@ -331,6 +382,7 @@
             transition: transform .15s, background .15s;
         }
         .home-btn:active { transform: scale(.92); background: #E8F4FD; }
+        .home-btn svg { width: 22px; height: 22px; flex-shrink: 0; }
 
         /* ===== START-DASHBOARD ===== */
         .dashboard-panel {
@@ -675,10 +727,16 @@
             display: none; align-items: center; justify-content: center; overflow: hidden;
         }
         #cameraOverlay.active { display: flex; }
+        /* Der Darstellungsmodus wird zur Laufzeit gewaehlt
+           (siehe chooseVideoFit): "cover" sieht besser aus, schneidet
+           aber Sensorflaeche weg. Bei 16:9-Kameras auf hochformatigen
+           Bildschirmen kostet das so viel Aufloesung, dass die Karte
+           unlesbar wird - dort greift "contain" mit schwarzen Balken. */
         #cameraVideo {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: cover; background: #000;
+            object-fit: contain; background: #000;
         }
+        #cameraVideo.fit-cover { object-fit: cover; }
         #cameraGuide {
             position: relative;
             width: 82%;
@@ -708,6 +766,54 @@
             background: #fff; border: 4px solid rgba(255,255,255,0.4); cursor: pointer;
         }
         .cam-shutter:active { background: #E8F4FD; }
+        /* Aufnahmeart waehlen */
+        .capture-modes { display: flex; gap: 8px; margin-bottom: 12px; }
+        .cap-mode {
+            flex: 1 1 0; min-width: 0; padding: 10px 4px;
+            border: 1.5px solid #e2e8f0; border-radius: 12px; background: #fff;
+            color: #4a5568; font-size: clamp(12px, 3.2vw, 14px); font-weight: 600; cursor: pointer;
+        }
+        .cap-mode.active { background: #0066AA; border-color: #0066AA; color: #fff; }
+
+        /* QR-Modus: quadratischer Rahmen statt Kartenformat */
+        #cameraOverlay.qr-mode #cameraGuide { aspect-ratio: 1 / 1; width: 68%; max-width: min(340px, 68dvh); }
+        #cameraOverlay.qr-mode #cameraControls .cam-shutter { display: none; }
+        #qrStatus {
+            position: absolute; left: 0; right: 0;
+            bottom: calc(max(env(safe-area-inset-bottom), 24px) + 96px);
+            text-align: center; color: #ffd54a; font-size: 13px; font-weight: 600;
+            text-shadow: 0 1px 4px rgba(0,0,0,.7); padding: 0 16px; z-index: 4; display: none;
+        }
+        #cameraOverlay.qr-mode #qrStatus { display: block; }
+        #cameraOverlay.qr-mode #cameraFocusHint { display: none; }
+        #cameraOverlay.qr-mode #lensPicker { display: none !important; }
+
+        /* Objektivwahl (Weitwinkel / Haupt / Tele) */
+        #lensPicker {
+            position: absolute; left: 0; right: 0;
+            top: calc(max(env(safe-area-inset-top), 16px) + 40px);
+            display: flex; justify-content: center; gap: 8px; z-index: 5; padding: 0 16px;
+        }
+        .lens-btn {
+            background: rgba(0,0,0,0.55); color: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 18px; padding: 7px 14px; font-size: 12px; font-weight: 600; cursor: pointer;
+        }
+        .lens-btn.active { background: #fff; color: #111; border-color: #fff; }
+
+        /* Zoom-Regler: Abstand halten statt nah herangehen */
+        #zoomWrap {
+            position: absolute; left: 0; right: 0;
+            bottom: calc(max(env(safe-area-inset-bottom), 24px) + 108px);
+            display: flex; align-items: center; gap: 10px; z-index: 5;
+            padding: 8px 20px; color: #fff;
+        }
+        #zoomWrap .zoom-lbl, #zoomValue {
+            font-size: 12px; font-weight: 600; text-shadow: 0 1px 4px rgba(0,0,0,.7);
+            white-space: nowrap; min-width: 38px;
+        }
+        #zoomSlider { flex: 1; accent-color: #fff; height: 28px; }
+        #cameraOverlay.qr-mode #zoomWrap { display: none !important; }
+
         .cam-btn {
             background: rgba(255,255,255,0.15); color: #fff; border: none;
             border-radius: 20px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
@@ -862,11 +968,16 @@
 
     <!-- APP (nach Login) -->
     <div id="appContainer" style="display:none;">
-        <button id="homeBtn" class="home-btn" aria-label="Zur Startseite" title="Startseite">⌂</button>
+        <button id="homeBtn" class="home-btn" aria-label="Zur Startseite" title="Startseite">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 11.5 12 4l9 7.5"/>
+                <path d="M5.5 10v9a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1v-9"/>
+            </svg>
+        </button>
 
         <!-- KACHEL-GRID -->
         <div class="grid" id="mainGrid">
-            <div class="grid-card" data-view="scan" data-feature="scan"><span class="icon">📸</span><div class="label">Visitenkarte</div><div class="sub">scannen &amp; erfassen</div></div>
+            <div class="grid-card" data-view="scan" data-feature="scan"><span class="icon">📸</span><div class="label">Lead aufnehmen</div><div class="sub">Visitenkarte oder QR-Code</div></div>
             <div class="grid-card" data-view="search" data-feature="leads"><span class="icon">🔍</span><div class="label">Suche</div><div class="sub">Leads finden</div></div>
             <div class="grid-card" data-view="questionnaire" data-feature="questionnaire"><span class="icon">📝</span><div class="label">Fragebogen</div><div class="sub">erstellen &amp; verwalten</div></div>
             <div class="grid-card" data-view="stats" data-feature="stats"><span class="icon">📊</span><div class="label">Statistik</div><div class="sub">Histogramm</div></div>
@@ -877,6 +988,7 @@
                 <span class="tile-badge" id="calendarTodayBadge" style="display:none;">0</span>
             </div>
             <div class="grid-card map-card" data-view="map" data-feature="map"><span class="icon">🗺️</span><div class="label">Karte</div><div class="sub">alle Leads auf einer Karte</div></div>
+            <div class="grid-card" data-view="team" id="teamTile" style="display:none;"><span class="icon">👥</span><div class="label">Team</div><div class="sub">Nutzer &amp; Auswertung</div></div>
         </div>
 
         <div id="dashboardPanel" class="dashboard-panel" style="display:none;">
@@ -904,7 +1016,11 @@
 
         <!-- VIEW: SCAN -->
         <div class="view" id="view-scan">
-            <div class="view-header"><button class="back" data-view="main">←</button><h2>📸 Visitenkarte scannen</h2></div>
+            <div class="view-header"><button class="back" data-view="main">←</button><h2>📸 Lead aufnehmen</h2></div>
+            <div class="capture-modes">
+                <button type="button" class="cap-mode active" id="modeCardBtn">📇 Visitenkarte</button>
+                <button type="button" class="cap-mode" id="modeQrBtn">▣ QR-Code</button>
+            </div>
             <div class="upload-area" id="uploadArea">
                 <div class="icon">📸</div><p>Visitenkarte scannen</p><small>Live-Kamera mit Rahmen · JPG, PNG, PDF (max. 10MB)</small>
             </div>
@@ -1095,6 +1211,32 @@
             </div>
 
             <div id="calList"></div>
+        </div>
+
+        <!-- VIEW: TEAM -->
+        <div class="view" id="view-team">
+            <div class="view-header"><button class="back" data-view="main">←</button><h2>👥 Team</h2></div>
+
+            <div class="team-tabs">
+                <button class="tt-btn active" data-tab="stats">📊 Auswertung</button>
+                <button class="tt-btn" data-tab="users">👤 Nutzer</button>
+            </div>
+
+            <!-- Auswertung -->
+            <div id="teamStatsPane">
+                <div class="team-total" id="teamTotals"></div>
+                <h3 style="font-size:15px; margin:14px 0 8px 0;">Nach Mitarbeiter</h3>
+                <div id="teamRanking"></div>
+            </div>
+
+            <!-- Nutzerverwaltung -->
+            <div id="teamUsersPane" style="display:none;">
+                <div class="team-limit" id="teamLimit"></div>
+                <div id="teamUserList"></div>
+                <div class="actions" style="margin-top:12px;">
+                    <button class="btn btn-primary" id="addUserBtn">➕ Nutzer anlegen</button>
+                </div>
+            </div>
         </div>
 
         <!-- VIEW: MAP -->
@@ -1312,6 +1454,13 @@
     <video id="cameraVideo" autoplay playsinline muted></video>
     <div id="cameraGuide"></div>
     <div id="cameraHint">Visitenkarte im Rahmen ausrichten</div>
+    <div id="qrStatus"></div>
+    <div id="lensPicker" style="display:none;"></div>
+    <div id="zoomWrap" style="display:none;">
+        <span class="zoom-lbl">Zoom</span>
+        <input type="range" id="zoomSlider" min="1" max="4" step="0.1" value="2">
+        <span id="zoomValue">2.0×</span>
+    </div>
     <div id="focusRing"></div>
     <div id="cameraFocusHint">Zum Scharfstellen auf die Karte tippen</div>
     <div id="cameraControls">
@@ -1403,6 +1552,11 @@ async function apiRequest(endpoint, options = {}, isRetry = false) {
             const clone = response.clone();
             try {
                 const body = await clone.json();
+                // Mandant wartet noch auf Freigabe -> klare Meldung
+                // statt Logout mit "Session abgelaufen".
+                if (body?.code === 'TENANT_NOT_ACTIVATED') {
+                    throw new Error(body.error || 'Ihr Zugang wurde noch nicht freigeschaltet.');
+                }
                 if (body?.code === 'FEATURE_NOT_LICENSED') {
                     // Lizenzlage hat sich geändert -> Kacheln aktualisieren
                     if (body.feature) {
@@ -1444,6 +1598,25 @@ async function login(email, password) {
     setRefreshToken(result.data.refreshToken);
     setUser(result.data.user);
     return result.data;
+}
+
+// Liefert die VOLLSTAENDIGE Antwort inkl. pendingApproval-Flag.
+// register() unten bleibt fuer Aufrufer erhalten, die nur data brauchen.
+async function registerRaw(email, password, fullName, tenantName) {
+    const response = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, fullName, tenantName })
+    });
+    const result = await response.json();
+    if (!result.success) throw new Error(result.error || 'Registrierung fehlgeschlagen');
+
+    // Nur anmelden, wenn der Zugang auch schon nutzbar ist
+    if (!result.pendingApproval && result.data?.token) {
+        setToken(result.data.token);
+        setRefreshToken(result.data.refreshToken);
+        setUser(result.data.user);
+    }
+    return result;
 }
 
 async function register(email, password, fullName, tenantName) {
@@ -1539,8 +1712,25 @@ registerForm.addEventListener('submit', async (e) => {
     registerError.style.display = 'none';
     registerBtn.disabled = true; registerBtn.textContent = '⏳ ...';
     try {
-        const data = await register(registerEmail.value, registerPassword.value, registerFullName.value, registerTenantName.value);
-        showApp(data.user, data.features);
+        const result = await registerRaw(registerEmail.value, registerPassword.value, registerFullName.value, registerTenantName.value);
+
+        // Bei REGISTRATION_MODE=approval ist der Zugang noch gesperrt –
+        // dann gar nicht erst in die App wechseln, sondern erklaeren.
+        if (result.pendingApproval) {
+            registerError.style.display = 'none';
+            document.getElementById('registerFormContainer').innerHTML = `
+                <h2 style="font-size:20px; margin-bottom:12px;">✅ Registrierung eingegangen</h2>
+                <p style="font-size:14px; color:#4a5568; line-height:1.6;">
+                    ${escapeHtml(result.message || 'Ihr Zugang wird geprueft.')}
+                </p>
+                <p style="font-size:13px; color:#6b7a8f; margin-top:14px;">
+                    Sie koennen sich anmelden, sobald die Freigabe erfolgt ist.
+                </p>
+                <button class="btn btn-secondary" style="margin-top:16px; width:100%;"
+                    onclick="location.reload()">Zurueck zur Anmeldung</button>`;
+            return;
+        }
+        showApp(result.data.user, result.data.features);
     } catch (error) {
         registerError.textContent = error.message || 'Registrierung fehlgeschlagen';
         registerError.style.display = 'block';
@@ -1577,6 +1767,7 @@ function applyFeatureVisibility() {
     document.querySelectorAll('[data-feature]').forEach(el => {
         el.style.display = hasFeature(el.dataset.feature) ? '' : 'none';
     });
+    applyRoleVisibility();
 }
 
 // Holt die aktuelle Lizenzlage vom Server (z.B. nach Ablauf einer Lizenz)
@@ -1629,6 +1820,7 @@ function showView(viewId) {
     if (viewId === 'questionnaire') { loadTemplates(); loadActiveTemplate(); }
     if (viewId === 'scan') { loadTemplates(); updateScanTemplateSelect(); }
     if (viewId === 'calendar') { loadCalendar(); }
+    if (viewId === 'team') { loadTeamStats(); }
 }
 document.querySelectorAll('.grid-card').forEach(card => {
     card.addEventListener('click', () => {
@@ -1953,16 +2145,40 @@ searchBtn.addEventListener('click', () => {
     if (!term) {
         searchResults.innerHTML = '<div class="empty-leads">🔍 Gib einen Suchbegriff ein oder klicke „Alle anzeigen"</div>';
         searchResultInfo.textContent = '';
-        searchActive = false;
+        setShowAllState(false);
         return;
     }
+    setShowAllState(false);   // gezielte Suche ist nicht "alle" – Button-Beschriftung zuruecksetzen
     runSearch(term);
 });
 searchInput.addEventListener('keyup', (e) => { if (e.key === 'Enter') searchBtn.click(); });
 
-// „Alle anzeigen": leert das Suchfeld und listet den gesamten Bestand
+// „Alle anzeigen" / „Alle ausblenden": echter Umschalter, mit eigenem
+// Merker getrennt von searchActive (das steuert nur, ob ueberhaupt
+// etwas gerendert wird). Sonst wuerde nach einer gezielten Textsuche
+// der Button "Alle anzeigen" zeigen, aber beim Klick faelschlich
+// "ausblenden" statt "alle zeigen" ausloesen.
+let showAllActive = false;
+
+function setShowAllState(active) {
+    showAllActive = active;
+    showAllBtn.textContent = active ? '🙈 Alle ausblenden' : '📋 Alle anzeigen';
+    showAllBtn.classList.toggle('active', active);
+}
+
 showAllBtn.addEventListener('click', () => {
+    if (showAllActive) {
+        // Ausblenden: Suchfeld leeren, Ergebnisliste zuruecksetzen
+        searchInput.value = '';
+        currentSearchTerm = '';
+        searchActive = false;
+        setShowAllState(false);
+        searchResults.innerHTML = '<div class="empty-leads">Gib einen Suchbegriff ein oder klicke „Alle anzeigen"</div>';
+        searchResultInfo.textContent = '';
+        return;
+    }
     searchInput.value = '';
+    setShowAllState(true);
     runSearch('');
 });
 
@@ -2267,7 +2483,7 @@ async function processCapturedImage(dataUrl, { showPreview = true } = {}) {
     } else {
         previewContainer.style.display = 'none';
     }
-    setStatus('OCR läuft, danach DeepSeek-Analyse...', true);
+    setStatus('Scan läuft...', true);
     try {
         const response = await apiRequest('/process-image', {
             method: 'POST',
@@ -2322,6 +2538,9 @@ const CARD_ASPECT_RATIO = 85 / 55;  // Standard-Visitenkartenformat, bei Bedarf 
 const CAPTURE_PADDING = 1.06;       // 6% Toleranz, falls Ausrichtung leicht daneben liegt
 
 let cameraStream = null;
+let preferredCameraId = null;      // gewaehltes Objektiv
+let availableCameras = [];         // alle Rueckkameras
+const CAMERA_PREF_KEY = 'leadcapture_camera_id';
 const cameraOverlay = document.getElementById('cameraOverlay');
 const cameraVideo = document.getElementById('cameraVideo');
 const cameraGuide = document.getElementById('cameraGuide');
@@ -2333,24 +2552,118 @@ async function openCamera() {
     }
     try {
         cameraStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+            video: {
+                facingMode: { ideal: 'environment' },
+                // So hoch wie das Geraet hergibt – je mehr Sensorpixel,
+                // desto lesbarer die Kleinschrift auf der Karte.
+                width:  { ideal: 3840 },
+                height: { ideal: 2160 },
+                ...(preferredCameraId ? { deviceId: { exact: preferredCameraId } } : {})
+            },
             audio: false
         });
         cameraVideo.srcObject = cameraStream;
         await cameraVideo.play();
         cameraOverlay.classList.add('active');
+        cameraOverlay.classList.toggle('qr-mode', captureMode === 'qr');
+        document.getElementById('cameraHint').textContent = captureMode === 'qr'
+            ? 'QR-Code im Rahmen ausrichten'
+            : 'Karte ca. 30 cm entfernt halten · mit Zoom formatfüllend einstellen';
+
+        // Erst JETZT sind die Kamerabezeichnungen lesbar – vor der
+        // erteilten Berechtigung liefert enumerateDevices leere Labels.
+        availableCameras = await listRearCameras();
+        if (!preferredCameraId) {
+            const best = pickBestCamera(availableCameras);
+            if (best && best !== cameraStream.getVideoTracks()[0]?.getSettings()?.deviceId) {
+                preferredCameraId = best;
+                try { localStorage.setItem(CAMERA_PREF_KEY, best); } catch {}
+                // Mit der besseren Linse neu oeffnen
+                cameraStream.getTracks().forEach(t => t.stop());
+                return openCamera();
+            }
+            preferredCameraId = best;
+        }
+        renderLensPicker();
+        logCameraCapabilities();
+
         await enableContinuousFocus();
+        await setupZoom();
+        chooseVideoFit();
+        if (captureMode === 'qr') startQrLoop();
     } catch (error) {
         console.error('Kamera-Fehler:', error);
         showError('Kamera konnte nicht gestartet werden: ' + (error.message || 'Zugriff verweigert'));
     }
 }
 
+// ------------------------------------------------------------
+// OBJEKTIVWAHL (Samsung & Co. haben mehrere Rueckkameras)
+// ------------------------------------------------------------
+// facingMode:'environment' liefert oft die ULTRAWEITWINKEL-Linse.
+// Die kann im Nahbereich haeufig gar nicht scharfstellen – eine
+// Visitenkarte bleibt dann dauerhaft unscharf, egal wie oft man
+// antippt. Deshalb: alle Rueckkameras auflisten und die Hauptkamera
+// bevorzugen, mit Umschaltmoeglichkeit fuer den Nutzer.
+
+function isUltraWide(label) {
+    return /ultra|wide.?angle|weitwinkel|0\.5/i.test(label || '');
+}
+function isTelephoto(label) {
+    return /tele|zoom|3x|5x/i.test(label || '');
+}
+
+async function listRearCameras() {
+    if (!navigator.mediaDevices?.enumerateDevices) return [];
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const cams = devices.filter(d => d.kind === 'videoinput');
+
+    // Ohne erteilte Berechtigung sind die Bezeichnungen leer –
+    // dann laesst sich nicht unterscheiden, welche Linse welche ist.
+    const rear = cams.filter(d => !/front|user|selfie/i.test(d.label || ''));
+    return rear.length > 0 ? rear : cams;
+}
+
+function pickBestCamera(cams) {
+    if (cams.length === 0) return null;
+    // Erste Wahl: eine Kamera, die weder Ultraweitwinkel noch Tele ist
+    const main = cams.find(c => !isUltraWide(c.label) && !isTelephoto(c.label));
+    if (main) return main.deviceId;
+    // Sonst wenigstens keine Ultraweitwinkel-Linse
+    const notWide = cams.find(c => !isUltraWide(c.label));
+    return (notWide || cams[0]).deviceId;
+}
+
+function renderLensPicker() {
+    const box = document.getElementById('lensPicker');
+    if (availableCameras.length < 2) { box.style.display = 'none'; return; }
+
+    box.style.display = 'flex';
+    box.innerHTML = availableCameras.map((c, i) => {
+        const label = isUltraWide(c.label) ? 'Weitwinkel'
+                    : isTelephoto(c.label) ? 'Tele'
+                    : `Objektiv ${i + 1}`;
+        const active = c.deviceId === preferredCameraId ? ' active' : '';
+        return `<button class="lens-btn${active}" data-cam="${c.deviceId}">${label}</button>`;
+    }).join('');
+
+    box.querySelectorAll('.lens-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            preferredCameraId = btn.dataset.cam;
+            try { localStorage.setItem(CAMERA_PREF_KEY, preferredCameraId); } catch {}
+            closeCamera();
+            await openCamera();
+        });
+    });
+}
+
 function closeCamera() {
+    stopQrLoop();
     cameraStream?.getTracks().forEach(t => t.stop());
     cameraStream = null;
     cameraVideo.srcObject = null;
     cameraOverlay.classList.remove('active');
+    cameraOverlay.classList.remove('qr-mode');
     document.getElementById('cameraFocusHint').textContent = 'Zum Scharfstellen auf die Karte tippen';
 }
 
@@ -2370,6 +2683,25 @@ function cameraTrack() {
     return cameraStream?.getVideoTracks()[0] || null;
 }
 
+// Einmal beim Laden: zuletzt gewaehltes Objektiv wiederherstellen
+try { preferredCameraId = localStorage.getItem(CAMERA_PREF_KEY) || null; } catch {}
+
+// Diagnose: zeigt in der Browserkonsole, was das Geraet tatsaechlich
+// kann. Hilft, wenn Bilder trotz allem unscharf bleiben.
+function logCameraCapabilities() {
+    const track = cameraTrack();
+    if (!track?.getCapabilities) { console.log('📷 Keine Kamera-Faehigkeiten abrufbar'); return; }
+    try {
+        const caps = track.getCapabilities();
+        const set = track.getSettings();
+        console.log('📷 Kamera:', set.deviceId?.slice(0, 12), '· Aufloesung', set.width + 'x' + set.height);
+        console.log('   Fokus-Modi:', caps.focusMode || 'nicht meldbar');
+        console.log('   Fokuspunkt:', caps.pointsOfInterest ? 'ja' : 'nein');
+        console.log('   Max. Aufloesung:', caps.width?.max + 'x' + caps.height?.max);
+        console.log('   Zoom:', caps.zoom ? `${caps.zoom.min}–${caps.zoom.max}` : 'nicht verfuegbar');
+    } catch (err) { console.warn('Faehigkeiten nicht lesbar:', err.message); }
+}
+
 // Fordert dauerhaften Autofokus an, sofern das Geraet ihn kann
 async function enableContinuousFocus() {
     const track = cameraTrack();
@@ -2385,6 +2717,100 @@ async function enableContinuousFocus() {
     }
     return false;
 }
+
+// ------------------------------------------------------------
+// DARSTELLUNGSMODUS AUTOMATISCH WAEHLEN
+// ------------------------------------------------------------
+// "cover" fuellt den Bildschirm und sieht besser aus, verwirft aber
+// alles, was ausserhalb liegt. Bei einer 16:9-Kamera auf einem
+// hochformatigen Bildschirm sind das rund 74% der Sensorbreite -
+// auf der Karte bleiben dann zu wenige Pixel fuer Kleinschrift.
+// Bei 4:3-Kameras (typisch iPhone) faellt der Verlust kaum ins
+// Gewicht, dort darf es formatfuellend bleiben.
+//
+// Statt fester Regeln pro Geraet wird hier gerechnet: reicht
+// "cover" fuer eine lesbare Karte, wird es genutzt - sonst nicht.
+
+const MIN_CARD_PIXELS = 1200;   // Erfahrungswert fuer 6-8pt-Schrift
+let currentVideoFit = 'contain';
+
+function cardWidthForFit(fit) {
+    const vw = cameraVideo.videoWidth, vh = cameraVideo.videoHeight;
+    const rect = cameraVideo.getBoundingClientRect();
+    if (!vw || !vh || !rect.width) return 0;
+
+    const scale = fit === 'cover'
+        ? Math.max(rect.width / vw, rect.height / vh)
+        : Math.min(rect.width / vw, rect.height / vh);
+
+    const guideW = cameraGuide.getBoundingClientRect().width;
+    return guideW / scale;
+}
+
+function chooseVideoFit() {
+    const coverWidth = cardWidthForFit('cover');
+    // Zoom vergroessert die Karte im Bild zusaetzlich
+    const zoomFactor = zoomCaps ? Number(document.getElementById('zoomSlider').value) / zoomCaps.min : 1;
+    const effective = coverWidth * zoomFactor;
+
+    currentVideoFit = effective >= MIN_CARD_PIXELS ? 'cover' : 'contain';
+    cameraVideo.classList.toggle('fit-cover', currentVideoFit === 'cover');
+
+    console.log(`🖼️ Darstellung: ${currentVideoFit} (Karte waere bei cover ${Math.round(effective)}px breit)`);
+    return currentVideoFit;
+}
+
+// ------------------------------------------------------------
+// ZOOM STATT NAH HERANGEHEN
+// ------------------------------------------------------------
+// Samsung gibt fuer die Hauptlinse eine Naheinstellgrenze von rund
+// 30 cm an. Haelt man die Visitenkarte naeher, KANN die Kamera nicht
+// scharfstellen - das ist eine optische Grenze, kein Fokusfehler.
+// Samsungs eigene Empfehlung: Abstand halten und zoomen.
+// Genau das machen wir hier automatisch.
+
+let zoomCaps = null;
+
+async function setupZoom() {
+    const track = cameraTrack();
+    const slider = document.getElementById('zoomSlider');
+    const wrap = document.getElementById('zoomWrap');
+    if (!track?.getCapabilities) { wrap.style.display = 'none'; return; }
+
+    let caps;
+    try { caps = track.getCapabilities(); } catch { wrap.style.display = 'none'; return; }
+
+    if (!caps.zoom) { zoomCaps = null; wrap.style.display = 'none'; return; }
+
+    zoomCaps = caps.zoom;
+    slider.min = zoomCaps.min;
+    slider.max = Math.min(zoomCaps.max, zoomCaps.min * 4);   // 4x reicht voellig
+    slider.step = zoomCaps.step || 0.1;
+
+    // Startwert: leicht herangezoomt, damit die Karte auch aus
+    // ~30 cm Abstand den Rahmen fuellt.
+    const start = Math.min(slider.max, zoomCaps.min * 2);
+    slider.value = start;
+    wrap.style.display = 'flex';
+
+    await applyZoom(start);
+}
+
+async function applyZoom(value) {
+    const track = cameraTrack();
+    if (!track || !zoomCaps) return;
+    try {
+        await track.applyConstraints({ advanced: [{ zoom: Number(value) }] });
+        document.getElementById('zoomValue').textContent = Number(value).toFixed(1) + '×';
+    } catch (err) {
+        console.warn('Zoom nicht setzbar:', err.message);
+    }
+}
+
+document.getElementById('zoomSlider').addEventListener('input', async (e) => {
+    await applyZoom(e.target.value);
+    chooseVideoFit();   // mehr Zoom kann formatfuellende Darstellung wieder erlauben
+});
 
 // Zeigt den Fokus-Ring an der angetippten Stelle
 function showFocusRing(clientX, clientY) {
@@ -2414,7 +2840,11 @@ async function focusAt(clientX, clientY) {
     const vw = cameraVideo.videoWidth, vh = cameraVideo.videoHeight;
     if (!vw || !vh) return;
 
-    const scale = Math.max(rect.width / vw, rect.height / vh);
+    // Denselben Modus nutzen, den die Darstellung gerade verwendet –
+    // sonst zeigt der Fokuspunkt auf die falsche Stelle.
+    const scale = currentVideoFit === 'cover'
+        ? Math.max(rect.width / vw, rect.height / vh)
+        : Math.min(rect.width / vw, rect.height / vh);
     const shownW = vw * scale, shownH = vh * scale;
     const offX = rect.left + (rect.width - shownW) / 2;
     const offY = rect.top + (rect.height - shownH) / 2;
@@ -2457,7 +2887,10 @@ function computeCropRegion() {
     const containerRect = cameraVideo.getBoundingClientRect();
     const guideRect = cameraGuide.getBoundingClientRect();
 
-    const scale = Math.max(containerRect.width / videoW, containerRect.height / videoH);
+    // min() = object-fit: contain (vorher max() fuer cover)
+    const scale = currentVideoFit === 'cover'
+        ? Math.max(containerRect.width / videoW, containerRect.height / videoH)
+        : Math.min(containerRect.width / videoW, containerRect.height / videoH);
     const displayedW = videoW * scale;
     const displayedH = videoH * scale;
     const videoLeft = containerRect.left + (containerRect.width - displayedW) / 2;
@@ -2484,17 +2917,73 @@ function computeCropRegion() {
     return { srcX, srcY, srcW, srcH };
 }
 
-function captureCard() {
+// Nimmt nach Moeglichkeit ein echtes Foto in Sensoraufloesung auf.
+// Ein Videobild hat nur Vorschauqualitaet – auf der Karte landeten
+// damit zu wenige Pixel, um Kleinschrift zu lesen. takePhoto()
+// liefert je nach Geraet ein Vielfaches davon.
+async function grabFullResolutionFrame() {
+    const track = cameraTrack();
+    if (!track || typeof window.ImageCapture !== 'function') return null;
+
+    try {
+        const capture = new window.ImageCapture(track);
+        const blob = await capture.takePhoto();
+        const bitmap = await createImageBitmap(blob);
+        // Nur nutzen, wenn das Foto wirklich groesser ist als die Vorschau
+        if (bitmap.width <= cameraVideo.videoWidth) { bitmap.close?.(); return null; }
+        return bitmap;
+    } catch (err) {
+        console.warn('Vollbild-Aufnahme nicht moeglich, nutze Videobild:', err.message);
+        return null;
+    }
+}
+
+async function captureCard() {
+    const shutter = document.getElementById('cameraShutterBtn');
+    shutter.disabled = true;
+
+    // Rahmen als ANTEIL des Videobilds merken – so laesst er sich
+    // auf ein Foto mit abweichender Groesse uebertragen.
     const { srcX, srcY, srcW, srcH } = computeCropRegion();
+    const vW = cameraVideo.videoWidth, vH = cameraVideo.videoHeight;
+    const fracW = srcW / vW, fracH = srcH / vH;
+
+    const photo = await grabFullResolutionFrame();
+    const source = photo || cameraVideo;
+    const sw = photo ? photo.width  : vW;
+    const sh = photo ? photo.height : vH;
+
+    let cx, cy, cw, ch;
+    if (photo) {
+        // Zentriert anwenden: das Foto kann ein anderes Seitenverhaeltnis
+        // haben als die Vorschau, der Rahmen liegt aber immer mittig.
+        cw = sw * fracW;
+        ch = sh * fracH;
+        const target = CARD_ASPECT_RATIO;
+        if (cw / ch > target) cw = ch * target; else ch = cw / target;
+        cx = (sw - cw) / 2;
+        cy = (sh - ch) / 2;
+    } else {
+        cx = srcX; cy = srcY; cw = srcW; ch = srcH;
+    }
 
     const canvas = document.createElement('canvas');
-    canvas.width = srcW;
-    canvas.height = srcH;
-    canvas.getContext('2d').drawImage(cameraVideo, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
+    canvas.width = Math.round(cw);
+    canvas.height = Math.round(ch);
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(source, cx, cy, cw, ch, 0, 0, canvas.width, canvas.height);
+
+    console.log(`📐 Ausschnitt ${canvas.width}x${canvas.height} px` +
+                (photo ? ` (Foto ${sw}x${sh})` : ` (Videobild ${sw}x${sh})`));
+    photo?.close?.();
 
     closeCamera();
+    shutter.disabled = false;
 
-    const dataUrl = downscaleCanvas(canvas, 1600, 0.85);
+    // 2000px statt 1600: die Karte darf jetzt mehr Detail behalten,
+    // die Datei bleibt durch JPEG-Kompression trotzdem klein genug.
+    const dataUrl = downscaleCanvas(canvas, 2000, 0.9);
     processCapturedImage(dataUrl);
 }
 
@@ -2514,9 +3003,282 @@ document.getElementById('cameraSwitchBtn').addEventListener('click', async () =>
         cameraVideo.srcObject = cameraStream;
         await cameraVideo.play();
         cameraOverlay.classList.add('active');
+        cameraOverlay.classList.toggle('qr-mode', captureMode === 'qr');
         await enableContinuousFocus();
+        await setupZoom();
+        chooseVideoFit();
+        if (captureMode === 'qr') startQrLoop();
     } catch (error) { showError('Kamera konnte nicht gewechselt werden.'); }
 });
+
+// ============================================================
+// 12c. QR-CODE ERFASSEN
+// ============================================================
+// Erkennung ueber die native BarcodeDetector-Schnittstelle
+// (Chrome/Android/Edge). Safari und Firefox kennen sie nicht -
+// dort wird jsQR nachgeladen, aber erst beim ersten QR-Scan,
+// damit die App normal nicht damit belastet wird.
+
+let captureMode = 'card';        // 'card' | 'qr'
+let qrLoopActive = false;
+let jsQrLoading = null;
+
+function unescapeVCard(v) {
+    return String(v || '')
+        .replace(/\\n/gi, '\n').replace(/\\,/g, ',')
+        .replace(/\\;/g, ';').replace(/\\\\/g, '\\').trim();
+}
+
+function parseVCard(text) {
+    const out = { address: {} };
+    // Gefaltete Zeilen (RFC 6350) zusammenfuehren, sonst brechen lange Werte
+    const lines = text.replace(/\r\n[ \t]/g, '').replace(/\n[ \t]/g, '').split(/\r?\n/);
+
+    for (const line of lines) {
+        const idx = line.indexOf(':');
+        if (idx < 0) continue;
+        const rawKey = line.slice(0, idx);
+        const value = unescapeVCard(line.slice(idx + 1));
+        if (!value) continue;
+
+        const parts = rawKey.split(';');
+        const key = parts[0].toUpperCase().replace(/^ITEM\d+\./, '');
+        const params = parts.slice(1).join(';').toUpperCase();
+
+        switch (key) {
+            case 'N': {
+                const n = value.split(';');
+                if (n[1]) out.firstName = n[1].trim();
+                if (n[0]) out.lastName = n[0].trim();
+                if (n[3]) out.title = n[3].trim();
+                break;
+            }
+            case 'FN': out._fullName = value; break;
+            case 'ORG': out.company = value.split(';')[0].trim(); break;
+            case 'TITLE': out.position = value; break;
+            case 'EMAIL': if (!out.email) out.email = value; break;
+            case 'TEL': {
+                if (/FAX/.test(params))              { if (!out.fax) out.fax = value; }
+                else if (/CELL|MOBILE/.test(params)) { if (!out.mobile) out.mobile = value; }
+                else                                 { if (!out.phone) out.phone = value; }
+                break;
+            }
+            case 'ADR': {
+                const a = value.split(';');
+                if (a[2]) out.address.street  = a[2].trim();
+                if (a[3]) out.address.city    = a[3].trim();
+                if (a[4]) out.address.state   = a[4].trim();
+                if (a[5]) out.address.zip     = a[5].trim();
+                if (a[6]) out.address.country = a[6].trim();
+                break;
+            }
+            case 'URL':
+                if (/linkedin/i.test(value)) out.linkedin = value;
+                else if (!out.website) out.website = value;
+                break;
+            case 'NOTE': out.note = value; break;
+        }
+    }
+
+    // Nur FN vorhanden -> in Vor- und Nachname aufteilen
+    if (!out.firstName && !out.lastName && out._fullName) {
+        const p = out._fullName.split(/\s+/);
+        out.lastName = p.pop() || '';
+        out.firstName = p.join(' ');
+    }
+    delete out._fullName;
+    return out;
+}
+
+function parseMeCard(text) {
+    const out = { address: {} };
+    const body = text.replace(/^MECARD:/i, '').replace(/;;\s*$/, '');
+    for (const f of body.split(/(?<!\\);/)) {
+        const idx = f.indexOf(':');
+        if (idx < 0) continue;
+        const key = f.slice(0, idx).toUpperCase();
+        const value = f.slice(idx + 1).replace(/\\;/g, ';').trim();
+        if (!value) continue;
+
+        switch (key) {
+            case 'N': {
+                const n = value.split(',');
+                if (n.length > 1) { out.lastName = n[0].trim(); out.firstName = n[1].trim(); }
+                else {
+                    const p = value.split(/\s+/);
+                    out.lastName = p.pop() || '';
+                    out.firstName = p.join(' ');
+                }
+                break;
+            }
+            case 'ORG': out.company = value; break;
+            case 'TEL': if (!out.phone) out.phone = value; break;
+            case 'TEL-AV': case 'TELAV': if (!out.mobile) out.mobile = value; break;
+            case 'EMAIL': if (!out.email) out.email = value; break;
+            case 'URL': if (!out.website) out.website = value; break;
+            case 'ADR': {
+                const a = value.split(',');
+                if (a[2]) out.address.street  = a[2].trim();
+                if (a[3]) out.address.city    = a[3].trim();
+                if (a[5]) out.address.zip     = a[5].trim();
+                if (a[6]) out.address.country = a[6].trim();
+                break;
+            }
+            case 'NOTE': out.note = value; break;
+        }
+    }
+    return out;
+}
+
+function parseQrPayload(text) {
+    const t = String(text || '').trim();
+    if (!t) return null;
+    if (/^BEGIN:VCARD/i.test(t)) return { kind: 'Visitenkarte (vCard)', data: parseVCard(t) };
+    if (/^MECARD:/i.test(t))     return { kind: 'Visitenkarte (MECARD)', data: parseMeCard(t) };
+    if (/^https?:\/\//i.test(t)) {
+        const data = { address: {} };
+        if (/linkedin\.com/i.test(t)) data.linkedin = t; else data.website = t;
+        return { kind: 'Weblink', data };
+    }
+    if (/^mailto:/i.test(t)) return { kind: 'E-Mail', data: { address: {}, email: t.replace(/^mailto:/i, '') } };
+    if (/^tel:/i.test(t))    return { kind: 'Telefonnummer', data: { address: {}, phone: t.replace(/^tel:/i, '') } };
+    return { kind: 'Text', data: { address: {}, note: t } };
+}
+
+// jsQR nur laden, wenn die native Erkennung fehlt
+function ensureJsQr() {
+    if (window.jsQR) return Promise.resolve(true);
+    if (jsQrLoading) return jsQrLoading;
+    jsQrLoading = new Promise((resolve) => {
+        const el = document.createElement('script');
+        el.src = 'https://unpkg.com/jsqr@1.4.0/dist/jsQR.js';
+        el.onload = () => resolve(!!window.jsQR);
+        el.onerror = () => resolve(false);
+        document.head.appendChild(el);
+    });
+    return jsQrLoading;
+}
+
+async function makeQrReader() {
+    // 1. Bevorzugt: native Erkennung, ohne Zusatzbibliothek
+    if ('BarcodeDetector' in window) {
+        try {
+            const formats = await window.BarcodeDetector.getSupportedFormats();
+            if (formats.includes('qr_code')) {
+                const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+                return async (video) => {
+                    const found = await detector.detect(video);
+                    return found.length > 0 ? found[0].rawValue : null;
+                };
+            }
+        } catch { /* faellt unten auf jsQR zurueck */ }
+    }
+    // 2. Rueckfallebene: jsQR ueber Canvas
+    const ok = await ensureJsQr();
+    if (!ok) return null;
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    return async (video) => {
+        const w = video.videoWidth, h = video.videoHeight;
+        if (!w || !h) return null;
+        // Auf halbe Groesse herunterrechnen – schneller und reicht fuer QR
+        canvas.width = Math.round(w / 2);
+        canvas.height = Math.round(h / 2);
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const res = window.jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+        return res?.data || null;
+    };
+}
+
+async function startQrLoop() {
+    const status = document.getElementById('qrStatus');
+    status.textContent = 'Suche QR-Code…';
+
+    const read = await makeQrReader();
+    if (!read) {
+        status.textContent = 'QR-Erkennung auf diesem Geraet nicht verfuegbar';
+        return;
+    }
+
+    qrLoopActive = true;
+    let lastTry = 0;
+
+    const tick = async (now) => {
+        if (!qrLoopActive || !cameraStream) return;
+        // Etwa 8 Versuche pro Sekunde – mehr kostet nur Akku
+        if (now - lastTry > 120) {
+            lastTry = now;
+            try {
+                const value = await read(cameraVideo);
+                if (value) { qrLoopActive = false; handleQrResult(value); return; }
+            } catch { /* einzelne Frames duerfen fehlschlagen */ }
+        }
+        requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+}
+
+function stopQrLoop() { qrLoopActive = false; }
+
+function handleQrResult(rawValue) {
+    const parsed = parseQrPayload(rawValue);
+    closeCamera();
+
+    if (!parsed) { showError('Der QR-Code war leer.'); return; }
+
+    // Kurz rueckmelden – sonst wirkt das Schliessen wie ein Abbruch
+    if (navigator.vibrate) navigator.vibrate(60);
+
+    if (parsed.kind.startsWith('Visitenkarte')) {
+        fillForm(parsed.data);
+        setStatus(`✅ ${parsed.kind} uebernommen – bitte pruefen und speichern.`, true);
+        setTimeout(() => setStatus('', false), 3500);
+        return;
+    }
+
+    // Kein Kontaktformat: nur die erkannten Einzelfelder ergaenzen,
+    // vorhandene Eingaben nicht ueberschreiben
+    const d = parsed.data;
+    let filled = 0;
+    const setIfEmpty = (field, value) => {
+        if (value && fields[field] && !fields[field].value.trim()) { fields[field].value = value; filled++; }
+    };
+    setIfEmpty('website', d.website);
+    setIfEmpty('linkedin', d.linkedin);
+    setIfEmpty('email', d.email);
+    setIfEmpty('phone', d.phone);
+
+    if (filled > 0) {
+        setStatus(`✅ ${parsed.kind} uebernommen.`, true);
+        setTimeout(() => setStatus('', false), 3000);
+    } else if (d.note) {
+        alert(`QR-Code enthaelt keine Kontaktdaten:\n\n${d.note.slice(0, 300)}`);
+    } else {
+        showError('Im QR-Code standen keine verwertbaren Kontaktdaten.');
+    }
+}
+
+// --- Umschalter Visitenkarte / QR ---
+document.getElementById('modeCardBtn').addEventListener('click', () => setCaptureMode('card'));
+document.getElementById('modeQrBtn').addEventListener('click', () => setCaptureMode('qr'));
+
+function setCaptureMode(mode) {
+    captureMode = mode;
+    document.getElementById('modeCardBtn').classList.toggle('active', mode === 'card');
+    document.getElementById('modeQrBtn').classList.toggle('active', mode === 'qr');
+
+    const area = document.getElementById('uploadArea');
+    area.querySelector('.icon').textContent = mode === 'qr' ? '▣' : '📸';
+    area.querySelector('p').textContent = mode === 'qr' ? 'QR-Code scannen' : 'Visitenkarte scannen';
+    area.querySelector('small').textContent = mode === 'qr'
+        ? 'vCard, MECARD, Weblink oder Telefonnummer'
+        : 'Live-Kamera mit Rahmen · JPG, PNG, PDF (max. 10MB)';
+
+    document.getElementById('galleryLink').style.display = mode === 'qr' ? 'none' : '';
+    document.getElementById('uploadBtn').textContent = mode === 'qr' ? '▣ QR scannen' : '📷 Kamera öffnen';
+}
 
 // ============================================================
 // 13. SCAN: FRAGEBOGEN DIREKT AUSFÜLLEN
@@ -3399,8 +4161,8 @@ function renderAppointments() {
                 </div>
             </div>
             <div class="appt-actions">
-                <!-- Follow-up direkt aus dem Termin heraus: uebernimmt den
-                     verknuepften Lead und schlaegt den Folgetag vor. -->
+                <!-- Follow-up direkt aus dem Termin: uebernimmt den Lead
+                     und schlaegt den naechsten Werktag vor. -->
                 <button class="act-followup" onclick="openTodoModal(null, '${a.lead_id || ''}', '${escapeHtml(company)}')">✓ Follow-up</button>
                 <button class="act-icon" ${(lead?.mobile || lead?.phone) ? `onclick="dialNumber('${escapeHtml(lead.mobile || lead.phone)}')"` : 'disabled'}>${lead?.mobile ? '&#128241;' : '&#128222;'}</button>
                 <button class="act-icon" ${lead?.email ? `onclick="window.location.href='mailto:${escapeHtml(lead.email)}'"` : 'disabled'}>&#9993;</button>
@@ -3541,7 +4303,6 @@ async function loadCalendar() {
     await loadDayAppointments();
     updateTodayBadge();
     loadGoalStats();
-    setupPushReminders();
 }
 
 async function updateTodayBadge() {
@@ -3911,8 +4672,8 @@ function showTodoLead(lead) {
     todoLeadResults.classList.remove('active');
 }
 
-// Vorbelegen: entweder ueber die Lead-ID oder – falls die Leads
-// noch nicht geladen sind – ueber den mitgegebenen Anzeigenamen.
+// Vorbelegen: ueber die Lead-ID oder – falls die Leads noch nicht
+// geladen sind – ueber den mitgegebenen Anzeigenamen.
 function populateTodoLeads(selectedId = '', fallbackLabel = '') {
     const lead = selectedId ? (allLeads || []).find(l => l.id === selectedId) : null;
     if (lead) { showTodoLead(lead); return; }
@@ -3971,8 +4732,7 @@ async function openTodoModal(id = null, presetLeadId = '', presetLabel = '') {
     const overlay = document.getElementById('todoOverlay');
     overlay.classList.add('active');
 
-    // Bei neuem Follow-up aus einem Termin: Lead sofort anzeigen,
-    // ohne auf das Nachladen der Lead-Liste zu warten.
+    // Lead sofort anzeigen, ohne auf das Nachladen zu warten
     if (!id && presetLeadId) populateTodoLeads(presetLeadId, presetLabel);
 
     if (allLeads.length === 0) {
@@ -3994,9 +4754,8 @@ async function openTodoModal(id = null, presetLeadId = '', presetLabel = '') {
 
     document.getElementById('todoTitle').value = todo?.title || '';
     document.getElementById('todoNote').value = todo?.note || '';
-
-    // Neues Follow-up aus einem Termin heraus: der naechste Werktag
-    // ist der realistischere Vorschlag als der Termintag selbst.
+    // Aus einem Termin heraus: der naechste Werktag ist der
+    // realistischere Vorschlag als der Termintag selbst.
     let vorschlag = todo?.due_date;
     if (!vorschlag) {
         const d = addDays(calSelectedDate, presetLeadId ? 1 : 0);
@@ -4246,66 +5005,6 @@ document.getElementById('histCloseBtn').addEventListener('click', closeHistory);
 histOverlay.addEventListener('click', (e) => { if (e.target === histOverlay) closeHistory(); });
 
 // ============================================================
-// 19f. PUSH-ERINNERUNGEN
-// ============================================================
-// Voraussetzung auf iOS: die PWA muss über "Zum Home-Bildschirm"
-// installiert sein - im normalen Safari-Tab blockiert iOS Push
-// komplett, unabhängig vom Code hier.
-
-function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-    const raw = atob(base64);
-    return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
-}
-
-function isStandalonePwa() {
-    return window.matchMedia('(display-mode: standalone)').matches
-        || window.navigator.standalone === true;
-}
-
-async function setupPushReminders() {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-    if (!hasFeature('calendar')) return;
-
-    try {
-        const reg = await navigator.serviceWorker.register('/sw.js');
-
-        const existing = await reg.pushManager.getSubscription();
-        if (existing) return;   // schon abonniert
-
-        if (Notification.permission === 'denied') return;
-
-        // iOS erlaubt Push NUR in der installierten (Home-Bildschirm) PWA.
-        // Im normalen Browser-Tab macht ein Berechtigungsdialog dort keinen
-        // Sinn und würde nur verwirren.
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-        if (isIOS && !isStandalonePwa()) return;
-
-        const keyRes = await apiRequest('/push/public-key');
-        const keyResult = await keyRes.json();
-        if (!keyResult.success) return;   // Push serverseitig nicht konfiguriert
-
-        const permission = Notification.permission === 'granted'
-            ? 'granted'
-            : await Notification.requestPermission();
-        if (permission !== 'granted') return;
-
-        const subscription = await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(keyResult.key)
-        });
-
-        await apiRequest('/push/subscribe', {
-            method: 'POST',
-            body: JSON.stringify({ subscription: subscription.toJSON() })
-        });
-    } catch (error) {
-        console.warn('Push-Einrichtung übersprungen:', error.message);
-    }
-}
-
-// ============================================================
 // 19e. ZIELVERFOLGUNG (Gamification)
 // ============================================================
 // Gezählt werden ERLEDIGTE Termine der laufenden Woche.
@@ -4399,6 +5098,207 @@ document.getElementById('goalEditBtn').addEventListener('click', async () => {
 });
 
 // ============================================================
+// 19g. TEAM: NUTZER UND AUSWERTUNG
+// ============================================================
+// Die Kachel erscheint nur fuer Mandanten-Admins. Mitglieder sehen
+// ihre eigenen Zahlen ueber die Statistik-Ansicht.
+
+let teamUsers = [];
+let teamLimit = null;
+
+function isTenantAdmin() {
+    return getUser()?.role === 'admin';
+}
+
+function applyRoleVisibility() {
+    const tile = document.getElementById('teamTile');
+    // Team braucht das Statistik-Modul, weil dort die Auswertung sitzt
+    tile.style.display = (isTenantAdmin() && hasFeature('stats')) ? '' : 'none';
+}
+
+document.querySelectorAll('.tt-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tt-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const stats = btn.dataset.tab === 'stats';
+        document.getElementById('teamStatsPane').style.display = stats ? '' : 'none';
+        document.getElementById('teamUsersPane').style.display = stats ? 'none' : '';
+        if (stats) loadTeamStats(); else loadTeamUsers();
+    });
+});
+
+// ---------- Auswertung ----------
+async function loadTeamStats() {
+    const totals = document.getElementById('teamTotals');
+    const ranking = document.getElementById('teamRanking');
+    totals.innerHTML = '';
+    ranking.innerHTML = '<div class="empty-leads">⏳ Lade Auswertung…</div>';
+
+    try {
+        const res = await apiRequest('/stats/team');
+        const r = await res.json();
+        if (!r.success) throw new Error(r.error);
+
+        const g = r.gesamt;
+        totals.innerHTML = `
+            <div class="tt-kpi"><div class="num">${g.leads}</div><div class="lbl">Leads gesamt</div></div>
+            <div class="tt-kpi"><div class="num">${g.leadsDieseWoche}</div><div class="lbl">diese Woche</div></div>
+            <div class="tt-kpi"><div class="num">${g.termine}</div><div class="lbl">Termine</div></div>
+            <div class="tt-kpi"><div class="num">${g.aktiveNutzer}</div><div class="lbl">aktive Nutzer</div></div>`;
+
+        const max = Math.max(1, ...r.proNutzer.map(p => p.leads));
+        ranking.innerHTML = (r.proNutzer.length === 0)
+            ? '<div class="empty-leads">Noch keine Daten.</div>'
+            : r.proNutzer.map(p => `
+                <div class="tm-row">
+                    <div class="tm-head">
+                        <span class="tm-name">${escapeHtml(p.name)}</span>
+                        <span class="tm-role ${p.isActive ? (p.role === 'admin' ? '' : 'member') : 'off'}">${
+                            p.isActive ? (p.role === 'admin' ? 'Admin' : 'Mitarbeiter') : 'inaktiv'}</span>
+                    </div>
+                    <div class="tm-nums">
+                        <div><b>${p.leads}</b> Leads</div>
+                        <div><b>${p.leadsDieseWoche}</b> diese Woche</div>
+                        <div><b>${p.termine}</b> Termine</div>
+                    </div>
+                    <div class="tm-bar"><span style="width:${Math.round(p.leads / max * 100)}%"></span></div>
+                    ${p.letzterLead ? `<div style="font-size:11px; color:#a0aec0; margin-top:6px;">
+                        zuletzt erfasst: ${new Date(p.letzterLead).toLocaleDateString('de-DE')}</div>` : ''}
+                </div>`).join('');
+
+        if (g.ohneZuordnung > 0) {
+            ranking.innerHTML += `<div style="font-size:12px; color:#6b7a8f; margin-top:8px;">
+                ℹ️ ${g.ohneZuordnung} Lead(s) ohne Zuordnung – meist per CSV importiert.</div>`;
+        }
+    } catch (error) {
+        ranking.innerHTML = `<div class="empty-leads">❌ ${escapeHtml(error.message)}</div>`;
+    }
+}
+
+// ---------- Nutzerverwaltung ----------
+async function loadTeamUsers() {
+    const list = document.getElementById('teamUserList');
+    list.innerHTML = '<div class="empty-leads">⏳ Lade Nutzer…</div>';
+
+    try {
+        const res = await apiRequest('/team');
+        const r = await res.json();
+        if (!r.success) throw new Error(r.error);
+
+        teamUsers = r.data || [];
+        teamLimit = r.limit;
+
+        const lim = document.getElementById('teamLimit');
+        if (teamLimit.max === null) {
+            lim.className = 'team-limit';
+            lim.textContent = `${teamLimit.active} aktive Nutzer · unbegrenzt`;
+        } else {
+            lim.className = 'team-limit' + (teamLimit.reached ? ' full' : '');
+            lim.textContent = `${teamLimit.active} von ${teamLimit.max} Nutzern`
+                + (r.packageName ? ` · Paket ${r.packageName}` : '')
+                + (teamLimit.reached ? ' · Grenze erreicht' : '');
+        }
+
+        const meineId = getUser()?.id;
+        list.innerHTML = teamUsers.map(u => {
+            const name = (u.full_name || '').trim() || u.email;
+            const selbst = u.id === meineId;
+            return `
+            <div class="tm-row">
+                <div class="tm-head">
+                    <span class="tm-name">${escapeHtml(name)}${selbst ? ' (Sie)' : ''}</span>
+                    <span class="tm-role ${u.is_active ? (u.role === 'admin' ? '' : 'member') : 'off'}">${
+                        u.is_active ? (u.role === 'admin' ? 'Admin' : 'Mitarbeiter') : 'inaktiv'}</span>
+                </div>
+                <div style="font-size:12px; color:#6b7a8f; margin-top:2px; overflow-wrap:anywhere;">
+                    ${escapeHtml(u.email)}${u.must_change_pw ? ' · Passwortwechsel offen' : ''}
+                </div>
+                <div class="tm-actions">
+                    ${selbst ? '' : `
+                        <button data-role="${u.id}">${u.role === 'admin' ? 'Zu Mitarbeiter' : 'Zu Admin'}</button>
+                        <button data-pw="${u.id}">Passwort setzen</button>
+                        <button class="${u.is_active ? 'danger' : ''}" data-toggle="${u.id}">${
+                            u.is_active ? 'Deaktivieren' : 'Aktivieren'}</button>`}
+                </div>
+            </div>`;
+        }).join('');
+
+        list.querySelectorAll('[data-role]').forEach(b =>
+            b.addEventListener('click', () => toggleUserRole(b.dataset.role)));
+        list.querySelectorAll('[data-pw]').forEach(b =>
+            b.addEventListener('click', () => resetUserPassword(b.dataset.pw)));
+        list.querySelectorAll('[data-toggle]').forEach(b =>
+            b.addEventListener('click', () => toggleUserActive(b.dataset.toggle)));
+
+        document.getElementById('addUserBtn').disabled = !!teamLimit.reached;
+    } catch (error) {
+        list.innerHTML = `<div class="empty-leads">❌ ${escapeHtml(error.message)}</div>`;
+    }
+}
+
+async function toggleUserRole(userId) {
+    const u = teamUsers.find(x => x.id === userId);
+    if (!u) return;
+    const neu = u.role === 'admin' ? 'member' : 'admin';
+    if (!confirm(`Rolle von ${u.email} auf "${neu === 'admin' ? 'Admin' : 'Mitarbeiter'}" ändern?`)) return;
+    try {
+        const res = await apiRequest(`/team/${userId}`, { method: 'PUT', body: JSON.stringify({ role: neu }) });
+        const r = await res.json();
+        if (!r.success) throw new Error(r.error);
+        await loadTeamUsers();
+    } catch (error) { alert('❌ ' + error.message); }
+}
+
+async function toggleUserActive(userId) {
+    const u = teamUsers.find(x => x.id === userId);
+    if (!u) return;
+    const aktivieren = !u.is_active;
+    if (!confirm(`${u.email} ${aktivieren ? 'aktivieren' : 'deaktivieren'}?`
+        + (aktivieren ? '' : '\n\nErfasste Leads bleiben erhalten und der Auswertung zugeordnet.'))) return;
+    try {
+        const res = await apiRequest(`/team/${userId}`, { method: 'PUT', body: JSON.stringify({ isActive: aktivieren }) });
+        const r = await res.json();
+        if (!r.success) throw new Error(r.error);
+        await loadTeamUsers();
+    } catch (error) { alert('❌ ' + error.message); }
+}
+
+async function resetUserPassword(userId) {
+    const u = teamUsers.find(x => x.id === userId);
+    if (!u) return;
+    const pw = prompt(`Neues Startpasswort für ${u.email}\n(mindestens 12 Zeichen)`);
+    if (!pw) return;
+    if (pw.length < 12) { alert('Das Passwort muss mindestens 12 Zeichen lang sein.'); return; }
+    try {
+        const res = await apiRequest(`/team/${userId}/password`, { method: 'POST', body: JSON.stringify({ password: pw }) });
+        const r = await res.json();
+        if (!r.success) throw new Error(r.error);
+        alert(`✅ Passwort gesetzt.\n\nTeilen Sie ${u.email} mit:\n${pw}\n\nDer Nutzer sollte es nach dem ersten Login ändern.`);
+        await loadTeamUsers();
+    } catch (error) { alert('❌ ' + error.message); }
+}
+
+document.getElementById('addUserBtn').addEventListener('click', async () => {
+    const email = prompt('E-Mail-Adresse des neuen Nutzers:');
+    if (!email) return;
+    const name = prompt('Name (optional):') || '';
+    const pw = prompt('Startpasswort (mindestens 12 Zeichen):');
+    if (!pw) return;
+    if (pw.length < 12) { alert('Das Passwort muss mindestens 12 Zeichen lang sein.'); return; }
+
+    try {
+        const res = await apiRequest('/team', {
+            method: 'POST',
+            body: JSON.stringify({ email, password: pw, fullName: name, role: 'member' })
+        });
+        const r = await res.json();
+        if (!r.success) throw new Error(r.error);
+        alert(`✅ Nutzer angelegt.\n\nZugangsdaten für ${email}:\nPasswort: ${pw}\n\nBitte persönlich weitergeben – es wird keine E-Mail versendet.`);
+        await loadTeamUsers();
+    } catch (error) { alert('❌ ' + error.message); }
+});
+
+// ============================================================
 // 20. CSV EXPORT / IMPORT
 // ============================================================
 document.getElementById('exportCsvBtn2').addEventListener('click', async () => {
@@ -4459,7 +5359,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = getUser();
     if (user && getToken()) showApp(user);
     else showLogin();
-    console.log('🚀 LeadCapture PWA v23.0.0 geladen (Follow-up-Fix)');
+    console.log('🚀 LeadCapture PWA v25.0.0 geladen (Team + Follow-up-Fix)');
 });
 </script>
 </body>
