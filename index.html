@@ -179,6 +179,37 @@
         /* ===== HISTOGRAMM ===== */
         .histogram-controls { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
         .histogram-controls select { padding: 6px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13px; background: white; }
+        /* Nutzerfilter in der Statistik */
+        .user-filter { position: relative; flex: 1 1 160px; min-width: 0; }
+        .uf-toggle {
+            width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 6px;
+            padding: 8px 10px; border: 1.5px solid #e2e8f0; border-radius: 10px;
+            background: #fff; color: #1a1a1a; font-size: 13px; font-weight: 500; cursor: pointer;
+        }
+        .uf-toggle.filtered { border-color: #0066AA; color: #0066AA; font-weight: 600; }
+        .uf-toggle span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .uf-caret { flex-shrink: 0; font-size: 10px; opacity: .6; }
+        .uf-panel {
+            display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 60;
+            background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px;
+            box-shadow: 0 8px 28px rgba(0,0,0,0.14); padding: 6px; min-width: 220px;
+        }
+        .uf-panel.open { display: block; }
+        .uf-list { max-height: 240px; overflow-y: auto; }
+        .uf-panel label {
+            display: flex; align-items: center; gap: 9px; padding: 8px 9px;
+            border-radius: 8px; cursor: pointer; font-size: 13px; color: #1a1a1a;
+        }
+        .uf-panel label:active { background: #E8F4FD; }
+        .uf-panel input[type=checkbox] { width: 17px; height: 17px; accent-color: #0066AA; flex-shrink: 0; }
+        .uf-panel .uf-all {
+            font-weight: 600; border-bottom: 1px solid #eef2f7;
+            border-radius: 8px 8px 0 0; margin-bottom: 4px;
+        }
+        .uf-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .uf-count { font-size: 11px; color: #6b7a8f; font-variant-numeric: tabular-nums; }
+        .uf-inactive .uf-name { color: #a0aec0; }
+
         .histogram-wrapper { background: #f8fafc; border-radius: 12px; padding: 16px; overflow-x: auto; min-height: 200px; }
         .histogram { display: flex; align-items: flex-end; height: clamp(150px, 26dvh, 220px); gap: 3px; min-width: 100%; }
         .histogram .bar { flex: 1; min-width: 12px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; cursor: pointer; }
@@ -298,11 +329,21 @@
         .cal-day.weekend { color: #ffc7c7; }
         .cal-dayname { font-size: clamp(9px, 2.6vw, 11px); opacity: 0.85; }
         .cal-daynum { font-size: clamp(15px, 4.5vw, 19px); font-weight: 600; margin-top: 1px; }
+        /* Zwei Marken je Tag: Termine und Follow-ups getrennt.
+           Unterscheidung nicht nur ueber Farbe, sondern auch ueber
+           Form (Follow-ups mit Haken-Vorsatz) – Farbe allein waere
+           bei Farbsehschwaeche nicht erkennbar. */
+        .cal-badges {
+            position: absolute; top: 2px; right: 3px;
+            display: flex; flex-direction: column; gap: 2px; align-items: flex-end;
+        }
         .cal-badge {
-            position: absolute; top: 2px; right: 4px; min-width: 15px; height: 15px;
+            min-width: 15px; height: 15px;
             background: #dc2626; color: #fff; border-radius: 8px; font-size: 9px; font-weight: 700;
             display: flex; align-items: center; justify-content: center; padding: 0 3px;
         }
+        .cal-badge.todo { background: #d97706; }
+        .cal-badge.todo::before { content: '✓'; font-size: 7px; margin-right: 1px; }
         .cal-toolbar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
         .cal-toolbar .btn { padding: 10px 12px; font-size: clamp(12px, 3.2vw, 14px); flex: 1 1 90px; min-width: 0; }
 
@@ -1142,6 +1183,19 @@
         <div class="view" id="view-stats">
             <div class="view-header"><button class="back" data-view="main">←</button><h2>📊 Statistik</h2></div>
             <div class="histogram-controls">
+                <div class="user-filter" id="userFilterWrap">
+                    <button type="button" class="uf-toggle" id="userFilterBtn">
+                        <span id="userFilterLabel">Alle Nutzer</span>
+                        <span class="uf-caret">▾</span>
+                    </button>
+                    <div class="uf-panel" id="userFilterPanel">
+                        <label class="uf-all">
+                            <input type="checkbox" id="userFilterAll" checked>
+                            <span>Alle auswählen / abwählen</span>
+                        </label>
+                        <div class="uf-list" id="userFilterList"></div>
+                    </div>
+                </div>
                 <select id="histogramYear"><option value="alle">Alle Jahre</option></select>
                 <select id="histogramView">
                     <option value="day">Tagesansicht</option>
@@ -1997,10 +2051,19 @@ function displayLeads(leads) {
 
 function applyLeadsHistogramFilter(leads) {
     const { label, prefix } = leadsHistogramFilter;
-    const filtered = leads.filter(l => (l.created_at || '').startsWith(prefix));
+    // Zeitraum UND Nutzerfilter anwenden, damit Liste und
+    // Histogramm nicht auseinanderlaufen
+    const filtered = leads.filter(l =>
+        (l.created_at || '').startsWith(prefix) && leadPassesUserFilter(l));
+
+    const nutzerHinweis = (typeof selectedUserIds !== 'undefined' && selectedUserIds !== null
+        && statsUsers.length > 0 && selectedUserIds.size !== statsUsers.length)
+        ? ` · ${selectedUserIds.size} von ${statsUsers.length} Nutzern`
+        : '';
 
     document.getElementById('leadsFilterBar').style.display = 'flex';
-    document.getElementById('leadsFilterLabel').textContent = `📅 ${label}: ${filtered.length} Lead${filtered.length === 1 ? '' : 's'}`;
+    document.getElementById('leadsFilterLabel').textContent =
+        `📅 ${label}: ${filtered.length} Lead${filtered.length === 1 ? '' : 's'}${nutzerHinweis}`;
     leadsCount.textContent = `${filtered.length} / ${leads.length}`;
 
     const highlight = makeHighlighter('');
@@ -4070,12 +4133,119 @@ function syncYearOptions(availableYears) {
     histogramYear.value = desired.includes(current) ? current : 'alle';
 }
 
+// ------------------------------------------------------------
+// NUTZERFILTER FÜR DIE STATISTIK
+// ------------------------------------------------------------
+// null = noch nichts geladen bzw. alle Nutzer (kein Parameter).
+// Ein LEERES Set heisst "alle abgewaehlt" und liefert bewusst
+// nichts - sonst waere Abwaehlen aller Nutzer nicht von "alle"
+// zu unterscheiden.
+let statsUsers = [];
+let selectedUserIds = null;
+
+function userFilterParam() {
+    if (selectedUserIds === null) return '';
+    if (selectedUserIds.size === statsUsers.length && statsUsers.length > 0) return '';
+    return `&users=${encodeURIComponent([...selectedUserIds].join(','))}`;
+}
+
+function renderUserFilter() {
+    const list = document.getElementById('userFilterList');
+    const alle = document.getElementById('userFilterAll');
+    const label = document.getElementById('userFilterLabel');
+    const btn = document.getElementById('userFilterBtn');
+
+    if (statsUsers.length === 0) {
+        document.getElementById('userFilterWrap').style.display = 'none';
+        return;
+    }
+    document.getElementById('userFilterWrap').style.display = '';
+
+    const aktiv = (id) => selectedUserIds === null || selectedUserIds.has(id);
+
+    list.innerHTML = statsUsers.map(u => `
+        <label class="${u.isActive ? '' : 'uf-inactive'}">
+            <input type="checkbox" data-uid="${u.id}" ${aktiv(u.id) ? 'checked' : ''}>
+            <span class="uf-name">${escapeHtml(u.name)}${u.isActive ? '' : ' (inaktiv)'}</span>
+            <span class="uf-count">${u.leadCount}</span>
+        </label>`).join('');
+
+    list.querySelectorAll('input[data-uid]').forEach(cb => {
+        cb.addEventListener('change', () => {
+            // Beim ersten Eingriff aus "alle" ein echtes Set machen
+            if (selectedUserIds === null) selectedUserIds = new Set(statsUsers.map(u => u.id));
+            if (cb.checked) selectedUserIds.add(cb.dataset.uid);
+            else selectedUserIds.delete(cb.dataset.uid);
+            afterUserFilterChange();
+        });
+    });
+
+    // Zustand des Sammel-Kaestchens
+    const anzahl = selectedUserIds === null ? statsUsers.length : selectedUserIds.size;
+    alle.checked = anzahl === statsUsers.length;
+    alle.indeterminate = anzahl > 0 && anzahl < statsUsers.length;
+
+    // Beschriftung: sagt auf einen Blick, was gefiltert ist
+    if (anzahl === statsUsers.length) {
+        label.textContent = 'Alle Nutzer';
+        btn.classList.remove('filtered');
+    } else if (anzahl === 0) {
+        label.textContent = 'Niemand ausgewählt';
+        btn.classList.add('filtered');
+    } else if (anzahl === 1) {
+        const nur = statsUsers.find(u => selectedUserIds.has(u.id));
+        label.textContent = nur ? nur.name : '1 Nutzer';
+        btn.classList.add('filtered');
+    } else {
+        label.textContent = `${anzahl} von ${statsUsers.length} Nutzern`;
+        btn.classList.add('filtered');
+    }
+}
+
+function afterUserFilterChange() {
+    renderUserFilter();
+    loadHistogram();
+    // Lead-Liste unter dem Histogramm mitfiltern
+    if (leadsHistogramFilter) applyLeadsHistogramFilter(allLeads);
+    else displayLeads(allLeads);
+}
+
+document.getElementById('userFilterAll').addEventListener('change', (e) => {
+    selectedUserIds = e.target.checked ? null : new Set();
+    afterUserFilterChange();
+});
+
+document.getElementById('userFilterBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.getElementById('userFilterPanel').classList.toggle('open');
+});
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('#userFilterWrap')) {
+        document.getElementById('userFilterPanel').classList.remove('open');
+    }
+});
+
+// Gilt ein Lead als sichtbar unter dem aktuellen Nutzerfilter?
+function leadPassesUserFilter(lead) {
+    if (selectedUserIds === null) return true;
+    return selectedUserIds.has(lead.created_by);
+}
+
 async function loadHistogram() {
     try {
         const year = histogramYear.value || 'alle';
-        const response = await apiRequest(`/stats/daily?year=${encodeURIComponent(year)}`);
+        const response = await apiRequest(`/stats/daily?year=${encodeURIComponent(year)}${userFilterParam()}`);
         const result = await response.json();
         if (!result.success) throw new Error(result.error || 'Unbekannter Fehler');
+
+        // Nutzerliste nur beim ersten Laden aufbauen, damit eine
+        // laufende Auswahl nicht bei jedem Abruf zurueckgesetzt wird
+        if (Array.isArray(result.users) && result.users.length !== statsUsers.length) {
+            statsUsers = result.users;
+            renderUserFilter();
+        } else if (Array.isArray(result.users)) {
+            statsUsers = result.users;
+        }
 
         syncYearOptions(result.availableYears);
         renderHistogram(result.data, histogramView.value);
@@ -4274,7 +4444,8 @@ let calSelectedDate = new Date();   // aktuell gewählter Tag
 let calWeekStart = null;            // Montag der angezeigten Woche
 let calAppointments = [];           // Termine des gewählten Tages
 let calTodos = [];                  // Follow-ups des gewählten Tages
-let calCounts = {};                 // { 'YYYY-MM-DD': anzahl }
+let calCounts = {};                 // { 'YYYY-MM-DD': anzahl }  Termine
+let calTodoCounts = {};             // { 'YYYY-MM-DD': anzahl }  offene Follow-ups
 let editingApptId = null;
 
 const DAY_NAMES = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
@@ -4326,15 +4497,23 @@ function renderWeekStrip() {
         const key = dateKey(d);
         const count = calCounts[key] || 0;
 
+        const todoCount = calTodoCounts[key] || 0;
+
         const el = document.createElement('div');
         el.className = 'cal-day'
             + (key === selKey ? ' selected' : '')
             + (key === todayKey ? ' today' : '')
             + (i >= 5 ? ' weekend' : '');
+        // Zwei getrennte Marken: blau = Termine, bernstein = Follow-ups.
+        // Bewusst nicht zusammengezaehlt - man will auf einen Blick
+        // sehen, ob ein Tag Termine ODER nur Aufgaben hat.
         el.innerHTML = `
             <div class="cal-dayname">${DAY_NAMES[i]}</div>
             <div class="cal-daynum">${d.getDate()}</div>
-            ${count > 0 ? `<span class="cal-badge">${count}</span>` : ''}
+            <div class="cal-badges">
+                ${count > 0 ? `<span class="cal-badge" title="${count} Termin(e)">${count}</span>` : ''}
+                ${todoCount > 0 ? `<span class="cal-badge todo" title="${todoCount} offene(s) Follow-up">${todoCount}</span>` : ''}
+            </div>
         `;
         el.addEventListener('click', () => {
             calSelectedDate = d;
@@ -4398,7 +4577,10 @@ async function loadWeekCounts() {
             `/appointments/counts?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`
         );
         const result = await res.json();
-        if (result.success) calCounts = result.data || {};
+        if (result.success) {
+            calCounts = result.data || {};
+            calTodoCounts = result.todos || {};
+        }
     } catch (error) { console.error('Zähler-Fehler:', error); }
 }
 
@@ -5653,7 +5835,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = getUser();
     if (user && getToken()) showApp(user);
     else showLogin();
-    console.log('🚀 LeadCapture PWA v25.1.0 geladen (mandantenweite Fragebogen-Vorlagen)');
+    console.log('🚀 LeadCapture PWA v28.0.0 geladen (Nutzerfilter + Follow-ups im Kalender)');
 });
 </script>
 </body>
