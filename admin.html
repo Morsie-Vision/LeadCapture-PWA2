@@ -131,6 +131,22 @@
     .cell:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
     .cell.dirty { box-shadow: 0 0 0 2px var(--blue); }
 
+    /* Paketspalte */
+    td.pkg { min-width: 148px; }
+    td.pkg b { display:block; font-size:12.5px; font-weight:600; }
+    .rt { display:block; font-size:11px; margin-top:1px; font-variant-numeric: tabular-nums; }
+    .rt.ok   { color: var(--on); }
+    .rt.soon { color: var(--soon); }
+    .rt.over { color: var(--danger); font-weight:600; }
+    .rt.none { color: var(--muted); }
+    .pkg-btn {
+        margin-top:5px; padding:4px 9px; font-size:11px; font-weight:600;
+        background: transparent; color: var(--text); border:1px solid var(--line); border-radius:6px;
+    }
+    .pkg-btn:hover { border-color: var(--blue); color: var(--blue); }
+    .ulim { display:block; font-size:11px; color: var(--muted); margin-top:2px; }
+    .ulim.over { color: var(--danger); font-weight:600; }
+
     td.actions { white-space: nowrap; text-align: right; }
     td.actions button { padding: 7px 12px; font-size: 12px; }
 
@@ -223,6 +239,37 @@
     </div>
 </div>
 
+<!-- Paket zuweisen -->
+<dialog id="pkgDlg">
+    <h3 id="pkgTitle">Paket zuweisen</h3>
+    <p id="pkgSub"></p>
+
+    <label for="pkgSelect" style="font-size:12px; color:var(--muted);">Paket</label>
+    <select id="pkgSelect" style="width:100%; background:var(--bg); color:var(--text);
+        border:1px solid var(--line); border-radius:8px; padding:10px 12px; font:inherit;"></select>
+
+    <div id="pkgInfo" style="font-size:11.5px; color:var(--muted); margin-top:8px; line-height:1.5;"></div>
+
+    <label for="pkgDays" style="font-size:12px; color:var(--muted); display:block; margin-top:14px;">
+        Laufzeit in Tagen <span style="opacity:.7;">(0 = unbefristet)</span>
+    </label>
+    <input type="number" id="pkgDays" min="0" max="1095" step="1">
+
+    <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">
+        <button class="ghost quick" data-days="30" style="flex:1; padding:6px; font-size:11px;">30 T</button>
+        <button class="ghost quick" data-days="60" style="flex:1; padding:6px; font-size:11px;">60 T</button>
+        <button class="ghost quick" data-days="365" style="flex:1; padding:6px; font-size:11px;">1 Jahr</button>
+        <button class="ghost quick" data-days="0" style="flex:1; padding:6px; font-size:11px;">unbefr.</button>
+    </div>
+
+    <div id="pkgPreview" style="font-size:11.5px; color:var(--blue); margin-top:12px; font-weight:600;"></div>
+
+    <div class="row">
+        <button class="ghost" id="pkgCancel">Abbrechen</button>
+        <button id="pkgOk">Zuweisen</button>
+    </div>
+</dialog>
+
 <!-- Ablaufdatum setzen -->
 <dialog id="dateDlg">
     <h3 id="dlgTitle">Befristung</h3>
@@ -243,6 +290,7 @@ let apiUrl = '';
 let adminKey = '';
 let catalog = [];
 let tenants = [];
+let packages = [];
 // Ausstehende Aenderungen: tenantId -> { featureKey: {enabled, validUntil} }
 const pendingChanges = new Map();
 
@@ -339,6 +387,7 @@ async function load() {
     const result = await api('/admin/licences');
     catalog = result.catalog || [];
     tenants = result.data || [];
+    packages = result.packages || [];
     if (result.registrationMode) $('regModeSelect').value = result.registrationMode;
     $('tenantCount').textContent = tenants.length;
     render();
@@ -375,6 +424,7 @@ function render() {
     // Kopfzeile
     $('head').innerHTML =
         '<th class="tenant-col">Mandant</th>' +
+        '<th>Paket</th>' +
         catalog.map(f => `<th class="mod" title="${esc(f.description || '')}">${esc(f.name)}</th>`).join('') +
         '<th></th>';
 
@@ -396,7 +446,7 @@ function render() {
 
     // Matrix
     if (tenants.length === 0) {
-        $('body').innerHTML = `<tr><td colspan="${catalog.length + 2}" class="empty">Noch keine Mandanten registriert.</td></tr>`;
+        $('body').innerHTML = `<tr><td colspan="${catalog.length + 3}" class="empty">Noch keine Mandanten registriert.</td></tr>`;
     } else {
         $('body').innerHTML = tenants.map(t => {
             const cells = catalog.map(f => {
@@ -416,10 +466,32 @@ function render() {
             const dirty = pendingChanges.has(t.id);
             const userLine = (t.users || []).map(u => u.email).join(', ');
 
+            // Laufzeit und Nutzerzahl bewerten
+            const until = t.packageUntil ? new Date(t.packageUntil) : null;
+            const days = until ? Math.ceil((until - new Date()) / 864e5) : null;
+            let runtime = '<span class="rt none">unbefristet</span>';
+            if (until) {
+                const cls = days < 0 ? 'over' : days <= 14 ? 'soon' : 'ok';
+                const txt = days < 0 ? `abgelaufen (${Math.abs(days)} T)` : `noch ${days} Tage`;
+                runtime = `<span class="rt ${cls}">${txt}</span>`;
+            }
+
+            const userCount = (t.users || []).length;
+            const overLimit = t.maxUsers != null && userCount > t.maxUsers;
+            const userInfo = t.maxUsers != null
+                ? `<span class="ulim ${overLimit ? 'over' : ''}">${userCount}/${t.maxUsers} Nutzer</span>`
+                : `<span class="ulim">${userCount} Nutzer</span>`;
+
             return `<tr>
                 <td class="tenant">
                     <b>${esc(t.name)}${t.isActive ? '' : ' <span style="color:var(--soon)">(gesperrt)</span>'}</b>
                     <span>${esc(userLine || 'kein Nutzer')}</span>
+                    ${userInfo}
+                </td>
+                <td class="pkg">
+                    <b>${esc(t.packageName || '—')}</b>
+                    ${runtime}
+                    <button class="pkg-btn" data-package="${t.id}">Paket ändern</button>
                 </td>
                 ${cells}
                 <td class="actions">
@@ -447,6 +519,9 @@ function bindEvents() {
     document.querySelectorAll('[data-activate]').forEach(btn => {
         btn.addEventListener('click', () => activateTenant(btn.dataset.activate, true));
     });
+    document.querySelectorAll('[data-package]').forEach(btn => {
+        btn.addEventListener('click', () => openPackageDialog(btn.dataset.package));
+    });
 }
 
 function toggleCell(tenantId, featureKey) {
@@ -462,6 +537,98 @@ function toggleCell(tenantId, featureKey) {
     pendingChanges.set(tenantId, changes);
     render();
 }
+
+// ---------- Paket zuweisen ----------
+let pkgTenantId = null;
+
+function openPackageDialog(tenantId) {
+    const t = tenants.find(x => x.id === tenantId);
+    if (!t || packages.length === 0) return;
+    pkgTenantId = tenantId;
+
+    $('pkgTitle').textContent = t.name;
+    $('pkgSub').textContent = t.packageName
+        ? `Aktuell: ${t.packageName}`
+        : 'Noch kein Paket zugewiesen.';
+
+    $('pkgSelect').innerHTML = packages.map(p =>
+        `<option value="${p.key}"${p.key === t.packageKey ? ' selected' : ''}>${p.name} · ${p.price}</option>`
+    ).join('');
+
+    updatePackageInfo();
+    $('pkgDlg').showModal();
+}
+
+function selectedPackage() {
+    return packages.find(p => p.key === $('pkgSelect').value) || null;
+}
+
+function updatePackageInfo(keepDays = false) {
+    const p = selectedPackage();
+    if (!p) return;
+
+    const names = p.features
+        .map(k => catalog.find(f => f.key === k)?.name || k)
+        .join(' · ');
+    $('pkgInfo').innerHTML =
+        `<b style="color:var(--text)">Module:</b> ${esc(names)}<br>` +
+        `<b style="color:var(--text)">Nutzer:</b> ${p.maxUsers ?? 'unbegrenzt'}`;
+
+    if (!keepDays) $('pkgDays').value = p.defaultDays;
+    updatePackagePreview();
+}
+
+function updatePackagePreview() {
+    const days = parseInt($('pkgDays').value, 10);
+    if (!Number.isFinite(days) || days <= 0) {
+        $('pkgPreview').textContent = 'Läuft unbefristet.';
+        return;
+    }
+    const end = new Date(Date.now() + days * 864e5);
+    $('pkgPreview').textContent =
+        `Läuft bis ${end.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })}`;
+}
+
+$('pkgSelect').addEventListener('change', () => updatePackageInfo());
+$('pkgDays').addEventListener('input', updatePackagePreview);
+document.querySelectorAll('.quick').forEach(b => {
+    b.addEventListener('click', (e) => {
+        e.preventDefault();
+        $('pkgDays').value = b.dataset.days;
+        updatePackagePreview();
+    });
+});
+$('pkgCancel').addEventListener('click', () => $('pkgDlg').close());
+
+$('pkgOk').addEventListener('click', async () => {
+    const p = selectedPackage();
+    if (!p || !pkgTenantId) return;
+
+    const days = parseInt($('pkgDays').value, 10);
+    const btn = $('pkgOk');
+    btn.disabled = true;
+    btn.textContent = 'Speichere…';
+
+    try {
+        await api('/admin/packages/apply', {
+            method: 'POST',
+            body: JSON.stringify({
+                tenantId: pkgTenantId,
+                packageKey: p.key,
+                days: Number.isFinite(days) ? days : p.defaultDays
+            })
+        });
+        $('pkgDlg').close();
+        pendingChanges.delete(pkgTenantId);   // Einzelaenderungen verwerfen
+        await load();
+        showMsg(`Paket "${p.name}" zugewiesen.`);
+    } catch (err) {
+        showMsg(err.message, 'err');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Zuweisen';
+    }
+});
 
 // ---------- Befristung ----------
 let dlgTarget = null;
