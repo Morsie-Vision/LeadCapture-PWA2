@@ -105,13 +105,40 @@
         .result-info { font-size: 12px; color: #6b7a8f; margin-bottom: 8px; }
 
         /* ===== LEAD LIST ===== */
-        .lead-card { background: white; border-radius: 12px; padding: 12px; margin-bottom: 8px; border: 1px solid #eef2f7; cursor: pointer; transition: all 0.2s; }
+        .lead-card { background: white; border-radius: 12px; padding: 12px; margin-bottom: 8px; border: 1px solid #eef2f7; cursor: pointer; transition: all 0.2s; position: relative; }
         .lead-card:active { background: #E8F4FD; }
         .lead-card .name { font-weight: 600; color: #1a1a1a; }
         .lead-card .company { color: #0066AA; font-weight: 500; font-size: 13px; }
         .lead-card .details { font-size: 13px; color: #4a5568; margin-top: 2px; }
         .lead-card .meta { font-size: 11px; color: #a0aec0; margin-top: 4px; }
-        .lead-card .actions { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+
+        /* Gleiche Lead-Aktionen wie auf den Terminkarten:
+           oben Kontakt-/Firmenhistorie, unten Follow-up/Telefon/E-Mail/Karte. */
+        .lead-card .lead-hist-group {
+            position: absolute; top: 10px; right: 10px; z-index: 2;
+            display: flex; gap: 6px;
+        }
+        .lead-card .lead-history-btn {
+            width: 34px; height: 34px; border: none; border-radius: 9px;
+            background: #E8F4FD; color: #0066AA; font-size: 17px;
+            cursor: pointer; line-height: 1; display: flex;
+            align-items: center; justify-content: center; padding: 0;
+        }
+        .lead-card .lead-history-btn.contact { background: #eef2f7; }
+        .lead-card .lead-history-btn:active { background: #cfe6f8; }
+        .lead-card .lead-history-btn.contact:active { background: #dde5ef; }
+        .lead-card .lead-main { padding-right: 86px; }
+        .lead-card .lead-actions { display:flex; gap:6px; margin-top:10px; }
+        .lead-card .lead-actions button {
+            flex:1; min-width:0; border:none; border-radius:8px; padding:9px 0;
+            cursor:pointer; font-size:13px; font-weight:600;
+            background:#0066AA; color:#fff;
+        }
+        .lead-card .lead-actions .lead-followup { flex:2.2; background:#fff8e8; color:#b77900; border:1px solid #e7bd64; }
+        .lead-card .lead-actions .lead-icon { background:#0066AA; }
+        .lead-card .lead-actions button:disabled { opacity:.35; cursor:default; }
+
+        .lead-card .actions { display: flex; gap: 6px; margin-top: 7px; flex-wrap: wrap; }
         .lead-card .actions button { padding: 4px 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; }
         .lead-card .actions .edit { background: #E8F4FD; color: #0066AA; }
         .lead-card .actions .questionnaire { background: #e8f0fe; color: #4a6fa5; }
@@ -939,6 +966,7 @@
             .cal-day { padding: 8px 2px; }
             .appt-actions button { padding: 12px 0; }
             .lead-card .actions button { padding: 8px 12px; font-size: 12px; }
+            .lead-card .lead-actions button { padding: 10px 0; font-size: 13px; }
             .search-bar input, .search-bar button { min-height: 44px; }
             /* iOS zoomt beim Fokus hinein, wenn die Schrift < 16px ist */
             input, select, textarea { font-size: 16px; }
@@ -2002,8 +2030,34 @@ function sortLeads(leads, mode) {
     return sorted;
 }
 
+function openLeadFollowup(leadId) {
+    const lead = allLeads.find(l => l.id === leadId);
+    if (!lead) return;
+    const company = lead.company || `${lead.first_name || ''} ${lead.last_name || ''}`.trim();
+    openTodoModal(null, leadId, company);
+}
+
 function leadActionsHtml(leadId) {
+    const lead = allLeads.find(l => l.id === leadId) || {};
+    const hasCalendar = hasFeature('calendar');
+    const number = lead.mobile || lead.phone || '';
+    const hasCoords = Number.isFinite(parseFloat(lead.latitude)) && Number.isFinite(parseFloat(lead.longitude));
+
     return `
+        ${hasCalendar ? `<div class="lead-hist-group">
+            <button class="lead-history-btn contact" title="Bisherige Termine mit diesem Kontakt"
+                onclick="event.stopPropagation(); openContactHistory('${leadId}')">&#128100;</button>
+            <button class="lead-history-btn" title="Bisherige Termine bei diesem Unternehmen"
+                onclick="event.stopPropagation(); openLeadHistory('${leadId}')">&#127970;</button>
+        </div>` : ''}
+
+        <div class="lead-actions">
+            ${hasCalendar ? `<button class="lead-followup" onclick="event.stopPropagation(); openLeadFollowup('${leadId}')">✓ Follow-up</button>` : ''}
+            <button class="lead-icon" ${number ? `onclick="event.stopPropagation(); dialNumber('${escapeHtml(number)}')"` : 'disabled'}>${lead.mobile ? '&#128241;' : '&#128222;'}</button>
+            <button class="lead-icon" ${lead.email ? `onclick="event.stopPropagation(); window.location.href='mailto:${escapeHtml(lead.email)}'"` : 'disabled'}>&#9993;</button>
+            <button class="lead-icon" ${hasCoords ? `onclick="event.stopPropagation(); openMaps(${parseFloat(lead.latitude)},${parseFloat(lead.longitude)})"` : 'disabled'}>&#128205;</button>
+        </div>
+
         <div class="actions">
             <button class="edit" onclick="event.stopPropagation(); openLeadDetail('${leadId}')">✏️ Details</button>
             <button class="questionnaire" onclick="event.stopPropagation(); openLeadQuestionnaire('${leadId}')">📝 Fragebogen</button>
@@ -2015,10 +2069,12 @@ function leadCardHtml(lead, highlight) {
     const name = `${lead.title ? highlight(lead.title) + ' ' : ''}${highlight(lead.first_name)} ${highlight(lead.last_name)}`.trim();
     return `
         <div class="lead-card" onclick="openLeadDetail('${lead.id}')">
-            <div><span class="name">${name || 'Unbekannt'}</span> · <span class="company">${lead.company ? highlight(lead.company) : 'Keine Firma'}</span></div>
-            <div class="details">${lead.position ? highlight(lead.position) : 'Keine Position'} ${lead.email ? '· ✉️ ' + highlight(lead.email) : ''} ${lead.phone ? '· 📞 ' + highlight(lead.phone) : ''}</div>
-            ${lead.city ? `<div class="details">📍 ${highlight(lead.city)}${lead.country ? ', ' + highlight(lead.country) : ''}</div>` : ''}
-            <div class="meta">🕐 ${lead.created_at ? new Date(lead.created_at).toLocaleString() : ''}</div>
+            <div class="lead-main">
+                <div><span class="name">${name || 'Unbekannt'}</span> · <span class="company">${lead.company ? highlight(lead.company) : 'Keine Firma'}</span></div>
+                <div class="details">${lead.position ? highlight(lead.position) : 'Keine Position'} ${lead.email ? '· ✉️ ' + highlight(lead.email) : ''} ${lead.phone ? '· 📞 ' + highlight(lead.phone) : ''}</div>
+                ${lead.city ? `<div class="details">📍 ${highlight(lead.city)}${lead.country ? ', ' + highlight(lead.country) : ''}</div>` : ''}
+                <div class="meta">🕐 ${lead.created_at ? new Date(lead.created_at).toLocaleString() : ''}</div>
+            </div>
             ${leadActionsHtml(lead.id)}
         </div>`;
 }
