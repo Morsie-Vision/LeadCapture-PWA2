@@ -1817,8 +1817,8 @@ function showView(viewId) {
     }
     if (viewId === 'map') { initMap(); loadMapData(); }
     if (viewId === 'stats') { loadHistogram(); loadLeads(); }
-    if (viewId === 'questionnaire') { loadTemplates(); loadActiveTemplate(); }
-    if (viewId === 'scan') { loadTemplates(); updateScanTemplateSelect(); }
+    if (viewId === 'questionnaire') { loadTemplates().then(() => loadActiveTemplate()); }
+    if (viewId === 'scan') { loadTemplates().then(() => updateScanTemplateSelect()); }
     if (viewId === 'calendar') { loadCalendar(); }
     if (viewId === 'team') { loadTeamStats(); }
 }
@@ -1856,6 +1856,12 @@ function showApp(user, features) {
 
     showView('main');
     loadLeads();
+
+    // Mandantenweite Fragebogen-Vorlagen nach erfolgreichem Login laden.
+    // Ohne Questionnaire-Lizenz bleibt die Funktion vollständig inaktiv.
+    if (hasFeature('questionnaire')) {
+        loadTemplates().then(() => loadActiveTemplate());
+    }
 
     // Lizenzlage im Hintergrund gegen den Server abgleichen,
     // damit abgelaufene Module auch ohne neuen Login verschwinden
@@ -3415,100 +3421,389 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
 });
 
 // ============================================================
-// 15. FRAGEBOGEN-VORLAGEN
+// 15. FRAGEBOGEN-VORLAGEN – MANDANTENWEIT
 // ============================================================
-const TEMPLATE_STORAGE_KEY = 'leadcapture_questionnaire_templates';
+// Gespeicherte Vorlagen liegen serverseitig und gehoeren dem
+// Mandanten. ACTIVE_QUESTIONS_KEY bleibt bewusst lokal: Ein
+// Benutzer darf einen Entwurf bearbeiten, ohne ihn sofort mit
+// anderen Benutzern des Mandanten zu teilen.
+const TEMPLATE_STORAGE_KEY = 'leadcapture_questionnaire_templates'; // Legacy-Migration
 const ACTIVE_TEMPLATE_KEY = 'leadcapture_active_template';
+const ACTIVE_TEMPLATE_ID_KEY = 'leadcapture_active_template_id';
 const ACTIVE_QUESTIONS_KEY = 'leadcapture_questions';
-let questionTemplate = [], templates = {}, activeTemplateName = '';
+const TEMPLATE_MIGRATION_KEY = 'leadcapture_questionnaire_migration_v1';
+
+let questionTemplate = [];
+let templates = {};
+let templateRecords = [];
+let activeTemplateName = '';
+let activeTemplateId = '';
 
 function persistActiveQuestions() {
     localStorage.setItem(ACTIVE_QUESTIONS_KEY, JSON.stringify(questionTemplate));
 }
+
 function getActiveQuestions() {
-    try { return JSON.parse(localStorage.getItem(ACTIVE_QUESTIONS_KEY) || '[]'); }
-    catch { return []; }
+    try {
+        return normalizeQuestionList(JSON.parse(localStorage.getItem(ACTIVE_QUESTIONS_KEY) || '[]'));
+    } catch {
+        return [];
+    }
 }
 
 function normalizeQuestion(q) {
-    const normalized = { ...q };
-    if (normalized.type === 'textarea' || normalized.type === 'short_text' || normalized.type === 'long_text') normalized.type = 'text';
+    const normalized = {
+        id: String(q?.id || `q_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`),
+        label: String(q?.label || '').trim(),
+        type: (q?.type === 'select') ? 'select' : 'text'
+    };
+
+    // Alte Fragebogentypen werden bewusst zu Freitext zusammengeführt.
+    if (normalized.type === 'select') {
+        normalized.options = Array.isArray(q?.options)
+            ? q.options.map(v => String(v || '').trim()).filter(Boolean)
+            : [];
+    }
+
     return normalized;
 }
+
 function normalizeQuestionList(list) {
-    return (Array.isArray(list) ? list : []).map(normalizeQuestion);
+    return (Array.isArray(list) ? list : [])
+        .map(normalizeQuestion)
+        .filter(q => q.label || q.type === 'select');
 }
-function loadTemplates() {
-    const saved = localStorage.getItem(TEMPLATE_STORAGE_KEY);
-    const raw = saved ? JSON.parse(saved) : {};
-    templates = Object.fromEntries(Object.entries(raw).map(([name, questions]) => [name, normalizeQuestionList(questions)]));
-    return templates;
+
+function currentTenantStorageKey(base) {
+    const user = getUser();
+    const tenantId = user?.tenant_id || user?.tenantId || 'unknown';
+    return `${base}_${tenantId}`;
 }
-function loadActiveTemplate() {
-    const saved = localStorage.getItem(ACTIVE_TEMPLATE_KEY);
-    activeTemplateName = saved || '';
-    if (activeTemplateName && templates[activeTemplateName]) {
-        questionTemplate = normalizeQuestionList(JSON.parse(JSON.stringify(templates[activeTemplateName])));
-    } else {
-        questionTemplate = normalizeQuestionList(getActiveQuestions());
+
+function readLegacyTemplates() {
+    try {
+        const saved = localStorage.getItem(TEMPLATE_STORAGE_KEY);
+        if (!saved) return {};
+        const raw = JSON.parse(saved);
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+
+        return Object.fromEntries(
+            Object.entries(raw).map(([name, questions]) => [
+                String(name).trim(),
+                normalizeQuestionList(questions)
+            ]).filter(([name, questions]) => name && questions.length)
+        );
+    } catch (error) {
+        console.warn('⚠️ Alte lokale Fragebögen konnten nicht gelesen werden:', error);
+        return {};
     }
+}
+
+function rebuildTemplateMap(records) {
+    templateRecords = Array.isArray(records) ? records : [];
+    templates = {};
+
+    templateRecords.forEach(template => {
+        const name = String(template?.name || '').trim();
+        if (!name) return;
+        templates[name] = normalizeQuestionList(template.questions || []);
+    });
+}
+
+async function fetchQuestionnaireTemplates() {
+    const response = await apiRequest('/questionnaire-templates');
+    const result = await response.json();
+
+    if (!result.success) {
+        throw new Error(result.error || 'Fragebögen konnten nicht geladen werden.');
+    }
+
+    rebuildTemplateMap(result.data || []);
+    return templateRecords;
+}
+
+async function migrateLegacyQuestionnaireTemplates() {
+    const migrationKey = currentTenantStorageKey(TEMPLATE_MIGRATION_KEY);
+
+    // Bereits erfolgreich migriert -> nichts mehr anfassen.
+    if (localStorage.getItem(migrationKey) === 'done') return false;
+
+    const legacy = readLegacyTemplates();
+    const names = Object.keys(legacy);
+
+    if (!names.length) {
+        localStorage.setItem(migrationKey, 'done');
+        return false;
+    }
+
+    let changed = false;
+
+    for (const name of names) {
+        // Server-Version gewinnt bei Namenskonflikten. Dadurch wird eine
+        // bereits gemeinsam verwendete Mandanten-Vorlage nicht von einem
+        // alten Browser-Stand überschrieben.
+        if (templateRecords.some(t => t.name === name)) continue;
+
+        try {
+            const response = await apiRequest('/questionnaire-templates', {
+                method: 'POST',
+                body: JSON.stringify({
+                    name,
+                    questions: legacy[name]
+                })
+            });
+
+            const result = await response.json();
+            if (!result.success) {
+                if (result.code === 'FEATURE_NOT_LICENSED') throw new Error(result.error);
+                console.warn(`⚠️ Vorlage "${name}" konnte nicht migriert werden:`, result.error);
+                continue;
+            }
+
+            templateRecords.push(result.data);
+            changed = true;
+        } catch (error) {
+            console.warn(`⚠️ Migration von "${name}" fehlgeschlagen:`, error);
+        }
+    }
+
+    if (changed) rebuildTemplateMap(templateRecords);
+
+    // Nur nach einem abgeschlossenen Migrationslauf entfernen. Falls einzelne
+    // Vorlagen wegen eines Netzwerkfehlers nicht übertragen werden konnten,
+    // bleiben sie lokal erhalten und koennen beim naechsten Lauf erneut werden.
+    const allLegacyNamesNowAvailable = names.every(name =>
+        templateRecords.some(t => t.name === name)
+    );
+
+    if (allLegacyNamesNowAvailable) {
+        localStorage.removeItem(TEMPLATE_STORAGE_KEY);
+        localStorage.setItem(migrationKey, 'done');
+    }
+
+    return changed;
+}
+
+async function loadTemplates() {
+    try {
+        await fetchQuestionnaireTemplates();
+
+        // Einmalige Migration der bisher browsergebundenen Vorlagen.
+        const migrated = await migrateLegacyQuestionnaireTemplates();
+        if (migrated) await fetchQuestionnaireTemplates();
+
+        updateTemplateSelect();
+        return templates;
+    } catch (error) {
+        console.error('❌ Fragebögen:', error);
+        templates = {};
+        templateRecords = [];
+        updateTemplateSelect();
+        return templates;
+    }
+}
+
+async function loadActiveTemplate() {
+    const savedId = localStorage.getItem(ACTIVE_TEMPLATE_ID_KEY) || '';
+    const savedName = localStorage.getItem(ACTIVE_TEMPLATE_KEY) || '';
+
+    activeTemplateId = savedId;
+    activeTemplateName = savedName;
+
+    let record = activeTemplateId
+        ? templateRecords.find(t => t.id === activeTemplateId)
+        : null;
+
+    if (!record && activeTemplateName) {
+        record = templateRecords.find(t => t.name === activeTemplateName);
+        if (record) activeTemplateId = record.id;
+    }
+
+    if (record) {
+        activeTemplateName = record.name;
+        questionTemplate = normalizeQuestionList(record.questions || []);
+        localStorage.setItem(ACTIVE_TEMPLATE_ID_KEY, record.id);
+        localStorage.setItem(ACTIVE_TEMPLATE_KEY, record.name);
+    } else {
+        // Kein gespeicherter Server-Entwurf: lokalen Entwurf nur fuer diesen
+        // Benutzer weiterverwenden.
+        activeTemplateId = '';
+        activeTemplateName = '';
+        questionTemplate = getActiveQuestions();
+    }
+
     persistActiveQuestions();
     renderQuestionnaireEditor();
     updateTemplateSelect();
 }
+
 function updateTemplateSelect() {
     const select = document.getElementById('questionnaireTemplateSelect');
-    select.innerHTML = '<option value="">Vorlage wählen...</option>';
-    Object.keys(templates).forEach(name => {
+    if (!select) return;
+
+    select.innerHTML = '<option value="">Neuen Fragebogen erstellen</option>';
+
+    templateRecords.forEach(template => {
         const opt = document.createElement('option');
-        opt.value = name;
-        opt.textContent = name;
-        if (name === activeTemplateName) opt.selected = true;
+        opt.value = template.name;
+        opt.textContent = `${template.name} (${normalizeQuestionList(template.questions || []).length} Fragen)`;
+        if (template.id === activeTemplateId || template.name === activeTemplateName) opt.selected = true;
         select.appendChild(opt);
     });
+
     updateScanTemplateSelect();
     updateLeadTemplateSelect();
 }
-function saveTemplate(name) {
-    if (!name || !name.trim()) { alert('❌ Bitte gib einen Namen ein.'); return; }
-    if (questionTemplate.length === 0) { alert('❌ Keine Fragen.'); return; }
-    templates[name.trim()] = JSON.parse(JSON.stringify(questionTemplate));
-    localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(templates));
-    localStorage.setItem(ACTIVE_TEMPLATE_KEY, name.trim());
-    activeTemplateName = name.trim();
-    persistActiveQuestions();
-    updateTemplateSelect();
-    renderQuestionnaireEditor();
-    alert(`✅ Vorlage "${name.trim()}" gespeichert!`);
-}
-function loadTemplate(name) {
-    if (!name || !templates[name]) { alert('❌ Vorlage nicht gefunden.'); return; }
-    questionTemplate = normalizeQuestionList(JSON.parse(JSON.stringify(templates[name])));
-    activeTemplateName = name;
-    localStorage.setItem(ACTIVE_TEMPLATE_KEY, name);
-    persistActiveQuestions();
-    renderQuestionnaireEditor();
-    updateTemplateSelect();
-    alert(`📂 Vorlage "${name}" geladen (${questionTemplate.length} Fragen).`);
-}
-function deleteTemplate(name) {
-    if (!name || !templates[name]) { alert('❌ Vorlage nicht gefunden.'); return; }
-    if (!confirm(`⚠️ Vorlage "${name}" löschen?`)) return;
-    delete templates[name];
-    localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(templates));
-    if (activeTemplateName === name) {
-        activeTemplateName = '';
-        localStorage.setItem(ACTIVE_TEMPLATE_KEY, '');
-        questionTemplate = [];
-        persistActiveQuestions();
-    }
-    updateTemplateSelect(); renderQuestionnaireEditor();
-    alert(`🗑️ Vorlage "${name}" gelöscht.`);
-}
-document.getElementById('questionnaireTemplateSelect').addEventListener('change', (e) => { if (e.target.value) loadTemplate(e.target.value); else { questionTemplate = []; activeTemplateName = ''; persistActiveQuestions(); renderQuestionnaireEditor(); } });
-document.getElementById('deleteTemplateBtn').addEventListener('click', () => { const name = document.getElementById('questionnaireTemplateSelect').value; if (name) deleteTemplate(name); });
 
-// ============================================================
+async function saveTemplate(name) {
+    name = String(name || '').trim();
+
+    if (!name) {
+        alert('❌ Bitte gib einen Namen ein.');
+        return false;
+    }
+
+    const cleaned = normalizeQuestionList(questionTemplate).filter(q => q.label);
+
+    if (!cleaned.length) {
+        alert('❌ Füge zuerst mindestens eine Frage hinzu.');
+        return false;
+    }
+
+    if (cleaned.some(q => q.type === 'select' && (!q.options || !q.options.length))) {
+        alert('❌ Jede Auswahlfrage braucht mindestens eine Antwortmöglichkeit.');
+        return false;
+    }
+
+    const existing = activeTemplateId
+        ? templateRecords.find(t => t.id === activeTemplateId)
+        : null;
+
+    // Wenn ein neuer Fragebogen unter einem Namen gespeichert wird, der
+    // bereits im Mandanten existiert, wird bewusst die vorhandene Vorlage
+    // verwendet statt eine zweite mit demselben Namen anzulegen.
+    const sameName = templateRecords.find(t => t.name === name);
+    const target = existing || sameName || null;
+
+    const url = target
+        ? `/questionnaire-templates/${target.id}`
+        : '/questionnaire-templates';
+
+    const method = target ? 'PUT' : 'POST';
+
+    try {
+        const response = await apiRequest(url, {
+            method,
+            body: JSON.stringify({ name, questions: cleaned })
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+            throw new Error(result.error || 'Speichern fehlgeschlagen.');
+        }
+
+        activeTemplateId = result.data.id;
+        activeTemplateName = result.data.name;
+        questionTemplate = normalizeQuestionList(result.data.questions || []);
+
+        localStorage.setItem(ACTIVE_TEMPLATE_ID_KEY, activeTemplateId);
+        localStorage.setItem(ACTIVE_TEMPLATE_KEY, activeTemplateName);
+        persistActiveQuestions();
+
+        await fetchQuestionnaireTemplates();
+        updateTemplateSelect();
+        updateScanTemplateSelect();
+        updateLeadTemplateSelect();
+        renderQuestionnaireEditor();
+
+        return true;
+    } catch (error) {
+        console.error('❌ Fragebogen speichern:', error);
+        alert(`❌ ${error.message}`);
+        return false;
+    }
+}
+
+async function loadTemplate(name) {
+    const record = templateRecords.find(t => t.name === name);
+
+    if (!record) {
+        alert('❌ Vorlage nicht gefunden.');
+        return;
+    }
+
+    questionTemplate = normalizeQuestionList(record.questions || []);
+    activeTemplateId = record.id;
+    activeTemplateName = record.name;
+
+    localStorage.setItem(ACTIVE_TEMPLATE_ID_KEY, activeTemplateId);
+    localStorage.setItem(ACTIVE_TEMPLATE_KEY, activeTemplateName);
+    persistActiveQuestions();
+
+    renderQuestionnaireEditor();
+    updateTemplateSelect();
+
+    alert(`📂 Vorlage "${record.name}" geladen (${questionTemplate.length} Fragen).`);
+}
+
+async function deleteTemplate(name) {
+    const record = templateRecords.find(t => t.name === name);
+
+    if (!record) {
+        alert('❌ Vorlage nicht gefunden.');
+        return;
+    }
+
+    if (!confirm(`⚠️ Vorlage "${record.name}" löschen?\n\nSie wird für alle Nutzer dieses Mandanten gelöscht.`)) return;
+
+    try {
+        const response = await apiRequest(`/questionnaire-templates/${record.id}`, {
+            method: 'DELETE'
+        });
+        const result = await response.json();
+
+        if (!result.success) throw new Error(result.error || 'Löschen fehlgeschlagen.');
+
+        if (activeTemplateId === record.id) {
+            activeTemplateId = '';
+            activeTemplateName = '';
+            questionTemplate = [];
+            localStorage.removeItem(ACTIVE_TEMPLATE_ID_KEY);
+            localStorage.removeItem(ACTIVE_TEMPLATE_KEY);
+            persistActiveQuestions();
+        }
+
+        await fetchQuestionnaireTemplates();
+        updateTemplateSelect();
+        renderQuestionnaireEditor();
+
+        alert(`🗑️ Vorlage "${record.name}" gelöscht.`);
+    } catch (error) {
+        console.error('❌ Fragebogen löschen:', error);
+        alert(`❌ ${error.message}`);
+    }
+}
+
+document.getElementById('questionnaireTemplateSelect').addEventListener('change', async (e) => {
+    if (e.target.value) {
+        await loadTemplate(e.target.value);
+    } else {
+        questionTemplate = [];
+        activeTemplateId = '';
+        activeTemplateName = '';
+        localStorage.removeItem(ACTIVE_TEMPLATE_ID_KEY);
+        localStorage.removeItem(ACTIVE_TEMPLATE_KEY);
+        persistActiveQuestions();
+        renderQuestionnaireEditor();
+    }
+});
+
+document.getElementById('deleteTemplateBtn').addEventListener('click', async () => {
+    const name = document.getElementById('questionnaireTemplateSelect').value;
+    if (name) await deleteTemplate(name);
+});
+
 // 16. FRAGEBOGEN EDITOR
 // ============================================================
 const questionEditor = document.getElementById('questionnaireEditor');
@@ -3631,7 +3926,7 @@ function removeQuestion(index) {
 }
 
 document.getElementById('addQuestionBtn').addEventListener('click', createQuestion);
-document.getElementById('saveQuestionnaireTemplateBtn').addEventListener('click', () => {
+document.getElementById('saveQuestionnaireTemplateBtn').addEventListener('click', async () => {
     const cleaned = questionTemplate
         .map(q => ({ ...q, label: String(q.label || '').trim(), options: q.options?.map(v => String(v || '').trim()).filter(Boolean) }))
         .filter(q => q.label);
@@ -3647,7 +3942,7 @@ document.getElementById('saveQuestionnaireTemplateBtn').addEventListener('click'
     questionTemplate = cleaned;
     const name = prompt('Name für den Fragebogen:', activeTemplateName || '');
     if (!name?.trim()) return;
-    saveTemplate(name.trim());
+    await saveTemplate(name.trim());
     renderQuestionnaireEditor();
 });
 
@@ -3655,7 +3950,8 @@ document.getElementById('resetQuestionnaireBtn').addEventListener('click', () =>
     if (confirm('Alle aktuellen Fragen zurücksetzen? Gespeicherte Vorlagen bleiben erhalten.')) {
         questionTemplate = [];
         activeTemplateName = '';
-        localStorage.setItem(ACTIVE_TEMPLATE_KEY, '');
+        localStorage.removeItem(ACTIVE_TEMPLATE_ID_KEY);
+        localStorage.removeItem(ACTIVE_TEMPLATE_KEY);
         persistActiveQuestions();
         updateTemplateSelect();
         renderQuestionnaireEditor();
@@ -3691,7 +3987,7 @@ function questionsForLeadView() {
 
 async function openLeadQuestionnaire(leadId) {
     currentLeadId = leadId;
-    loadTemplates();
+    await loadTemplates();
     updateLeadTemplateSelect();
     showView('lead-questionnaire');
     try {
@@ -5353,13 +5649,11 @@ document.getElementById('csvFileInput').addEventListener('change', async (e) => 
 // 21. INIT
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
-    loadTemplates();
-    loadActiveTemplate();
     loadCachedFeatures();
     const user = getUser();
     if (user && getToken()) showApp(user);
     else showLogin();
-    console.log('🚀 LeadCapture PWA v25.0.0 geladen (Team + Follow-up-Fix)');
+    console.log('🚀 LeadCapture PWA v25.1.0 geladen (mandantenweite Fragebogen-Vorlagen)');
 });
 </script>
 </body>
