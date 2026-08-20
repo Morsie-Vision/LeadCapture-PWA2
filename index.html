@@ -105,40 +105,13 @@
         .result-info { font-size: 12px; color: #6b7a8f; margin-bottom: 8px; }
 
         /* ===== LEAD LIST ===== */
-        .lead-card { background: white; border-radius: 12px; padding: 12px; margin-bottom: 8px; border: 1px solid #eef2f7; cursor: pointer; transition: all 0.2s; position: relative; }
+        .lead-card { background: white; border-radius: 12px; padding: 12px; margin-bottom: 8px; border: 1px solid #eef2f7; cursor: pointer; transition: all 0.2s; }
         .lead-card:active { background: #E8F4FD; }
         .lead-card .name { font-weight: 600; color: #1a1a1a; }
         .lead-card .company { color: #0066AA; font-weight: 500; font-size: 13px; }
         .lead-card .details { font-size: 13px; color: #4a5568; margin-top: 2px; }
         .lead-card .meta { font-size: 11px; color: #a0aec0; margin-top: 4px; }
-
-        /* Gleiche Lead-Aktionen wie auf den Terminkarten:
-           oben Kontakt-/Firmenhistorie, unten Follow-up/Telefon/E-Mail/Karte. */
-        .lead-card .lead-hist-group {
-            position: absolute; top: 10px; right: 10px; z-index: 2;
-            display: flex; gap: 6px;
-        }
-        .lead-card .lead-history-btn {
-            width: 34px; height: 34px; border: none; border-radius: 9px;
-            background: #E8F4FD; color: #0066AA; font-size: 17px;
-            cursor: pointer; line-height: 1; display: flex;
-            align-items: center; justify-content: center; padding: 0;
-        }
-        .lead-card .lead-history-btn.contact { background: #eef2f7; }
-        .lead-card .lead-history-btn:active { background: #cfe6f8; }
-        .lead-card .lead-history-btn.contact:active { background: #dde5ef; }
-        .lead-card .lead-main { padding-right: 86px; }
-        .lead-card .lead-actions { display:flex; gap:6px; margin-top:10px; }
-        .lead-card .lead-actions button {
-            flex:1; min-width:0; border:none; border-radius:8px; padding:9px 0;
-            cursor:pointer; font-size:13px; font-weight:600;
-            background:#0066AA; color:#fff;
-        }
-        .lead-card .lead-actions .lead-followup { flex:2.2; background:#fff8e8; color:#b77900; border:1px solid #e7bd64; }
-        .lead-card .lead-actions .lead-icon { background:#0066AA; }
-        .lead-card .lead-actions button:disabled { opacity:.35; cursor:default; }
-
-        .lead-card .actions { display: flex; gap: 6px; margin-top: 7px; flex-wrap: wrap; }
+        .lead-card .actions { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
         .lead-card .actions button { padding: 4px 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; }
         .lead-card .actions .edit { background: #E8F4FD; color: #0066AA; }
         .lead-card .actions .questionnaire { background: #e8f0fe; color: #4a6fa5; }
@@ -270,6 +243,103 @@
         .map-hint { margin-top: 8px; font-size: 12px; color: #6b7a8f; text-align: center; }
         .map-warn { margin-top: 6px; font-size: 12px; color: #b45309; background: #fef3c7; padding: 8px 10px; border-radius: 8px; text-align: center; display: none; }
         .map-warn button { margin-top: 6px; padding: 6px 14px; border: none; border-radius: 8px; background: #0066AA; color: white; font-size: 12px; cursor: pointer; }
+
+        /* CSV-Export konfigurieren */
+        #exportOverlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1700;
+            display: none; justify-content: center; align-items: center; padding: 16px;
+        }
+        #exportOverlay.active { display: flex; }
+        #exportModal {
+            background: #fff; max-width: 440px; width: 100%; max-height: 90dvh;
+            border-radius: 20px; padding: clamp(16px,4vw,22px); overflow-y: auto; position: relative;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        #exportModal .close-btn {
+            position: absolute; top: 12px; right: 16px; background: none; border: none;
+            font-size: 24px; cursor: pointer; color: #6b7a8f;
+        }
+        #exportModal h3 { font-size: 17px; margin-bottom: 2px; padding-right: 28px; }
+        .exp-sub { font-size: 12.5px; color: #6b7a8f; margin-bottom: 16px; line-height: 1.5; }
+        .exp-block { margin-bottom: 16px; }
+        .exp-label {
+            font-size: 11px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: .05em; color: #6b7a8f; margin-bottom: 7px;
+        }
+        .exp-quick { display: flex; gap: 6px; margin-bottom: 9px; }
+        .exp-quick button {
+            flex: 1; padding: 7px 4px; border: 1.5px solid #e2e8f0; border-radius: 9px;
+            background: #fff; font-size: 12px; font-weight: 600; color: #4a5568; cursor: pointer;
+        }
+        .exp-quick button.active { background: #0066AA; border-color: #0066AA; color: #fff; }
+        .exp-dates { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+        .exp-dates label { display: block; font-size: 11.5px; color: #6b7a8f; margin-bottom: 3px; }
+        .exp-dates input {
+            width: 100%; box-sizing: border-box; padding: 9px 10px; font-size: 16px;
+            border: 1.5px solid #e2e8f0; border-radius: 10px; height: 42px;
+            -webkit-appearance: none; appearance: none; background: #fff;
+        }
+        .exp-users { max-height: 190px; overflow-y: auto; margin-top: 4px; }
+        #exportModal .exp-users label, .exp-all {
+            display: flex; align-items: center; gap: 9px; padding: 8px 9px;
+            border-radius: 8px; cursor: pointer; font-size: 13px; color: #1a1a1a;
+        }
+        .exp-all { font-weight: 600; border-bottom: 1px solid #eef2f7; }
+        #exportModal input[type=checkbox] { width: 17px; height: 17px; accent-color: #0066AA; flex-shrink: 0; }
+        .exp-uname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .exp-ucount { font-size: 11px; color: #6b7a8f; font-variant-numeric: tabular-nums; }
+        .exp-count {
+            background: #E8F4FD; border-radius: 10px; padding: 10px 12px;
+            font-size: 13px; color: #0066AA; font-weight: 600; text-align: center;
+        }
+        .exp-count.leer { background: #fef3c7; color: #b45309; }
+        .exp-actions { display: flex; gap: 8px; margin-top: 14px; }
+        .exp-actions .btn { flex: 1; }
+
+        /* Nutzer loeschen */
+        #delUserOverlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1700;
+            display: none; justify-content: center; align-items: center; padding: 16px;
+        }
+        #delUserOverlay.active { display: flex; }
+        #delUserModal {
+            background: #fff; max-width: 440px; width: 100%; max-height: 90dvh;
+            border-radius: 20px; padding: clamp(16px,4vw,22px); overflow-y: auto; position: relative;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        #delUserModal .close-btn {
+            position: absolute; top: 12px; right: 16px; background: none; border: none;
+            font-size: 24px; cursor: pointer; color: #6b7a8f;
+        }
+        #delUserModal h3 { font-size: 17px; margin-bottom: 2px; padding-right: 28px; }
+        #delUserModal .del-sub { font-size: 13px; color: #6b7a8f; margin-bottom: 14px; overflow-wrap: anywhere; }
+        .del-warn {
+            background: #fef3c7; border: 1px solid #fcd34d; border-radius: 10px;
+            padding: 10px 12px; font-size: 12.5px; color: #92400e; margin-bottom: 14px; line-height: 1.55;
+        }
+        .del-choice { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+        .del-choice label {
+            display: flex; gap: 10px; align-items: flex-start; padding: 10px;
+            border: 1.5px solid #e2e8f0; border-radius: 10px; cursor: pointer;
+        }
+        .del-choice label:has(input:checked) { border-color: #0066AA; background: #f5faff; }
+        .del-choice input[type=radio] { margin-top: 2px; accent-color: #0066AA; flex-shrink: 0; }
+        .del-choice b { display: block; font-size: 13px; color: #1a1a1a; }
+        .del-choice small { display: block; font-size: 11.5px; color: #6b7a8f; margin-top: 2px; line-height: 1.45; }
+        #delUserTarget {
+            width: 100%; padding: 10px; border: 1.5px solid #e2e8f0; border-radius: 10px;
+            font-size: 14px; background: #fff;
+        }
+        #delUserTarget:disabled { opacity: .5; }
+        .del-confirm-label { display: block; font-size: 12px; color: #6b7a8f; margin-bottom: 5px; }
+        #delUserConfirm {
+            width: 100%; padding: 10px 12px; border: 1.5px solid #e2e8f0;
+            border-radius: 10px; font-size: 15px; box-sizing: border-box;
+        }
+        .del-actions { display: flex; gap: 8px; margin-top: 16px; }
+        .del-actions .btn { flex: 1; }
+        .btn-danger { background: #dc2626; color: #fff; }
+        .btn-danger:disabled { background: #e2e8f0; color: #a0aec0; cursor: default; }
 
         /* ===== TEAM ===== */
         .team-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
@@ -966,7 +1036,6 @@
             .cal-day { padding: 8px 2px; }
             .appt-actions button { padding: 12px 0; }
             .lead-card .actions button { padding: 8px 12px; font-size: 12px; }
-            .lead-card .lead-actions button { padding: 10px 0; font-size: 13px; }
             .search-bar input, .search-bar button { min-height: 44px; }
             /* iOS zoomt beim Fokus hinein, wenn die Schrift < 16px ist */
             input, select, textarea { font-size: 16px; }
@@ -1531,6 +1600,89 @@
     </div>
 </div>
 
+<!-- CSV-EXPORT KONFIGURIEREN -->
+<div id="exportOverlay" class="modal-overlay">
+    <div id="exportModal">
+        <button class="close-btn" id="exportCloseBtn">×</button>
+        <h3>CSV-Export</h3>
+        <p class="exp-sub">Zeitraum und Mitarbeiter wählen. Ohne Auswahl wird alles exportiert.</p>
+
+        <div class="exp-block">
+            <div class="exp-label">Zeitraum</div>
+            <div class="exp-quick">
+                <button type="button" data-range="all">Alles</button>
+                <button type="button" data-range="30">30 Tage</button>
+                <button type="button" data-range="year">Dieses Jahr</button>
+            </div>
+            <div class="exp-dates">
+                <div>
+                    <label for="exportFrom">von</label>
+                    <input type="date" id="exportFrom">
+                </div>
+                <div>
+                    <label for="exportTo">bis</label>
+                    <input type="date" id="exportTo">
+                </div>
+            </div>
+        </div>
+
+        <div class="exp-block">
+            <div class="exp-label">Mitarbeiter</div>
+            <label class="exp-all">
+                <input type="checkbox" id="exportUserAll" checked>
+                <span>Alle auswählen / abwählen</span>
+            </label>
+            <div class="exp-users" id="exportUserList"></div>
+        </div>
+
+        <div class="exp-count" id="exportCount">Wird berechnet…</div>
+
+        <div class="exp-actions">
+            <button class="btn btn-secondary" id="exportCancel">Abbrechen</button>
+            <button class="btn btn-primary" id="exportStart">Herunterladen</button>
+        </div>
+    </div>
+</div>
+
+<!-- NUTZER ENDGÜLTIG LÖSCHEN -->
+<div id="delUserOverlay" class="modal-overlay">
+    <div id="delUserModal">
+        <button class="close-btn" id="delUserCloseBtn">×</button>
+        <h3>Nutzer löschen</h3>
+        <p class="del-sub" id="delUserName"></p>
+
+        <div class="del-warn" id="delUserImpact"></div>
+
+        <div class="del-choice">
+            <label>
+                <input type="radio" name="delMode" value="unassign" checked>
+                <span>
+                    <b>Daten behalten, ohne Zuordnung</b>
+                    <small>Leads und Termine bleiben erhalten, sind aber keinem Mitarbeiter mehr zugeordnet.</small>
+                </span>
+            </label>
+            <label>
+                <input type="radio" name="delMode" value="reassign">
+                <span>
+                    <b>Daten übertragen auf</b>
+                    <small>Alle Einträge werden einem anderen Mitarbeiter zugeschrieben.</small>
+                </span>
+            </label>
+            <select id="delUserTarget" disabled></select>
+        </div>
+
+        <label class="del-confirm-label" for="delUserConfirm">
+            Zur Bestätigung die E-Mail-Adresse eintippen:
+        </label>
+        <input type="text" id="delUserConfirm" placeholder="" autocomplete="off">
+
+        <div class="del-actions">
+            <button class="btn btn-secondary" id="delUserCancel">Abbrechen</button>
+            <button class="btn btn-danger" id="delUserConfirmBtn" disabled>Endgültig löschen</button>
+        </div>
+    </div>
+</div>
+
 <!-- KAMERA-MODAL (Live-Erfassung mit Kartenrahmen) -->
 <div id="cameraOverlay">
     <video id="cameraVideo" autoplay playsinline muted></video>
@@ -2030,34 +2182,8 @@ function sortLeads(leads, mode) {
     return sorted;
 }
 
-function openLeadFollowup(leadId) {
-    const lead = allLeads.find(l => l.id === leadId);
-    if (!lead) return;
-    const company = lead.company || `${lead.first_name || ''} ${lead.last_name || ''}`.trim();
-    openTodoModal(null, leadId, company);
-}
-
 function leadActionsHtml(leadId) {
-    const lead = allLeads.find(l => l.id === leadId) || {};
-    const hasCalendar = hasFeature('calendar');
-    const number = lead.mobile || lead.phone || '';
-    const hasCoords = Number.isFinite(parseFloat(lead.latitude)) && Number.isFinite(parseFloat(lead.longitude));
-
     return `
-        ${hasCalendar ? `<div class="lead-hist-group">
-            <button class="lead-history-btn contact" title="Bisherige Termine mit diesem Kontakt"
-                onclick="event.stopPropagation(); openContactHistory('${leadId}')">&#128100;</button>
-            <button class="lead-history-btn" title="Bisherige Termine bei diesem Unternehmen"
-                onclick="event.stopPropagation(); openLeadHistory('${leadId}')">&#127970;</button>
-        </div>` : ''}
-
-        <div class="lead-actions">
-            ${hasCalendar ? `<button class="lead-followup" onclick="event.stopPropagation(); openLeadFollowup('${leadId}')">✓ Follow-up</button>` : ''}
-            <button class="lead-icon" ${number ? `onclick="event.stopPropagation(); dialNumber('${escapeHtml(number)}')"` : 'disabled'}>${lead.mobile ? '&#128241;' : '&#128222;'}</button>
-            <button class="lead-icon" ${lead.email ? `onclick="event.stopPropagation(); window.location.href='mailto:${escapeHtml(lead.email)}'"` : 'disabled'}>&#9993;</button>
-            <button class="lead-icon" ${hasCoords ? `onclick="event.stopPropagation(); openMaps(${parseFloat(lead.latitude)},${parseFloat(lead.longitude)})"` : 'disabled'}>&#128205;</button>
-        </div>
-
         <div class="actions">
             <button class="edit" onclick="event.stopPropagation(); openLeadDetail('${leadId}')">✏️ Details</button>
             <button class="questionnaire" onclick="event.stopPropagation(); openLeadQuestionnaire('${leadId}')">📝 Fragebogen</button>
@@ -2069,12 +2195,10 @@ function leadCardHtml(lead, highlight) {
     const name = `${lead.title ? highlight(lead.title) + ' ' : ''}${highlight(lead.first_name)} ${highlight(lead.last_name)}`.trim();
     return `
         <div class="lead-card" onclick="openLeadDetail('${lead.id}')">
-            <div class="lead-main">
-                <div><span class="name">${name || 'Unbekannt'}</span> · <span class="company">${lead.company ? highlight(lead.company) : 'Keine Firma'}</span></div>
-                <div class="details">${lead.position ? highlight(lead.position) : 'Keine Position'} ${lead.email ? '· ✉️ ' + highlight(lead.email) : ''} ${lead.phone ? '· 📞 ' + highlight(lead.phone) : ''}</div>
-                ${lead.city ? `<div class="details">📍 ${highlight(lead.city)}${lead.country ? ', ' + highlight(lead.country) : ''}</div>` : ''}
-                <div class="meta">🕐 ${lead.created_at ? new Date(lead.created_at).toLocaleString() : ''}</div>
-            </div>
+            <div><span class="name">${name || 'Unbekannt'}</span> · <span class="company">${lead.company ? highlight(lead.company) : 'Keine Firma'}</span></div>
+            <div class="details">${lead.position ? highlight(lead.position) : 'Keine Position'} ${lead.email ? '· ✉️ ' + highlight(lead.email) : ''} ${lead.phone ? '· 📞 ' + highlight(lead.phone) : ''}</div>
+            ${lead.city ? `<div class="details">📍 ${highlight(lead.city)}${lead.country ? ', ' + highlight(lead.country) : ''}</div>` : ''}
+            <div class="meta">🕐 ${lead.created_at ? new Date(lead.created_at).toLocaleString() : ''}</div>
             ${leadActionsHtml(lead.id)}
         </div>`;
 }
@@ -2576,9 +2700,31 @@ const galleryLink = document.getElementById('galleryLink');
 
 // Verkleinert eine Canvas auf maximal maxDim Kantenlänge und
 // kodiert als JPEG. Wird von Kamera- UND Galerie-Pfad genutzt.
+// WebP liefert bei gleicher Lesbarkeit deutlich kleinere Dateien
+// als JPEG - auf Messe-WLAN ist die Uebertragung der groesste
+// Zeitfresser. Einmal pruefen, ob der Browser es kann; Safari
+// unterstuetzt es seit Version 14, aeltere fallen auf JPEG zurueck.
+const CAPTURE_FORMAT = (() => {
+    try {
+        const c = document.createElement('canvas');
+        c.width = c.height = 1;
+        return c.toDataURL('image/webp').startsWith('data:image/webp')
+            ? 'image/webp' : 'image/jpeg';
+    } catch { return 'image/jpeg'; }
+})();
+
+function encodeCanvas(canvas, quality) {
+    const url = canvas.toDataURL(CAPTURE_FORMAT, quality);
+    // Sicherheitsnetz: manche Browser melden webp, liefern aber PNG
+    if (CAPTURE_FORMAT === 'image/webp' && !url.startsWith('data:image/webp')) {
+        return canvas.toDataURL('image/jpeg', quality);
+    }
+    return url;
+}
+
 function downscaleCanvas(sourceCanvas, maxDim, quality) {
     const scale = Math.min(1, maxDim / Math.max(sourceCanvas.width, sourceCanvas.height));
-    if (scale === 1) return sourceCanvas.toDataURL('image/jpeg', quality);
+    if (scale === 1) return encodeCanvas(sourceCanvas, quality);
 
     const out = document.createElement('canvas');
     out.width = Math.round(sourceCanvas.width * scale);
@@ -2586,7 +2732,7 @@ function downscaleCanvas(sourceCanvas, maxDim, quality) {
     const ctx = out.getContext('2d');
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(sourceCanvas, 0, 0, out.width, out.height);
-    return out.toDataURL('image/jpeg', quality);
+    return encodeCanvas(out, quality);
 }
 
 // Galerie-Pfad: komplettes Foto, EXIF-Rotation korrekt beachtet
@@ -2608,19 +2754,42 @@ async function processCapturedImage(dataUrl, { showPreview = true } = {}) {
     } else {
         previewContainer.style.display = 'none';
     }
-    setStatus('Scan läuft...', true);
+    // Laufende Rueckmeldung: ohne sie wirken schon 4 Sekunden lang.
+    // Der Text wechselt, damit erkennbar bleibt, dass etwas passiert.
+    const t0 = performance.now();
+    let stufe = 0;
+    const texte = [
+        'Scan läuft...',
+        'Bild wird übertragen...',
+        'Text wird ausgelesen...',
+        'Fast fertig...'
+    ];
+    setStatus(texte[0], true);
+    const ticker = setInterval(() => {
+        stufe = Math.min(stufe + 1, texte.length - 1);
+        setStatus(texte[stufe], true);
+    }, 2500);
+
     try {
         const response = await apiRequest('/process-image', {
             method: 'POST',
             body: JSON.stringify({ image: dataUrl, save: false })
         });
         const result = await response.json();
+        clearInterval(ticker);
         if (!result.success) throw new Error(result.error || 'Unbekannter Fehler');
+
+        // Zeitmessung in der Konsole: zeigt, ob Upload oder Erkennung bremst
+        const gesamt = Math.round(performance.now() - t0);
+        const server = result.meta?.processingTime;
+        console.log(`⏱️ Scan gesamt ${gesamt}ms` +
+            (server ? ` · davon Server ${server}ms · Übertragung ~${gesamt - server}ms` : ''));
 
         fillForm(result.data);
         setStatus('✅ Karte ausgelesen – bitte prüfen und speichern.', true);
         setTimeout(() => setStatus('', false), 2500);
     } catch (error) {
+        clearInterval(ticker);
         showError('Verarbeitung fehlgeschlagen: ' + error.message);
         setStatus('', false);
     }
@@ -2659,6 +2828,13 @@ galleryLink.addEventListener('click', (e) => { e.preventDefault(); fileInput.cli
 // ============================================================
 // 12b. KAMERA: LIVE-ERFASSUNG MIT AUSSCHNITT
 // ============================================================
+// Uebertragungsgroesse: 1600px reichen fuer Kleinschrift auf einer
+// Visitenkarte. Bei 2000px/0.9 war die Datei rund doppelt so gross,
+// ohne dass die Erkennung besser wurde - der Upload dominiert die
+// gefuehlte Wartezeit, besonders im Messe-WLAN.
+const CAPTURE_MAX_PX = 1600;
+const CAPTURE_QUALITY = 0.82;
+
 const CARD_ASPECT_RATIO = 85 / 55;  // Standard-Visitenkartenformat, bei Bedarf anpassen
 const CAPTURE_PADDING = 1.06;       // 6% Toleranz, falls Ausrichtung leicht daneben liegt
 
@@ -3042,75 +3218,46 @@ function computeCropRegion() {
     return { srcX, srcY, srcW, srcH };
 }
 
-// Nimmt nach Moeglichkeit ein echtes Foto in Sensoraufloesung auf.
-// Ein Videobild hat nur Vorschauqualitaet – auf der Karte landeten
-// damit zu wenige Pixel, um Kleinschrift zu lesen. takePhoto()
-// liefert je nach Geraet ein Vielfaches davon.
-async function grabFullResolutionFrame() {
-    const track = cameraTrack();
-    if (!track || typeof window.ImageCapture !== 'function') return null;
+// Hinweis: Hier stand grabFullResolutionFrame() mit
+// ImageCapture.takePhoto(). Entfernt, weil der Aufruf auf Android
+// 1-3 Sekunden blockierte und das Bild erst danach entstand -
+// die Kamera durfte in dieser Zeit nicht bewegt werden.
 
-    try {
-        const capture = new window.ImageCapture(track);
-        const blob = await capture.takePhoto();
-        const bitmap = await createImageBitmap(blob);
-        // Nur nutzen, wenn das Foto wirklich groesser ist als die Vorschau
-        if (bitmap.width <= cameraVideo.videoWidth) { bitmap.close?.(); return null; }
-        return bitmap;
-    } catch (err) {
-        console.warn('Vollbild-Aufnahme nicht moeglich, nutze Videobild:', err.message);
-        return null;
-    }
-}
 
-async function captureCard() {
-    const shutter = document.getElementById('cameraShutterBtn');
-    shutter.disabled = true;
+function captureCard() {
+    // WICHTIG: Diese Funktion ist bewusst SYNCHRON.
+    //
+    // Vorher wurde hier ImageCapture.takePhoto() abgewartet. Das
+    // rekonfiguriert auf Android den Sensor und dauert 1-3 Sekunden;
+    // die Vorschau steht dabei still, aber das Bild entsteht erst am
+    // ENDE der Wartezeit. Jede Bewegung in dieser Zeit landete im
+    // Foto - fuer den Nutzer voellig unvorhersehbar.
+    //
+    // drawImage() aus dem laufenden Video dauert wenige Millisekunden
+    // und friert exakt den Moment ein, in dem gedrueckt wurde. Die
+    // Aufloesung reicht dank object-fit:contain locker (>1500px auf
+    // der Karte), takePhoto bringt hier keinen erkennbaren Vorteil.
+    const t0 = performance.now();
 
-    // Rahmen als ANTEIL des Videobilds merken – so laesst er sich
-    // auf ein Foto mit abweichender Groesse uebertragen.
     const { srcX, srcY, srcW, srcH } = computeCropRegion();
-    const vW = cameraVideo.videoWidth, vH = cameraVideo.videoHeight;
-    const fracW = srcW / vW, fracH = srcH / vH;
-
-    const photo = await grabFullResolutionFrame();
-    const source = photo || cameraVideo;
-    const sw = photo ? photo.width  : vW;
-    const sh = photo ? photo.height : vH;
-
-    let cx, cy, cw, ch;
-    if (photo) {
-        // Zentriert anwenden: das Foto kann ein anderes Seitenverhaeltnis
-        // haben als die Vorschau, der Rahmen liegt aber immer mittig.
-        cw = sw * fracW;
-        ch = sh * fracH;
-        const target = CARD_ASPECT_RATIO;
-        if (cw / ch > target) cw = ch * target; else ch = cw / target;
-        cx = (sw - cw) / 2;
-        cy = (sh - ch) / 2;
-    } else {
-        cx = srcX; cy = srcY; cw = srcW; ch = srcH;
-    }
 
     const canvas = document.createElement('canvas');
-    canvas.width = Math.round(cw);
-    canvas.height = Math.round(ch);
+    canvas.width = Math.round(srcW);
+    canvas.height = Math.round(srcH);
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(source, cx, cy, cw, ch, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(cameraVideo, srcX, srcY, srcW, srcH, 0, 0, canvas.width, canvas.height);
 
-    console.log(`📐 Ausschnitt ${canvas.width}x${canvas.height} px` +
-                (photo ? ` (Foto ${sw}x${sh})` : ` (Videobild ${sw}x${sh})`));
-    photo?.close?.();
-
+    // Kamera SOFORT schliessen - ab hier darf das Geraet bewegt werden
     closeCamera();
-    shutter.disabled = false;
 
-    // 2000px statt 1600: die Karte darf jetzt mehr Detail behalten,
-    // die Datei bleibt durch JPEG-Kompression trotzdem klein genug.
-    const dataUrl = downscaleCanvas(canvas, 2000, 0.9);
+    const dataUrl = downscaleCanvas(canvas, CAPTURE_MAX_PX, CAPTURE_QUALITY);
+    const kb = Math.round(dataUrl.length * 0.75 / 1024);
+    console.log(`📐 Aufnahme ${canvas.width}x${canvas.height}px · ${CAPTURE_FORMAT.split('/')[1]} · ${kb} KB in ${Math.round(performance.now() - t0)}ms`);
+
     processCapturedImage(dataUrl);
 }
+
 
 uploadArea.addEventListener('click', openCamera);
 document.getElementById('uploadBtn').addEventListener('click', openCamera);
@@ -5752,7 +5899,8 @@ async function loadTeamUsers() {
                         <button data-role="${u.id}">${u.role === 'admin' ? 'Zu Mitarbeiter' : 'Zu Admin'}</button>
                         <button data-pw="${u.id}">Passwort setzen</button>
                         <button class="${u.is_active ? 'danger' : ''}" data-toggle="${u.id}">${
-                            u.is_active ? 'Deaktivieren' : 'Aktivieren'}</button>`}
+                            u.is_active ? 'Deaktivieren' : 'Aktivieren'}</button>
+                        <button class="danger" data-del="${u.id}">Löschen</button>`}
                 </div>
             </div>`;
         }).join('');
@@ -5763,6 +5911,8 @@ async function loadTeamUsers() {
             b.addEventListener('click', () => resetUserPassword(b.dataset.pw)));
         list.querySelectorAll('[data-toggle]').forEach(b =>
             b.addEventListener('click', () => toggleUserActive(b.dataset.toggle)));
+        list.querySelectorAll('[data-del]').forEach(b =>
+            b.addEventListener('click', () => openDeleteUser(b.dataset.del)));
 
         document.getElementById('addUserBtn').disabled = !!teamLimit.reached;
     } catch (error) {
@@ -5796,6 +5946,116 @@ async function toggleUserActive(userId) {
         await loadTeamUsers();
     } catch (error) { alert('❌ ' + error.message); }
 }
+
+// ------------------------------------------------------------
+// NUTZER ENDGÜLTIG LÖSCHEN
+// ------------------------------------------------------------
+// Anders als das Deaktivieren ist das unumkehrbar. Erfasste Leads
+// und Termine werden dabei NIE geloescht - sie behalten entweder
+// keine Zuordnung mehr oder gehen an einen anderen Mitarbeiter.
+let delUserTarget = null;
+
+function openDeleteUser(userId) {
+    const u = teamUsers.find(x => x.id === userId);
+    if (!u) return;
+    delUserTarget = u;
+
+    const c = u.counts || { leads: 0, appointments: 0, todos: 0 };
+    const gesamt = (c.leads || 0) + (c.appointments || 0) + (c.todos || 0);
+
+    document.getElementById('delUserName').textContent =
+        `${(u.full_name || '').trim() || u.email} · ${u.email}`;
+
+    document.getElementById('delUserImpact').innerHTML = gesamt === 0
+        ? 'Diesem Nutzer sind keine Daten zugeordnet. Das Löschen hat keine weiteren Folgen.'
+        : `An diesem Nutzer hängen <b>${c.leads || 0} Leads</b>, `
+          + `<b>${c.appointments || 0} Termine</b> und <b>${c.todos || 0} Follow-ups</b>. `
+          + 'Diese Daten bleiben in jedem Fall erhalten – wählen Sie unten, was mit der Zuordnung geschehen soll.';
+
+    // Ziele für die Übertragung: alle anderen Nutzer des Mandanten
+    const ziele = teamUsers.filter(x => x.id !== userId);
+    const sel = document.getElementById('delUserTarget');
+    sel.innerHTML = ziele.length === 0
+        ? '<option value="">Kein anderer Nutzer vorhanden</option>'
+        : ziele.map(x => `<option value="${x.id}">${escapeHtml((x.full_name || '').trim() || x.email)}</option>`).join('');
+
+    // Ohne zweiten Nutzer ist Übertragen nicht möglich
+    const reassignRadio = document.querySelector('input[name="delMode"][value="reassign"]');
+    reassignRadio.disabled = ziele.length === 0;
+    document.querySelector('input[name="delMode"][value="unassign"]').checked = true;
+    sel.disabled = true;
+
+    const confirmInput = document.getElementById('delUserConfirm');
+    confirmInput.value = '';
+    confirmInput.placeholder = u.email;
+    document.getElementById('delUserConfirmBtn').disabled = true;
+
+    document.getElementById('delUserOverlay').classList.add('active');
+}
+
+function closeDeleteUser() {
+    document.getElementById('delUserOverlay').classList.remove('active');
+    delUserTarget = null;
+}
+
+document.getElementById('delUserCloseBtn').addEventListener('click', closeDeleteUser);
+document.getElementById('delUserCancel').addEventListener('click', closeDeleteUser);
+document.getElementById('delUserOverlay').addEventListener('click', (e) => {
+    if (e.target.id === 'delUserOverlay') closeDeleteUser();
+});
+
+document.querySelectorAll('input[name="delMode"]').forEach(r => {
+    r.addEventListener('change', () => {
+        document.getElementById('delUserTarget').disabled =
+            document.querySelector('input[name="delMode"]:checked').value !== 'reassign';
+    });
+});
+
+// Der Knopf bleibt gesperrt, bis die E-Mail exakt eingetippt wurde –
+// ein versehentliches Löschen soll nicht mit einem Klick möglich sein.
+document.getElementById('delUserConfirm').addEventListener('input', (e) => {
+    const passt = delUserTarget
+        && e.target.value.trim().toLowerCase() === delUserTarget.email.toLowerCase();
+    document.getElementById('delUserConfirmBtn').disabled = !passt;
+});
+
+document.getElementById('delUserConfirmBtn').addEventListener('click', async () => {
+    if (!delUserTarget) return;
+    const btn = document.getElementById('delUserConfirmBtn');
+    const mode = document.querySelector('input[name="delMode"]:checked').value;
+    const targetUserId = mode === 'reassign' ? document.getElementById('delUserTarget').value : null;
+
+    if (mode === 'reassign' && !targetUserId) {
+        alert('Bitte einen Zielnutzer für die Übertragung wählen.');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Lösche…';
+    try {
+        const res = await apiRequest(`/team/${delUserTarget.id}/permanent`, {
+            method: 'DELETE',
+            body: JSON.stringify({ mode, targetUserId })
+        });
+        const r = await res.json();
+        if (!r.success) throw new Error(r.error);
+
+        const m = r.moved || {};
+        const verschoben = (m.leads || 0) + (m.appointments || 0) + (m.todos || 0);
+        closeDeleteUser();
+        await loadTeamUsers();
+        alert(`✅ ${r.deleted} wurde gelöscht.`
+            + (verschoben > 0
+                ? `\n\n${verschoben} Datensätze ${mode === 'reassign' ? 'wurden übertragen' : 'bleiben ohne Zuordnung erhalten'}.`
+                : '')
+            + (r.hinweis ? `\n\n⚠️ ${r.hinweis}` : ''));
+    } catch (error) {
+        alert('❌ ' + error.message);
+        btn.disabled = false;
+    } finally {
+        btn.textContent = 'Endgültig löschen';
+    }
+});
 
 async function resetUserPassword(userId) {
     const u = teamUsers.find(x => x.id === userId);
@@ -5835,18 +6095,180 @@ document.getElementById('addUserBtn').addEventListener('click', async () => {
 // ============================================================
 // 20. CSV EXPORT / IMPORT
 // ============================================================
-document.getElementById('exportCsvBtn2').addEventListener('click', async () => {
+// ============================================================
+// CSV-EXPORT MIT FILTERN
+// ============================================================
+// null = alle Nutzer. Ein leeres Set heisst "niemand" und liefert
+// bewusst nichts - sonst waere Abwaehlen nicht von "alle" zu
+// unterscheiden.
+let exportUserIds = null;
+let exportUsers = [];
+let vorschauTimer = null;
+
+function exportParams() {
+    const p = new URLSearchParams();
+    const von = document.getElementById('exportFrom').value;
+    const bis = document.getElementById('exportTo').value;
+    if (von) p.set('from', von);
+    if (bis) p.set('to', bis);
+
+    if (exportUserIds !== null && !(exportUserIds.size === exportUsers.length && exportUsers.length > 0)) {
+        p.set('users', [...exportUserIds].join(','));
+    }
+    return p.toString();
+}
+
+function renderExportUsers() {
+    const list = document.getElementById('exportUserList');
+    const alle = document.getElementById('exportUserAll');
+
+    if (exportUsers.length === 0) {
+        list.innerHTML = '<div style="font-size:12.5px;color:#6b7a8f;padding:8px;">Keine Mitarbeiter gefunden.</div>';
+        return;
+    }
+    const aktiv = (id) => exportUserIds === null || exportUserIds.has(id);
+
+    list.innerHTML = exportUsers.map(u => `
+        <label>
+            <input type="checkbox" data-euid="${u.id}" ${aktiv(u.id) ? 'checked' : ''}>
+            <span class="exp-uname">${escapeHtml(u.name)}</span>
+            <span class="exp-ucount">${u.leadCount}</span>
+        </label>`).join('');
+
+    list.querySelectorAll('input[data-euid]').forEach(cb => {
+        cb.addEventListener('change', () => {
+            if (exportUserIds === null) exportUserIds = new Set(exportUsers.map(u => u.id));
+            if (cb.checked) exportUserIds.add(cb.dataset.euid);
+            else exportUserIds.delete(cb.dataset.euid);
+            renderExportUsers();
+            planeVorschau();
+        });
+    });
+
+    const n = exportUserIds === null ? exportUsers.length : exportUserIds.size;
+    alle.checked = n === exportUsers.length;
+    alle.indeterminate = n > 0 && n < exportUsers.length;
+}
+
+// Vorschau leicht verzoegert, damit das Tippen im Datumsfeld
+// nicht bei jedem Tastendruck eine Abfrage ausloest.
+function planeVorschau() {
+    clearTimeout(vorschauTimer);
+    document.getElementById('exportCount').textContent = 'Wird berechnet…';
+    document.getElementById('exportCount').className = 'exp-count';
+    vorschauTimer = setTimeout(ladeVorschau, 350);
+}
+
+async function ladeVorschau() {
+    const box = document.getElementById('exportCount');
     try {
-        const response = await apiRequest('/export/csv');
+        const res = await apiRequest(`/export/preview?${exportParams()}`);
+        const r = await res.json();
+        if (!r.success) throw new Error(r.error);
+
+        box.textContent = r.count === 0
+            ? 'Keine Leads für diese Auswahl'
+            : `${r.count} Lead${r.count === 1 ? '' : 's'} werden exportiert`;
+        box.className = 'exp-count' + (r.count === 0 ? ' leer' : '');
+        document.getElementById('exportStart').disabled = r.count === 0;
+    } catch (error) {
+        box.textContent = 'Vorschau nicht verfügbar';
+        box.className = 'exp-count leer';
+        document.getElementById('exportStart').disabled = false;
+    }
+}
+
+async function openExportDialog() {
+    document.getElementById('exportOverlay').classList.add('active');
+    document.getElementById('exportFrom').value = '';
+    document.getElementById('exportTo').value = '';
+    exportUserIds = null;
+    document.querySelectorAll('.exp-quick button').forEach(b =>
+        b.classList.toggle('active', b.dataset.range === 'all'));
+
+    // Nutzerliste über den Statistik-Endpunkt holen – dort ist
+    // sie samt Lead-Anzahl bereits vorhanden.
+    try {
+        const res = await apiRequest('/stats/daily?year=alle');
+        const r = await res.json();
+        exportUsers = r.success && Array.isArray(r.users) ? r.users : [];
+    } catch { exportUsers = []; }
+
+    renderExportUsers();
+    planeVorschau();
+}
+
+document.getElementById('exportCsvBtn2').addEventListener('click', openExportDialog);
+document.getElementById('exportCloseBtn').addEventListener('click', () =>
+    document.getElementById('exportOverlay').classList.remove('active'));
+document.getElementById('exportCancel').addEventListener('click', () =>
+    document.getElementById('exportOverlay').classList.remove('active'));
+document.getElementById('exportOverlay').addEventListener('click', (e) => {
+    if (e.target.id === 'exportOverlay') e.currentTarget.classList.remove('active');
+});
+
+document.getElementById('exportUserAll').addEventListener('change', (e) => {
+    exportUserIds = e.target.checked ? null : new Set();
+    renderExportUsers();
+    planeVorschau();
+});
+
+document.getElementById('exportFrom').addEventListener('change', () => { markiereZeitraum(null); planeVorschau(); });
+document.getElementById('exportTo').addEventListener('change', () => { markiereZeitraum(null); planeVorschau(); });
+
+function markiereZeitraum(bereich) {
+    document.querySelectorAll('.exp-quick button').forEach(b =>
+        b.classList.toggle('active', b.dataset.range === bereich));
+}
+
+document.querySelectorAll('.exp-quick button').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const heute = new Date();
+        const von = document.getElementById('exportFrom');
+        const bis = document.getElementById('exportTo');
+
+        if (btn.dataset.range === 'all') {
+            von.value = ''; bis.value = '';
+        } else if (btn.dataset.range === '30') {
+            const start = new Date(heute); start.setDate(start.getDate() - 30);
+            von.value = dateKey(start); bis.value = dateKey(heute);
+        } else if (btn.dataset.range === 'year') {
+            von.value = `${heute.getFullYear()}-01-01`; bis.value = dateKey(heute);
+        }
+        markiereZeitraum(btn.dataset.range);
+        planeVorschau();
+    });
+});
+
+document.getElementById('exportStart').addEventListener('click', async () => {
+    const btn = document.getElementById('exportStart');
+    btn.disabled = true;
+    btn.textContent = 'Erstelle…';
+    try {
+        const response = await apiRequest(`/export/csv?${exportParams()}`);
         if (!response.ok) throw new Error('Export fehlgeschlagen');
+
+        // Dateiname aus der Server-Antwort übernehmen – er beschreibt
+        // den gewählten Zeitraum und die Filterung.
+        let name = `leads_${new Date().toISOString().slice(0,10)}.csv`;
+        const cd = response.headers.get('Content-Disposition');
+        const treffer = cd && cd.match(/filename=([^;]+)/);
+        if (treffer) name = treffer[1].trim().replace(/"/g, '');
+
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `leads_${new Date().toISOString().slice(0,10)}.csv`;
+        a.download = name;
         a.click();
         URL.revokeObjectURL(url);
-    } catch (error) { alert('❌ Fehler: ' + error.message); }
+        document.getElementById('exportOverlay').classList.remove('active');
+    } catch (error) {
+        alert('❌ Fehler: ' + error.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Herunterladen';
+    }
 });
 
 document.getElementById('importCsvBtn2').addEventListener('click', () => document.getElementById('csvFileInput').click());
@@ -5891,7 +6313,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = getUser();
     if (user && getToken()) showApp(user);
     else showLogin();
-    console.log('🚀 LeadCapture PWA v28.0.0 geladen (Nutzerfilter + Follow-ups im Kalender)');
+    console.log('🚀 LeadCapture PWA v31.0.0 geladen (CSV-Export konfigurierbar)');
 });
 </script>
 </body>
