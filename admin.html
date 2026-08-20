@@ -250,6 +250,12 @@
 
     <div id="pkgInfo" style="font-size:11.5px; color:var(--muted); margin-top:8px; line-height:1.5;"></div>
 
+    <label for="pkgUsers" style="font-size:12px; color:var(--muted); display:block; margin-top:14px;">
+        Nutzerzahl <span style="opacity:.7;">(leer = unbegrenzt)</span>
+    </label>
+    <input type="number" id="pkgUsers" min="1" max="500" step="1" placeholder="unbegrenzt">
+    <div id="pkgUserHint" style="font-size:11px; color:var(--muted); margin-top:5px;"></div>
+
     <label for="pkgDays" style="font-size:12px; color:var(--muted); display:block; margin-top:14px;">
         Laufzeit in Tagen <span style="opacity:.7;">(0 = unbefristet)</span>
     </label>
@@ -291,6 +297,7 @@ let adminKey = '';
 let catalog = [];
 let tenants = [];
 let packages = [];
+let extraUserPrice = 0;
 // Ausstehende Aenderungen: tenantId -> { featureKey: {enabled, validUntil} }
 const pendingChanges = new Map();
 
@@ -388,6 +395,7 @@ async function load() {
     catalog = result.catalog || [];
     tenants = result.data || [];
     packages = result.packages || [];
+    extraUserPrice = result.extraUserPrice || 0;
     if (result.registrationMode) $('regModeSelect').value = result.registrationMode;
     $('tenantCount').textContent = tenants.length;
     render();
@@ -555,7 +563,10 @@ function openPackageDialog(tenantId) {
         `<option value="${p.key}"${p.key === t.packageKey ? ' selected' : ''}>${p.name} · ${p.price}</option>`
     ).join('');
 
+    // Bereits gesetzte Nutzerzahl uebernehmen, sonst Paketvorgabe
+    $('pkgUsers').value = t.maxUsers ?? '';
     updatePackageInfo();
+    updateUserHint();
     $('pkgDlg').showModal();
 }
 
@@ -567,15 +578,54 @@ function updatePackageInfo(keepDays = false) {
     const p = selectedPackage();
     if (!p) return;
 
-    const names = p.features
-        .map(k => catalog.find(f => f.key === k)?.name || k)
-        .join(' · ');
-    $('pkgInfo').innerHTML =
-        `<b style="color:var(--text)">Module:</b> ${esc(names)}<br>` +
-        `<b style="color:var(--text)">Nutzer:</b> ${p.maxUsers ?? 'unbegrenzt'}`;
+    // features: null = Paket "Individuell", laesst Module unveraendert
+    const names = p.features === null
+        ? 'bleiben unveraendert – einzeln in der Matrix schalten'
+        : (p.features.length === 0
+            ? 'nur Kern-Module (Scan, QR, Leads, Suche)'
+            : p.features.map(k => catalog.find(f => f.key === k)?.name || k).join(' · '));
 
-    if (!keepDays) $('pkgDays').value = p.defaultDays;
+    $('pkgInfo').innerHTML =
+        `<b style="color:var(--text)">Preis:</b> ${esc(p.price || '—')}<br>` +
+        `<b style="color:var(--text)">Module:</b> ${esc(names)}<br>` +
+        `<b style="color:var(--text)">Nutzer im Paket:</b> ${p.maxUsers ?? 'unbegrenzt'}`;
+
+    if (!keepDays) {
+        $('pkgDays').value = p.defaultDays;
+        $('pkgUsers').value = p.maxUsers ?? '';
+    }
+    updateUserHint();
     updatePackagePreview();
+}
+
+// Zeigt an, was zusaetzliche Nutzer kosten, sobald die Zahl ueber
+// der Paketvorgabe liegt. Ohne diesen Hinweis wird der Aufpreis
+// beim Angebot leicht vergessen.
+function updateUserHint() {
+    const p = selectedPackage();
+    const hint = $('pkgUserHint');
+    if (!p) { hint.textContent = ''; return; }
+
+    const wert = $('pkgUsers').value.trim();
+    if (wert === '') {
+        hint.textContent = 'Unbegrenzt viele Nutzer.';
+        return;
+    }
+    const n = parseInt(wert, 10);
+    if (!Number.isFinite(n) || n < 1) { hint.textContent = ''; return; }
+
+    const imPaket = p.maxUsers;
+    if (imPaket == null) {
+        hint.textContent = `${n} Nutzer (Paket waere unbegrenzt).`;
+    } else if (n > imPaket) {
+        const extra = n - imPaket;
+        const aufpreis = extraUserPrice ? ` · Aufpreis ${extra * extraUserPrice} € / Jahr` : '';
+        hint.innerHTML = `${imPaket} im Paket + <b style="color:var(--soon)">${extra} zusätzlich</b>${esc(aufpreis)}`;
+    } else if (n < imPaket) {
+        hint.textContent = `${n} Nutzer – unter der Paketvorgabe von ${imPaket}.`;
+    } else {
+        hint.textContent = `Entspricht der Paketvorgabe.`;
+    }
 }
 
 function updatePackagePreview() {
@@ -591,6 +641,7 @@ function updatePackagePreview() {
 
 $('pkgSelect').addEventListener('change', () => updatePackageInfo());
 $('pkgDays').addEventListener('input', updatePackagePreview);
+$('pkgUsers').addEventListener('input', updateUserHint);
 document.querySelectorAll('.quick').forEach(b => {
     b.addEventListener('click', (e) => {
         e.preventDefault();
@@ -615,7 +666,8 @@ $('pkgOk').addEventListener('click', async () => {
             body: JSON.stringify({
                 tenantId: pkgTenantId,
                 packageKey: p.key,
-                days: Number.isFinite(days) ? days : p.defaultDays
+                days: Number.isFinite(days) ? days : p.defaultDays,
+                maxUsers: $('pkgUsers').value.trim() === '' ? null : $('pkgUsers').value.trim()
             })
         });
         $('pkgDlg').close();
