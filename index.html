@@ -111,6 +111,24 @@
         .lead-card .company { color: #0066AA; font-weight: 500; font-size: 13px; }
         .lead-card .details { font-size: 13px; color: #4a5568; margin-top: 2px; }
         .lead-card .meta { font-size: 11px; color: #a0aec0; margin-top: 4px; }
+        /* Sofort-Aktionen auf der Lead-Karte: Follow-up breit,
+           daneben Anrufen / Mailen / Route als gleich grosse Felder.
+           Bewusst grosszuegig, weil sie am Messestand mit dem Daumen
+           getroffen werden muessen. */
+        .lead-quick { display: flex; gap: 6px; margin-top: 8px; }
+        .lead-quick button {
+            border: none; border-radius: 8px; cursor: pointer;
+            font-size: 13px; font-weight: 600; padding: 9px 0; min-height: 38px;
+        }
+        .lead-quick .lq-followup {
+            flex: 2.2; background: #fff7e6; color: #b7791f;
+            border: 1px solid #e2c47a; font-size: 12.5px;
+        }
+        .lead-quick .lq-followup:active { background: #fdf0d5; }
+        .lead-quick .lq-icon { flex: 1; background: #0066AA; color: #fff; font-size: 15px; }
+        .lead-quick .lq-icon:active { background: #004E82; }
+        .lead-quick .lq-icon:disabled { background: #eef2f7; color: #cbd5e0; cursor: default; }
+
         .lead-card .actions { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
         .lead-card .actions button { padding: 4px 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; }
         .lead-card .actions .edit { background: #E8F4FD; color: #0066AA; }
@@ -478,8 +496,6 @@
         .appt-field { margin-bottom: 6px; }
         .appt-field .lbl { font-size: 11px; color: #6b7a8f; }
         .appt-field .val { font-size: 14px; color: #1a1a1a; }
-        .appt-times { display: flex; gap: 12px; }
-        .appt-times > div { flex: 1; }
         .appt-actions { display: flex; gap: 6px; margin-top: 10px; }
         .appt-actions button {
             border: none; border-radius: 8px; padding: 9px 0; cursor: pointer;
@@ -2182,12 +2198,34 @@ function sortLeads(leads, mode) {
     return sorted;
 }
 
-function leadActionsHtml(leadId) {
+// Zwei Reihen: oben die Sofort-Aktionen (Follow-up, anrufen,
+// mailen, Route), unten die Verwaltung. Wird von JEDER Lead-Karte
+// genutzt - Suche, Statistik und Firmenuebersicht sehen dadurch
+// zwingend gleich aus.
+function leadActionsHtml(lead) {
+    // Rueckwaertskompatibel: frueher wurde nur die ID uebergeben
+    if (typeof lead === 'string') lead = (allLeads || []).find(l => l.id === lead) || { id: lead };
+    const id = lead.id;
+
+    const nummer = lead.mobile || lead.phone || '';
+    const bez = [lead.company, `${lead.first_name || ''} ${lead.last_name || ''}`.trim()]
+        .filter(Boolean).join(' · ') || 'Unbenannt';
+    const hatOrt = !!(lead.latitude && lead.longitude);
+
     return `
+        <div class="lead-quick">
+            <button class="lq-followup" onclick="event.stopPropagation(); openTodoModal(null, '${id}', '${escapeHtml(bez).replace(/'/g, "\\'")}')">✓ Follow-up</button>
+            <button class="lq-icon" ${nummer ? `onclick="event.stopPropagation(); dialNumber('${escapeHtml(nummer)}')"` : 'disabled'}
+                title="${nummer ? escapeHtml(nummer) : 'Keine Nummer hinterlegt'}">${lead.mobile ? '📱' : '📞'}</button>
+            <button class="lq-icon" ${lead.email ? `onclick="event.stopPropagation(); window.location.href='mailto:${escapeHtml(lead.email)}'"` : 'disabled'}
+                title="${lead.email ? escapeHtml(lead.email) : 'Keine E-Mail hinterlegt'}">✉️</button>
+            <button class="lq-icon" ${hatOrt ? `onclick="event.stopPropagation(); openMaps(${lead.latitude},${lead.longitude})"` : 'disabled'}
+                title="${hatOrt ? 'Route anzeigen' : 'Keine Koordinaten hinterlegt'}">📍</button>
+        </div>
         <div class="actions">
-            <button class="edit" onclick="event.stopPropagation(); openLeadDetail('${leadId}')">✏️ Details</button>
-            <button class="questionnaire" onclick="event.stopPropagation(); openLeadQuestionnaire('${leadId}')">📝 Fragebogen</button>
-            <button class="delete" onclick="event.stopPropagation(); confirmDeleteLead('${leadId}')">🗑️ Löschen</button>
+            <button class="edit" onclick="event.stopPropagation(); openLeadDetail('${id}')">✏️ Details</button>
+            <button class="questionnaire" onclick="event.stopPropagation(); openLeadQuestionnaire('${id}')">📝 Fragebogen</button>
+            <button class="delete" onclick="event.stopPropagation(); confirmDeleteLead('${id}')">🗑️ Löschen</button>
         </div>`;
 }
 
@@ -2199,7 +2237,7 @@ function leadCardHtml(lead, highlight) {
             <div class="details">${lead.position ? highlight(lead.position) : 'Keine Position'} ${lead.email ? '· ✉️ ' + highlight(lead.email) : ''} ${lead.phone ? '· 📞 ' + highlight(lead.phone) : ''}</div>
             ${lead.city ? `<div class="details">📍 ${highlight(lead.city)}${lead.country ? ', ' + highlight(lead.country) : ''}</div>` : ''}
             <div class="meta">🕐 ${lead.created_at ? new Date(lead.created_at).toLocaleString() : ''}</div>
-            ${leadActionsHtml(lead.id)}
+            ${leadActionsHtml(lead)}
         </div>`;
 }
 
@@ -4836,10 +4874,6 @@ function renderAppointments() {
                 <div class="appt-sep"></div>
                 ${a.main_item ? `<div class="appt-field"><div class="lbl">Thema</div><div class="val">${escapeHtml(a.main_item)}</div></div>` : ''}
                 <div class="appt-field"><div class="lbl">Geplant</div><div class="val">${escapeHtml(planned)}</div></div>
-                <div class="appt-field appt-times">
-                    <div><div class="lbl">Startzeit (ist)</div><div class="val">${a.actual_start ? fmtTime(a.actual_start) : '\u2013'}</div></div>
-                    <div><div class="lbl">Endzeit (ist)</div><div class="val">${a.actual_end ? fmtTime(a.actual_end) : '\u2013'}</div></div>
-                </div>
             </div>
             <div class="appt-actions">
                 <!-- Follow-up direkt aus dem Termin: uebernimmt den Lead
@@ -5624,9 +5658,6 @@ function renderHistory(items, meta = {}) {
         return;
     }
 
-    // Kennzahlen: wie oft war man da, wie lange insgesamt
-    const withDuration = items.filter(a => a.actual_start && a.actual_end);
-    const totalMin = withDuration.reduce((sum, a) => sum + minutesBetween(a.actual_start, a.actual_end), 0);
     const last = items[0];
 
     sub.textContent = `${items.length} Termin${items.length === 1 ? '' : 'e'}`
@@ -5634,20 +5665,15 @@ function renderHistory(items, meta = {}) {
             ? ' · nur dieser Kontakt'
             : contactCount > 1 ? ` · ${contactCount} Ansprechpartner` : '');
 
+    // "Erfasste Zeit" ist entfallen: sie kam aus den Ist-Zeiten,
+    // die ohne START/STOP nie gefuellt wurden.
     const summaryParts = [`Letzter Termin: ${new Date(last.starts_at).toLocaleDateString('de-DE')}`];
-    if (withDuration.length > 0) {
-        const h = Math.floor(totalMin / 60), m = totalMin % 60;
-        summaryParts.push(`Erfasste Zeit: ${h > 0 ? h + ' Std ' : ''}${m} Min`);
-    }
 
     box.innerHTML = contactsHtml + `
         <div class="hist-summary">${summaryParts.map(escapeHtml).join('<br>')}</div>
         ${items.map(a => {
             const d = new Date(a.starts_at);
             const dateStr = d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
-            const ist = (a.actual_start && a.actual_end)
-                ? `${fmtTime(a.actual_start)}–${fmtTime(a.actual_end)} (${minutesBetween(a.actual_start, a.actual_end)}min)`
-                : a.actual_start ? `ab ${fmtTime(a.actual_start)}` : 'keine Ist-Zeit erfasst';
             const offen = a.status !== 'erledigt';
             // Bei Firmen-Historie kann jeder Termin einen anderen
             // Ansprechpartner haben -> immer mit ausweisen
@@ -5661,7 +5687,7 @@ function renderHistory(items, meta = {}) {
                 <div class="hist-title">${escapeHtml(a.title)}</div>
                 ${who ? `<div class="hist-who">👤 ${escapeHtml(who)}</div>` : ''}
                 <div class="hist-meta">
-                    Geplant ${fmtTime(a.starts_at)}–${fmtTime(a.ends_at)} · Ist ${escapeHtml(ist)}
+                    ${fmtTime(a.starts_at)}–${fmtTime(a.ends_at)}
                     ${a.main_item ? ' · ' + escapeHtml(a.main_item) : ''}
                 </div>
                 ${a.description ? `<div class="hist-note">${escapeHtml(a.description)}</div>` : ''}
@@ -6313,7 +6339,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = getUser();
     if (user && getToken()) showApp(user);
     else showLogin();
-    console.log('🚀 LeadCapture PWA v31.0.0 geladen (CSV-Export konfigurierbar)');
+    console.log('🚀 LeadCapture PWA v34.0.0 geladen (Ist-Zeiten entfernt)');
 });
 </script>
 </body>
