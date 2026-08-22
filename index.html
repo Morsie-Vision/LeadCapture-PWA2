@@ -2210,7 +2210,7 @@ function leadActionsHtml(lead) {
     const nummer = lead.mobile || lead.phone || '';
     const bez = [lead.company, `${lead.first_name || ''} ${lead.last_name || ''}`.trim()]
         .filter(Boolean).join(' · ') || 'Unbenannt';
-    const hatOrt = !!(lead.latitude && lead.longitude);
+    const ziel = navigationsZiel(lead, leadAdresse(lead));
 
     return `
         <div class="lead-quick">
@@ -2219,8 +2219,12 @@ function leadActionsHtml(lead) {
                 title="${nummer ? escapeHtml(nummer) : 'Keine Nummer hinterlegt'}">${lead.mobile ? '📱' : '📞'}</button>
             <button class="lq-icon" ${lead.email ? `onclick="event.stopPropagation(); window.location.href='mailto:${escapeHtml(lead.email)}'"` : 'disabled'}
                 title="${lead.email ? escapeHtml(lead.email) : 'Keine E-Mail hinterlegt'}">✉️</button>
-            <button class="lq-icon" ${hatOrt ? `onclick="event.stopPropagation(); openMaps(${lead.latitude},${lead.longitude})"` : 'disabled'}
-                title="${hatOrt ? 'Route anzeigen' : 'Keine Koordinaten hinterlegt'}">📍</button>
+            <button class="lq-icon" ${ziel
+                ? `onclick="event.stopPropagation(); ${ziel.adresse
+                    ? `openMaps('${escapeHtml(ziel.adresse).replace(/'/g, "\\'")}')`
+                    : `openMaps(${ziel.lat},${ziel.lon})`}"`
+                : 'disabled'}
+                title="${ziel ? escapeHtml(ziel.adresse || 'Route anzeigen') : 'Keine Adresse hinterlegt'}">📍</button>
         </div>
         <div class="actions">
             <button class="edit" onclick="event.stopPropagation(); openLeadDetail('${id}')">✏️ Details</button>
@@ -4881,7 +4885,16 @@ function renderAppointments() {
                 <button class="act-followup" onclick="openTodoModal(null, '${a.lead_id || ''}', '${escapeHtml(company)}')">✓ Follow-up</button>
                 <button class="act-icon" ${(lead?.mobile || lead?.phone) ? `onclick="dialNumber('${escapeHtml(lead.mobile || lead.phone)}')"` : 'disabled'}>${lead?.mobile ? '&#128241;' : '&#128222;'}</button>
                 <button class="act-icon" ${lead?.email ? `onclick="window.location.href='mailto:${escapeHtml(lead.email)}'"` : 'disabled'}>&#9993;</button>
-                <button class="act-icon" ${(a.latitude && a.longitude) ? `onclick="openMaps(${a.latitude},${a.longitude})"` : 'disabled'}>&#128205;</button>
+                ${(() => {
+                    // Koordinaten bevorzugen, sonst Adresse. a.location
+                    // enthaelt die beim Anlegen uebernommene Anschrift.
+                    const ziel = navigationsZiel(a, a.location || leadAdresse(lead));
+                    if (!ziel) return `<button class="act-icon" disabled title="Keine Adresse hinterlegt">&#128205;</button>`;
+                    const ruf = ziel.adresse
+                        ? `openMaps('${escapeHtml(ziel.adresse).replace(/'/g, "\\'")}')`
+                        : `openMaps(${ziel.lat},${ziel.lon})`;
+                    return `<button class="act-icon" onclick="${ruf}" title="${escapeHtml(ziel.adresse || 'Route anzeigen')}">&#128205;</button>`;
+                })()}
             </div>
         </div>`);
     });
@@ -4989,12 +5002,48 @@ function renderDashboard() {
     if (hasGamification) renderDashboardGoal();
 }
 
-function openMaps(lat, lon) {
-    // Auf iOS öffnet maps.apple.com die Karten-App, sonst Google Maps
+// Nimmt entweder Koordinaten oder eine Adresse als Text.
+// Frueher waren zwingend Koordinaten noetig - fehlte das Geocoding,
+// blieb der Knopf grau, obwohl die Adresse vollstaendig vorlag.
+// Karten-Apps finden eine Adresse aber auch ohne Koordinaten.
+function openMaps(latOrAddress, lon) {
     const isApple = /iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent);
+
+    const ziel = (lon !== undefined && lon !== null && latOrAddress !== '')
+        ? `${latOrAddress},${lon}`          // Koordinaten: genauer
+        : String(latOrAddress || '').trim();  // Adresse als Suchbegriff
+
+    if (!ziel) return;
+
     window.open(isApple
-        ? `https://maps.apple.com/?daddr=${lat},${lon}`
-        : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`, '_blank');
+        ? `https://maps.apple.com/?daddr=${encodeURIComponent(ziel)}`
+        : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(ziel)}`, '_blank');
+}
+
+// Baut aus den Adressfeldern eines Leads eine Zeile, die eine
+// Karten-App auswerten kann. Der Firmenname hilft zusaetzlich,
+// wenn die Hausnummer fehlt.
+function leadAdresse(lead) {
+    if (!lead) return '';
+    const ort = [lead.zip, lead.city].filter(Boolean).join(' ');
+
+    // Mit Strasse reicht die reine Anschrift und ist am genauesten.
+    // Ohne Strasse hilft der Firmenname: "Salzgitter" allein landet
+    // in der Stadtmitte, "Salzgitter Hydroforming, Salzgitter" beim
+    // Unternehmen.
+    const teile = lead.street
+        ? [lead.street, ort, lead.country]
+        : [lead.company, ort, lead.country];
+
+    return teile.filter(Boolean).join(', ');
+}
+
+// Liefert das Navigationsziel: Koordinaten wenn vorhanden,
+// sonst die Adresse. Leerer String = kein Ziel bekannt.
+function navigationsZiel(obj, adresseFallback = '') {
+    if (obj?.latitude && obj?.longitude) return { lat: obj.latitude, lon: obj.longitude };
+    const adr = (adresseFallback || '').trim();
+    return adr ? { adresse: adr } : null;
 }
 
 async function startAppointment(id) {
@@ -6339,7 +6388,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = getUser();
     if (user && getToken()) showApp(user);
     else showLogin();
-    console.log('🚀 LeadCapture PWA v34.0.0 geladen (Ist-Zeiten entfernt)');
+    console.log('🚀 LeadCapture PWA v35.0.0 geladen (Route auch ohne Koordinaten)');
 });
 </script>
 </body>
