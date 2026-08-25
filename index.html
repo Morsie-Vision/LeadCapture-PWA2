@@ -2237,6 +2237,7 @@ function leadActionsHtml(lead) {
             <button class="delete" onclick="event.stopPropagation(); confirmDeleteLead('${id}')">🗑️ Löschen</button>
         </div>`;
 }
+
 // Felder, die durchsucht werden, aber NICHT auf der Karte stehen.
 // Ohne Hinweis wirkt ein Treffer darin wie ein Fehler der Suche:
 // "Hes" findet Kassel und Fulda, weil beide in Hessen liegen -
@@ -2267,6 +2268,7 @@ function verstecktenTrefferFinden(lead, term) {
         const wert = String(lead[feld] || '');
         if (wert.toLowerCase().includes(t)) return `${name}: ${wert}`;
     }
+    // Interessen und Fragebogen-Antworten
     if (Array.isArray(lead.interests) && lead.interests.some(i => String(i).toLowerCase().includes(t))) {
         return `Interessen: ${lead.interests.filter(i => String(i).toLowerCase().includes(t)).join(', ')}`;
     }
@@ -2276,10 +2278,11 @@ function verstecktenTrefferFinden(lead, term) {
     }
     return null;
 }
-    
+
 function leadCardHtml(lead, highlight, term = '') {
     const name = `${lead.title ? highlight(lead.title) + ' ' : ''}${highlight(lead.first_name)} ${highlight(lead.last_name)}`.trim();
     const versteckt = verstecktenTrefferFinden(lead, term);
+
     return `
         <div class="lead-card" onclick="openLeadDetail('${lead.id}')">
             <div><span class="name">${name || 'Unbekannt'}</span> · <span class="company">${lead.company ? highlight(lead.company) : 'Keine Firma'}</span></div>
@@ -2334,11 +2337,13 @@ function applyLeadsHistogramFilter(leads) {
         `📅 ${label}: ${filtered.length} Lead${filtered.length === 1 ? '' : 's'}${nutzerHinweis}`;
     leadsCount.textContent = `${filtered.length} / ${leads.length}`;
 
+    // In der Statistik gibt es keinen Suchbegriff – daher leer,
+    // sonst waere "term" hier gar nicht definiert.
     const highlight = makeHighlighter('');
     const sorted = sortLeads(filtered, 'date_desc');
     leadsList.innerHTML = sorted.length === 0
         ? '<div class="empty-leads">📭 Keine Leads in diesem Zeitraum</div>'
-        : sorted.map(lead => leadCardHtml(lead, highlight)).join('');
+        : sorted.map(lead => leadCardHtml(lead, highlight, '')).join('');
 }
 
 function showLeadsForBar(item, view) {
@@ -2383,7 +2388,7 @@ function renderSearchResults() {
 
     searchResults.innerHTML = sorted.length === 0
         ? `<div class="empty-leads">🔍 Keine Leads gefunden</div>`
-        : sorted.map(lead => leadCardHtml(lead, highlight)).join('');
+        : sorted.map(lead => leadCardHtml(lead, highlight, term)).join('');
 }
 
 // Fasst Leads zu eindeutigen Firmen zusammen (Groß-/Kleinschreibung
@@ -2916,10 +2921,17 @@ galleryLink.addEventListener('click', (e) => { e.preventDefault(); fileInput.cli
 // ============================================================
 // 12b. KAMERA: LIVE-ERFASSUNG MIT AUSSCHNITT
 // ============================================================
-// Uebertragungsgroesse: 1200px reichen fuer Kleinschrift auf einer
+// Uebertragungsgroesse: 1600px reichen fuer Kleinschrift auf einer
 // Visitenkarte. Bei 2000px/0.9 war die Datei rund doppelt so gross,
 // ohne dass die Erkennung besser wurde - der Upload dominiert die
 // gefuehlte Wartezeit, besonders im Messe-WLAN.
+// Bildgroesse ist der GROESSTE Hebel fuer die Scan-Dauer:
+// Mistral zerlegt das Bild in 16x16-Kacheln, jede zaehlt als Token.
+//   1600px -> ~6400 Bild-Tokens (92% der gesamten Eingabe)
+//   1200px -> ~3600 Bild-Tokens (44% weniger)
+// Bei 1200px hat selbst 6pt-Schrift noch ~21 Pixel Hoehe und bleibt
+// damit klar ueber der Lesbarkeitsschwelle von etwa 12 Pixeln.
+// Hochsetzen, falls die Erkennung bei kleiner Schrift nachlaesst.
 const CAPTURE_MAX_PX = 1200;
 const CAPTURE_QUALITY = 0.82;
 
@@ -6434,7 +6446,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = getUser();
     if (user && getToken()) showApp(user);
     else showLogin();
-    console.log('🚀 LeadCapture PWA v35.0.0 geladen (Route auch ohne Koordinaten)');
+    console.log('🚀 LeadCapture PWA v37.0.0 geladen (Trefferhinweis in der Suche)');
 });
 </script>
 </body>
