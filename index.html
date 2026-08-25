@@ -115,6 +115,11 @@
            daneben Anrufen / Mailen / Route als gleich grosse Felder.
            Bewusst grosszuegig, weil sie am Messestand mit dem Daumen
            getroffen werden muessen. */
+        .match-hint {
+            font-size: 11.5px; color: #b45309; background: #fffbeb;
+            border-radius: 6px; padding: 4px 8px; margin-top: 4px;
+            display: inline-block; overflow-wrap: anywhere;
+        }
         .lead-quick { display: flex; gap: 6px; margin-top: 8px; }
         .lead-quick button {
             border: none; border-radius: 8px; cursor: pointer;
@@ -2232,14 +2237,55 @@ function leadActionsHtml(lead) {
             <button class="delete" onclick="event.stopPropagation(); confirmDeleteLead('${id}')">🗑️ Löschen</button>
         </div>`;
 }
+// Felder, die durchsucht werden, aber NICHT auf der Karte stehen.
+// Ohne Hinweis wirkt ein Treffer darin wie ein Fehler der Suche:
+// "Hes" findet Kassel und Fulda, weil beide in Hessen liegen -
+// das Bundesland ist auf der Karte aber nirgends zu sehen.
+const VERSTECKTE_SUCHFELDER = [
+    ['state',        'Bundesland'],
+    ['street',       'Straße'],
+    ['zip',          'PLZ'],
+    ['mobile',       'Mobil'],
+    ['fax',          'Fax'],
+    ['website',      'Website'],
+    ['linkedin',     'LinkedIn'],
+    ['vat_id',       'USt-IdNr.'],
+    ['visitor_type', 'Besuchertyp']
+];
 
-function leadCardHtml(lead, highlight) {
+function verstecktenTrefferFinden(lead, term) {
+    const t = (term || '').toLowerCase().trim();
+    if (!t) return null;
+
+    // Steht der Begriff schon in einem sichtbaren Feld? Dann sieht
+    // der Nutzer den Grund ohnehin.
+    const sichtbar = [lead.title, lead.first_name, lead.last_name, lead.company,
+                      lead.position, lead.email, lead.phone, lead.city, lead.country];
+    if (sichtbar.some(v => String(v || '').toLowerCase().includes(t))) return null;
+
+    for (const [feld, name] of VERSTECKTE_SUCHFELDER) {
+        const wert = String(lead[feld] || '');
+        if (wert.toLowerCase().includes(t)) return `${name}: ${wert}`;
+    }
+    if (Array.isArray(lead.interests) && lead.interests.some(i => String(i).toLowerCase().includes(t))) {
+        return `Interessen: ${lead.interests.filter(i => String(i).toLowerCase().includes(t)).join(', ')}`;
+    }
+    for (const wert of Object.values(lead.questionnaire || {})) {
+        const w = Array.isArray(wert) ? wert.join(', ') : String(wert || '');
+        if (w.toLowerCase().includes(t)) return `Fragebogen: ${w}`;
+    }
+    return null;
+}
+    
+function leadCardHtml(lead, highlight, term = '') {
     const name = `${lead.title ? highlight(lead.title) + ' ' : ''}${highlight(lead.first_name)} ${highlight(lead.last_name)}`.trim();
+    const versteckt = verstecktenTrefferFinden(lead, term);
     return `
         <div class="lead-card" onclick="openLeadDetail('${lead.id}')">
             <div><span class="name">${name || 'Unbekannt'}</span> · <span class="company">${lead.company ? highlight(lead.company) : 'Keine Firma'}</span></div>
             <div class="details">${lead.position ? highlight(lead.position) : 'Keine Position'} ${lead.email ? '· ✉️ ' + highlight(lead.email) : ''} ${lead.phone ? '· 📞 ' + highlight(lead.phone) : ''}</div>
             ${lead.city ? `<div class="details">📍 ${highlight(lead.city)}${lead.country ? ', ' + highlight(lead.country) : ''}</div>` : ''}
+            ${versteckt ? `<div class="match-hint">🔎 Treffer in ${highlight(versteckt)}</div>` : ''}
             <div class="meta">🕐 ${lead.created_at ? new Date(lead.created_at).toLocaleString() : ''}</div>
             ${leadActionsHtml(lead)}
         </div>`;
