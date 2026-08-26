@@ -1348,6 +1348,8 @@
                     <option value="name_desc">🔤 Name (Z → A)</option>
                     <option value="company_asc">🏢 Organisation (A → Z)</option>
                     <option value="company_desc">🏢 Organisation (Z → A)</option>
+                    <option value="priority_desc">⭐ Priorität (hoch → niedrig)</option>
+                    <option value="priority_asc">⭐ Priorität (niedrig → hoch)</option>
                 </select>
             </div>
             <div class="result-info" id="searchResultInfo"></div>
@@ -2359,11 +2361,22 @@ function sortLeads(leads, mode) {
         return av - bv;
     };
 
+    // Unbewertete Leads (priority = null) sollen bei "hoch -> niedrig"
+    // ans ENDE rutschen, nicht als 0 mitgezaehlt werden - sonst
+    // stuenden sie faelschlich unter den 1-Stern-Leads statt danach.
+    const cmpPrio = (a, b) => {
+        const av = a.priority || 0, bv = b.priority || 0;
+        if (av === bv) return cmpDate(b, a);   // bei Gleichstand: neueste zuerst
+        return bv - av;   // absteigend; fuer aufsteigend wird a,b vertauscht aufgerufen
+    };
+
     switch (mode) {
         case 'name_asc':     sorted.sort((a, b) => cmpText(a, b, personName)); break;
         case 'name_desc':    sorted.sort((a, b) => cmpText(b, a, personName)); break;
         case 'company_asc':  sorted.sort((a, b) => cmpText(a, b, l => l.company)); break;
         case 'company_desc': sorted.sort((a, b) => cmpText(b, a, l => l.company)); break;
+        case 'priority_desc': sorted.sort((a, b) => cmpPrio(a, b)); break;
+        case 'priority_asc':  sorted.sort((a, b) => cmpPrio(b, a)); break;
         case 'date_asc':     sorted.sort(cmpDate); break;
         case 'date_desc':
         default:             sorted.sort((a, b) => cmpDate(b, a)); break;
@@ -2452,13 +2465,19 @@ function verstecktenTrefferFinden(lead, term) {
 // Fuenf Sterne, antippbar. Ein zweiter Klick auf den bereits
 // aktiven Stern setzt die Bewertung zurueck - so laesst sich eine
 // Fehleingabe ohne Umweg ueber "Details" korrigieren.
+// Die Markierung (data-prio-id) MUSS Teil der zurueckgegebenen
+// Markierung sein, nicht separat drumherum gesetzt werden. Frueher
+// stand sie im aufrufenden Template, prioritaetSetzen() ersetzte
+// beim Update aber nur diesen inneren Teil per outerHTML - dabei
+// ging die Markierung verloren, und jeder weitere Klick lief ins
+// Leere, bis ein Neuladen die Liste komplett neu aufbaute.
 function prioSterneHtml(lead) {
     const aktuell = lead.priority || 0;
     const sterne = [1, 2, 3, 4, 5].map(n => `
         <button class="prio-stern ${n <= aktuell ? 'an' : ''}" type="button"
             onclick="event.stopPropagation(); prioritaetSetzen('${lead.id}', ${n === aktuell ? 'null' : n})"
             aria-label="${n} von 5 Sternen">${n <= aktuell ? '★' : '☆'}</button>`).join('');
-    return `<div class="prio-sterne">${sterne}</div>`;
+    return `<span class="prio-sterne" data-prio-id="${lead.id}">${sterne}</span>`;
 }
 
 async function prioritaetSetzen(leadId, wert) {
@@ -2499,7 +2518,7 @@ function leadCardHtml(lead, highlight, term = '') {
     return `
         <div class="lead-card" onclick="openLeadDetail('${lead.id}')">
             <div><span class="name">${name || 'Unbekannt'}</span> · <span class="company">${lead.company ? highlight(lead.company) : 'Keine Firma'}</span></div>
-            <span data-prio-id="${lead.id}">${prioSterneHtml(lead)}</span>
+            ${prioSterneHtml(lead)}
             <div class="details">${lead.position ? highlight(lead.position) : 'Keine Position'} ${lead.email ? '· ✉️ ' + highlight(lead.email) : ''} ${lead.phone ? '· 📞 ' + highlight(lead.phone) : ''}</div>
             ${lead.city ? `<div class="details">📍 ${highlight(lead.city)}${lead.country ? ', ' + highlight(lead.country) : ''}</div>` : ''}
             ${versteckt ? `<div class="match-hint">🔎 Treffer in ${highlight(versteckt)}</div>` : ''}
@@ -3122,30 +3141,29 @@ async function kontaktUebernehmen(leadId) {
     if (!lead) return;
 
     const vcard = leadAlsVCard(lead);
-    const datei = new File([vcard], `${(lead.last_name || lead.company || 'kontakt')}.vcf`,
-                           { type: 'text/vcard' });
-
-    // Auf dem Handy ist Teilen der zuverlaessigste Weg: der Nutzer
-    // waehlt "Zu Kontakten hinzufuegen" und bleibt in der App.
-    if (navigator.canShare?.({ files: [datei] })) {
-        try {
-            await navigator.share({ files: [datei] });
-            return;
-        } catch (err) {
-            if (err?.name === 'AbortError') return;   // Nutzer hat abgebrochen
-            console.warn('Teilen nicht moeglich, lade herunter:', err.message);
-        }
-    }
-
-    // Rueckfall: als Datei herunterladen. Auf dem Rechner landet sie
-    // im Download-Ordner, auf dem Handy oeffnet meist direkt die
-    // Kontakte-App.
     const url = URL.createObjectURL(new Blob([vcard], { type: 'text/vcard;charset=utf-8' }));
+
+    // WICHTIG, und Ursache des gemeldeten Fehlers: KEIN a.download
+    // setzen! Das download-Attribut zwingt den Browser, die Datei
+    // als generischen Download zu behandeln - genau dadurch wurde
+    // vorher nur "gespeichert" statt der native Kontakt-Dialog
+    // geoeffnet. Ohne download-Attribut erkennt iOS/Android den
+    // MIME-Typ text/vcard beim direkten Aufruf und zeigt die
+    // eingebaute "Neuer Kontakt"-Ansicht - denselben Dialog, der
+    // beim Antippen eines vcf-Anhangs in Mail erscheint.
+    //
+    // Das Teilen-Menue (Web Share) ist dafuer NICHT der richtige
+    // Weg: es zeigt Sende-Ziele wie AirDrop, Mail, WhatsApp - die
+    // Kontakte-App ist dort kein Sende-Ziel, wie der Screenshot
+    // zeigt. Direktes Oeffnen ist der zuverlaessige Weg.
     const a = document.createElement('a');
     a.href = url;
-    a.download = datei.name;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
     a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
 // ============================================================
@@ -7026,7 +7044,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = getUser();
     if (user && getToken()) showApp(user);
     else showLogin();
-    console.log('🚀 LeadCapture PWA v40.0.0 geladen (Priorität, CSV-Zuordnung)');
+    console.log('🚀 LeadCapture PWA v41.0.0 geladen (Prio-Sortierung, Kontakt-Fix)');
 });
 </script>
 </body>
