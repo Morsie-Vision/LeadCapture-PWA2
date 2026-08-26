@@ -115,6 +115,58 @@
            daneben Anrufen / Mailen / Route als gleich grosse Felder.
            Bewusst grosszuegig, weil sie am Messestand mit dem Daumen
            getroffen werden muessen. */
+        /* CSV-Import: Zuordnungsmaske */
+        #importOverlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1700;
+            display: none; justify-content: center; align-items: center; padding: 16px;
+        }
+        #importOverlay.active { display: flex; }
+        #importModal {
+            background: #fff; max-width: 560px; width: 100%; max-height: 90dvh;
+            border-radius: 20px; padding: clamp(16px,4vw,22px); overflow-y: auto; position: relative;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        #importModal .close-btn {
+            position: absolute; top: 12px; right: 16px; background: none; border: none;
+            font-size: 24px; cursor: pointer; color: #6b7a8f;
+        }
+        #importModal h3 { font-size: 17px; margin-bottom: 4px; padding-right: 28px; }
+        .im-sub { font-size: 12.5px; color: #6b7a8f; margin-bottom: 6px; line-height: 1.5; }
+        .im-warnung {
+            background: #fef3c7; border: 1px solid #fcd34d; color: #92400e;
+            border-radius: 9px; padding: 9px 12px; font-size: 12.5px; margin: 10px 0;
+        }
+        .im-liste { display: flex; flex-direction: column; gap: 7px; margin-top: 12px; }
+        .im-zeile {
+            display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center;
+            padding: 9px 10px; background: #f8fafc; border: 1px solid #eef2f7; border-radius: 10px;
+        }
+        .im-quelle b { display: block; font-size: 13px; color: #1a1a1a; overflow-wrap: anywhere; }
+        .im-beispiel {
+            display: block; font-size: 11px; color: #a0aec0; margin-top: 1px;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .im-pfeil { color: #cbd5e0; font-size: 13px; }
+        .im-ziel {
+            width: 100%; padding: 7px 8px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+            font-size: 12.5px; background: #fff; box-sizing: border-box;
+        }
+        .im-actions { display: flex; gap: 8px; margin-top: 16px; }
+        .im-actions .btn { flex: 1; }
+        @media (max-width: 480px) {
+            .im-zeile { grid-template-columns: 1fr; gap: 4px; }
+            .im-pfeil { display: none; }
+        }
+
+        /* Priorität: Sterne auf der Lead-Karte */
+        .prio-sterne { display: inline-flex; gap: 1px; align-items: center; margin-top: 4px; }
+        .prio-stern {
+            background: none; border: none; padding: 2px; cursor: pointer;
+            font-size: 15px; line-height: 1; color: #e2e8f0;
+        }
+        .prio-stern.an { color: #f5a623; }
+        .prio-stern:active { transform: scale(1.15); }
+
         .match-hint {
             font-size: 11.5px; color: #b45309; background: #fffbeb;
             border-radius: 6px; padding: 4px 8px; margin-top: 4px;
@@ -1732,6 +1784,28 @@
     </div>
 </div>
 
+<!-- CSV-IMPORT: SPALTEN ZUORDNEN -->
+<div id="importOverlay" class="modal-overlay">
+    <div id="importModal">
+        <button class="close-btn" id="importCloseX" onclick="document.getElementById('importOverlay').classList.remove('active')">×</button>
+        <h3>Spalten zuordnen</h3>
+        <p class="im-sub">
+            So wurden die Spalten erkannt. Bitte prüfen und bei Bedarf korrigieren –
+            es wird noch nichts gespeichert.
+        </p>
+        <p class="im-sub" id="importZeilenInfo"></p>
+
+        <div id="importUeberschneidung" class="im-warnung" style="display:none;"></div>
+
+        <div id="importZuordnungListe" class="im-liste"></div>
+
+        <div class="im-actions">
+            <button class="btn btn-secondary" id="importAbbrechenBtn">Abbrechen</button>
+            <button class="btn btn-primary" id="importUebernehmenBtn">Importieren</button>
+        </div>
+    </div>
+</div>
+
 <!-- KAMERA-MODAL (Live-Erfassung mit Kartenrahmen) -->
 <div id="cameraOverlay">
     <video id="cameraVideo" autoplay playsinline muted></video>
@@ -2375,6 +2449,49 @@ function verstecktenTrefferFinden(lead, term) {
     return null;
 }
 
+// Fuenf Sterne, antippbar. Ein zweiter Klick auf den bereits
+// aktiven Stern setzt die Bewertung zurueck - so laesst sich eine
+// Fehleingabe ohne Umweg ueber "Details" korrigieren.
+function prioSterneHtml(lead) {
+    const aktuell = lead.priority || 0;
+    const sterne = [1, 2, 3, 4, 5].map(n => `
+        <button class="prio-stern ${n <= aktuell ? 'an' : ''}" type="button"
+            onclick="event.stopPropagation(); prioritaetSetzen('${lead.id}', ${n === aktuell ? 'null' : n})"
+            aria-label="${n} von 5 Sternen">${n <= aktuell ? '★' : '☆'}</button>`).join('');
+    return `<div class="prio-sterne">${sterne}</div>`;
+}
+
+async function prioritaetSetzen(leadId, wert) {
+    // Sofort in der Oberflaeche aendern, nicht erst nach Serverantwort
+    // warten - bei Netzverzoegerung fuehlt sich das sonst traege an.
+    // Den alten Wert merken, um ihn bei einem Fehler zurueckzusetzen.
+    const lead = (allLeads || []).find(l => l.id === leadId);
+    const vorherigerWert = lead ? lead.priority : null;
+
+    if (lead) lead.priority = wert;
+    const neuZeichnen = (bewertung) => {
+        document.querySelectorAll(`[data-prio-id="${leadId}"]`).forEach(el => {
+            el.outerHTML = prioSterneHtml({ id: leadId, priority: bewertung });
+        });
+    };
+    neuZeichnen(wert);
+
+    try {
+        const res = await apiRequest(`/leads/${leadId}/priority`, {
+            method: 'PUT',
+            body: JSON.stringify({ priority: wert })
+        });
+        const r = await res.json();
+        if (!r.success) throw new Error(r.error);
+    } catch (error) {
+        console.warn('Priorität nicht gespeichert:', error.message);
+        // Nicht aufdringlich unterbrechen – nur den echten alten
+        // Wert wiederherstellen, sowohl im Datensatz als auch optisch.
+        if (lead) lead.priority = vorherigerWert;
+        neuZeichnen(vorherigerWert);
+    }
+}
+
 function leadCardHtml(lead, highlight, term = '') {
     const name = `${lead.title ? highlight(lead.title) + ' ' : ''}${highlight(lead.first_name)} ${highlight(lead.last_name)}`.trim();
     const versteckt = verstecktenTrefferFinden(lead, term);
@@ -2382,6 +2499,7 @@ function leadCardHtml(lead, highlight, term = '') {
     return `
         <div class="lead-card" onclick="openLeadDetail('${lead.id}')">
             <div><span class="name">${name || 'Unbekannt'}</span> · <span class="company">${lead.company ? highlight(lead.company) : 'Keine Firma'}</span></div>
+            <span data-prio-id="${lead.id}">${prioSterneHtml(lead)}</span>
             <div class="details">${lead.position ? highlight(lead.position) : 'Keine Position'} ${lead.email ? '· ✉️ ' + highlight(lead.email) : ''} ${lead.phone ? '· 📞 ' + highlight(lead.phone) : ''}</div>
             ${lead.city ? `<div class="details">📍 ${highlight(lead.city)}${lead.country ? ', ' + highlight(lead.country) : ''}</div>` : ''}
             ${versteckt ? `<div class="match-hint">🔎 Treffer in ${highlight(versteckt)}</div>` : ''}
@@ -6771,23 +6889,34 @@ document.getElementById('exportStart').addEventListener('click', async () => {
     }
 });
 
+// ============================================================
+// CSV-IMPORT MIT ZUORDNUNGSMASKE
+// ============================================================
+// Die Datei muss KEINE eigenen Spaltennamen haben. Der Server
+// schlaegt eine Zuordnung vor (siehe /import/csv/analyze), der
+// Nutzer prueft und korrigiert sie, bevor irgendetwas gespeichert
+// wird (/import/csv/apply). So landet nie eine Telefonnummer
+// unbemerkt im Namensfeld.
+
 document.getElementById('importCsvBtn2').addEventListener('click', () => document.getElementById('csvFileInput').click());
+
 document.getElementById('csvFileInput').addEventListener('change', async (e) => {
     const file = e.target.files[0];
-    if (!file || !file.name.endsWith('.csv')) return;
+    if (!file || !file.name.toLowerCase().endsWith('.csv')) { e.target.value = ''; return; }
+
     const formData = new FormData();
     formData.append('file', file);
 
-    async function uploadCsv(isRetry = false) {
+    async function hochladenUndAnalysieren(isRetry = false) {
         const token = getToken();
-        const response = await fetch(`${API_URL}/import/csv`, {
+        const response = await fetch(`${API_URL}/import/csv/analyze`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` },
             body: formData
         });
         if ((response.status === 401 || response.status === 403) && !isRetry) {
             const newToken = await refreshAccessToken();
-            if (newToken) return uploadCsv(true);
+            if (newToken) return hochladenUndAnalysieren(true);
             removeToken(); showLogin();
             throw new Error('Session abgelaufen – bitte erneut anmelden');
         }
@@ -6795,14 +6924,98 @@ document.getElementById('csvFileInput').addEventListener('change', async (e) => 
     }
 
     try {
-        const response = await uploadCsv();
+        const response = await hochladenUndAnalysieren();
         const result = await response.json();
-        if (result.success) {
-            await loadLeads();
-            alert('✅ ' + result.message);
-        } else throw new Error(result.error);
-    } catch (error) { alert('❌ Fehler: ' + error.message); }
+        if (!result.success) throw new Error(result.error);
+        importZuordnungOeffnen(result);
+    } catch (error) {
+        alert('❌ ' + error.message);
+    }
     e.target.value = '';
+});
+
+let importAktuell = null;
+
+function importZuordnungOeffnen(daten) {
+    importAktuell = { importId: daten.importId, headers: daten.headers, zielfelder: daten.zielfelder };
+
+    document.getElementById('importZeilenInfo').textContent =
+        `${daten.zeilenAnzahl} Datenzeile${daten.zeilenAnzahl === 1 ? '' : 'n'} gefunden`;
+
+    const liste = document.getElementById('importZuordnungListe');
+    liste.innerHTML = daten.headers.map((h, i) => {
+        const beispiele = daten.vorschau.map(z => z[i]).filter(v => v).slice(0, 3);
+        const optionen = daten.zielfelder.map(f =>
+            `<option value="${f.key}" ${f.key === daten.vorschlag[i] ? 'selected' : ''}>${escapeHtml(f.label)}</option>`
+        ).join('');
+
+        return `
+        <div class="im-zeile">
+            <div class="im-quelle">
+                <b>${escapeHtml(h || `Spalte ${i + 1}`)}</b>
+                ${beispiele.length ? `<span class="im-beispiel">${beispiele.map(escapeHtml).join(' · ')}</span>` : ''}
+            </div>
+            <span class="im-pfeil">→</span>
+            <select class="im-ziel" data-spalte="${i}">${optionen}</select>
+        </div>`;
+    }).join('');
+
+    document.getElementById('importUeberschneidung').style.display = 'none';
+    liste.querySelectorAll('.im-ziel').forEach(sel => sel.addEventListener('change', importUeberschneidungPruefen));
+    importUeberschneidungPruefen();
+
+    document.getElementById('importOverlay').classList.add('active');
+}
+
+// Warnt, wenn zwei Spalten auf dasselbe Feld zeigen (z.B. beide
+// "phone") - meist ein Versehen, das den Datensatz der zuerst
+// gelesenen Spalte ueberschreiben wuerde.
+function importUeberschneidungPruefen() {
+    const gewaehlt = [...document.querySelectorAll('.im-ziel')].map(s => s.value);
+    const zaehler = {};
+    gewaehlt.forEach(z => { if (z !== '__ignorieren' && z !== '__fragebogen') zaehler[z] = (zaehler[z] || 0) + 1; });
+    const mehrfach = Object.entries(zaehler).filter(([, n]) => n > 1).map(([k]) => k);
+
+    const warnung = document.getElementById('importUeberschneidung');
+    if (mehrfach.length === 0) { warnung.style.display = 'none'; return; }
+
+    const namen = mehrfach.map(k => importAktuell.zielfelder.find(f => f.key === k)?.label || k);
+    warnung.textContent = `⚠️ Mehrfach zugeordnet: ${namen.join(', ')} – nur die letzte Spalte zählt.`;
+    warnung.style.display = 'block';
+}
+
+document.getElementById('importAbbrechenBtn').addEventListener('click', () => {
+    document.getElementById('importOverlay').classList.remove('active');
+    importAktuell = null;
+});
+
+document.getElementById('importUebernehmenBtn').addEventListener('click', async () => {
+    if (!importAktuell) return;
+    const btn = document.getElementById('importUebernehmenBtn');
+    btn.disabled = true;
+    btn.textContent = 'Importiere…';
+
+    const mapping = importAktuell.headers.map((_, i) =>
+        document.querySelector(`.im-ziel[data-spalte="${i}"]`).value);
+
+    try {
+        const res = await apiRequest('/import/csv/apply', {
+            method: 'POST',
+            body: JSON.stringify({ importId: importAktuell.importId, mapping })
+        });
+        const r = await res.json();
+        if (!r.success) throw new Error(r.error);
+
+        document.getElementById('importOverlay').classList.remove('active');
+        importAktuell = null;
+        await loadLeads();
+        alert('✅ ' + r.message);
+    } catch (error) {
+        alert('❌ ' + error.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Importieren';
+    }
 });
 
 // ============================================================
@@ -6813,7 +7026,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = getUser();
     if (user && getToken()) showApp(user);
     else showLogin();
-    console.log('🚀 LeadCapture PWA v39.0.0 geladen (Sitzung, Kontakt-Export)');
+    console.log('🚀 LeadCapture PWA v40.0.0 geladen (Priorität, CSV-Zuordnung)');
 });
 </script>
 </body>
