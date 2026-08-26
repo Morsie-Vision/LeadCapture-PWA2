@@ -414,6 +414,27 @@
         }
         .team-limit.full { background: #fef3c7; color: #b45309; }
 
+        /* Hinweis auf gepufferte Scans. Bernstein wie die Follow-ups,
+           weil beides "noch offen" bedeutet. */
+        #offlineLeiste {
+            display: flex; align-items: center; gap: 10px;
+            background: #fff7e6; border: 1px solid #e2c47a; color: #92400e;
+            border-radius: 10px; padding: 9px 12px; margin-bottom: 10px;
+            font-size: 13px; font-weight: 600;
+        }
+        #offlineLeiste.wartet { background: #fef3c7; }
+        #offlineLeiste .ol-punkt {
+            width: 8px; height: 8px; border-radius: 50%; background: #d97706;
+            flex-shrink: 0; animation: olPuls 1.6s ease-in-out infinite;
+        }
+        #offlineLeiste.wartet .ol-punkt { animation: none; background: #b45309; }
+        @keyframes olPuls { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+        #offlineLeiste span:nth-child(2) { flex: 1; }
+        #offlineLeiste button {
+            background: #d97706; color: #fff; border: none; border-radius: 7px;
+            padding: 6px 11px; font-size: 12px; font-weight: 600; cursor: pointer;
+        }
+
         .leads-filter-bar {
             display: flex; justify-content: space-between; align-items: center;
             background: #E8F4FD; border-radius: 10px; padding: 8px 12px;
@@ -1099,6 +1120,13 @@
         </span>
     </div>
 
+    <!-- Zwischengespeicherte Scans: nur sichtbar, wenn welche warten -->
+    <div id="offlineLeiste" style="display:none;">
+        <span class="ol-punkt"></span>
+        <span id="offlineText"></span>
+        <button id="offlineJetzt">Jetzt versuchen</button>
+    </div>
+
     <!-- LOGIN -->
     <div id="loginContainer">
         <div id="loginFormContainer">
@@ -1757,6 +1785,62 @@ function setUser(u) { localStorage.setItem(USER_KEY, JSON.stringify(u)); }
 // ============================================================
 let refreshPromise = null;
 
+// ============================================================
+// SITZUNG VORAUSSCHAUEND ERNEUERN
+// ============================================================
+// Das Zugangs-Token laeuft nach etwa einer Stunde ab. Bisher wurde
+// erst erneuert, NACHDEM eine Anfrage daran gescheitert war - kam
+// der Nutzer nach laengerer Pause zurueck, liefen mehrere Anfragen
+// gleichzeitig ins Leere und die Sitzung ging verloren.
+//
+// Jetzt wird vorher erneuert: kurz vor Ablauf und immer dann, wenn
+// die App nach einer Pause wieder in den Vordergrund kommt.
+
+// Liest das Ablaufdatum aus dem Token. Das Token ist ein JWT;
+// der mittlere Teil enthaelt lesbares JSON mit dem Feld "exp".
+function tokenLaeuftAbUm(token) {
+    try {
+        const teil = String(token).split('.')[1];
+        if (!teil) return 0;
+        const roh = atob(teil.replace(/-/g, '+').replace(/_/g, '/'));
+        const daten = JSON.parse(decodeURIComponent(
+            [...roh].map(c => '%' + c.charCodeAt(0).toString(16).padStart(2, '0')).join('')
+        ));
+        return (daten.exp || 0) * 1000;
+    } catch { return 0; }
+}
+
+// Erneuert, wenn weniger als fuenf Minuten Restlaufzeit bleiben.
+// Der Puffer verhindert, dass ein Token waehrend einer laufenden
+// Anfrage ablaeuft.
+const PUFFER_MS = 5 * 60 * 1000;
+
+async function sitzungSichern() {
+    const token = getToken();
+    if (!token || !getRefreshToken()) return;
+
+    const ablauf = tokenLaeuftAbUm(token);
+    // Kein lesbares Ablaufdatum? Dann nichts erzwingen – die
+    // nachtraegliche Erneuerung greift weiterhin als Rueckfall.
+    if (!ablauf) return;
+
+    if (Date.now() > ablauf - PUFFER_MS) {
+        const neu = await refreshAccessToken();
+        if (neu) console.log('🔄 Sitzung erneuert');
+    }
+}
+
+// Beim Zurueckkehren in die App pruefen – das ist der Moment,
+// in dem der Nutzer den Abbruch sonst bemerkt haette.
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') sitzungSichern();
+});
+window.addEventListener('focus', sitzungSichern);
+window.addEventListener('online', sitzungSichern);
+
+// Zusaetzlich regelmaessig, solange die App offen liegt
+setInterval(sitzungSichern, 4 * 60 * 1000);
+
 async function refreshAccessToken() {
     const rt = getRefreshToken();
     if (!rt) return null;
@@ -1775,7 +1859,10 @@ async function refreshAccessToken() {
             setRefreshToken(result.data.refreshToken);
             return result.data.token;
         } catch (err) {
-            console.error('❌ Refresh-Fehler:', err);
+            // Netzproblem: Die Sitzung ist deshalb nicht ungueltig.
+            // Ein Abmelden waere hier falsch – der Nutzer haette
+            // seine Arbeit verloren, obwohl nur das WLAN weg war.
+            console.warn('Sitzung konnte nicht erneuert werden:', err.message);
             return null;
         } finally {
             refreshPromise = null;
@@ -2112,6 +2199,13 @@ function showApp(user, features) {
     showView('main');
     loadLeads();
 
+    // Sitzung auffrischen, bevor die ersten Anfragen rausgehen
+    sitzungSichern();
+
+    // Beim Start pruefen: liegen noch Scans vom letzten Einsatz?
+    wsAnzeigeAktualisieren();
+    if (navigator.onLine) setTimeout(() => wsVerarbeiten({ still: true }), 1200);
+
     // Mandantenweite Fragebogen-Vorlagen nach erfolgreichem Login laden.
     // Ohne Questionnaire-Lizenz bleibt die Funktion vollständig inaktiv.
     if (hasFeature('questionnaire')) {
@@ -2224,6 +2318,8 @@ function leadActionsHtml(lead) {
                 title="${nummer ? escapeHtml(nummer) : 'Keine Nummer hinterlegt'}">${lead.mobile ? '📱' : '📞'}</button>
             <button class="lq-icon" ${lead.email ? `onclick="event.stopPropagation(); window.location.href='mailto:${escapeHtml(lead.email)}'"` : 'disabled'}
                 title="${lead.email ? escapeHtml(lead.email) : 'Keine E-Mail hinterlegt'}">✉️</button>
+            <button class="lq-icon" onclick="event.stopPropagation(); kontaktUebernehmen('${id}')"
+                title="In die Kontakte des Telefons übernehmen">👤</button>
             <button class="lq-icon" ${ziel
                 ? `onclick="event.stopPropagation(); ${ziel.adresse
                     ? `openMaps('${escapeHtml(ziel.adresse).replace(/'/g, "\\'")}')`
@@ -2840,6 +2936,263 @@ async function compressImage(file, maxDim = 1600, quality = 0.85) {
 }
 
 // Gemeinsamer Versand-Pfad für Kamera- UND Galerie-Bilder
+// ============================================================
+// IN DIE TELEFON-KONTAKTE ÜBERNEHMEN
+// ============================================================
+// Erzeugt eine vCard und uebergibt sie dem Geraet. iOS und Android
+// oeffnen daraufhin ihre Kontakte-App mit ausgefuellten Feldern -
+// der Nutzer muss nur noch bestaetigen.
+
+function vcEscape(v) {
+    return String(v ?? '')
+        .replace(/\\/g, '\\\\')
+        .replace(/;/g, '\\;')
+        .replace(/,/g, '\\,')
+        .replace(/\r?\n/g, '\\n');
+}
+
+// Zeilen ueber 75 Zeichen muessen nach RFC 6350 umbrochen werden,
+// sonst verweigern manche Kontakte-Apps den Import.
+function vcFalten(zeile) {
+    if (zeile.length <= 74) return zeile;
+    const teile = [zeile.slice(0, 74)];
+    let rest = zeile.slice(74);
+    while (rest.length > 73) { teile.push(' ' + rest.slice(0, 73)); rest = rest.slice(73); }
+    if (rest) teile.push(' ' + rest);
+    return teile.join('\r\n');
+}
+
+function leadAlsVCard(lead) {
+    const z = [];
+    z.push('BEGIN:VCARD');
+    z.push('VERSION:3.0');
+
+    // N: Nachname;Vorname;Zusatz;Praefix;Suffix
+    z.push(`N:${vcEscape(lead.last_name)};${vcEscape(lead.first_name)};;${vcEscape(lead.title)};`);
+    const voll = [lead.title, lead.first_name, lead.last_name].filter(Boolean).join(' ').trim();
+    z.push(vcFalten(`FN:${vcEscape(voll || lead.company || 'Unbenannt')}`));
+
+    if (lead.company)  z.push(vcFalten(`ORG:${vcEscape(lead.company)}`));
+    if (lead.position) z.push(vcFalten(`TITLE:${vcEscape(lead.position)}`));
+    if (lead.email)    z.push(`EMAIL;TYPE=WORK:${vcEscape(lead.email)}`);
+    if (lead.phone)    z.push(`TEL;TYPE=WORK,VOICE:${vcEscape(lead.phone)}`);
+    if (lead.mobile)   z.push(`TEL;TYPE=CELL:${vcEscape(lead.mobile)}`);
+    if (lead.fax)      z.push(`TEL;TYPE=WORK,FAX:${vcEscape(lead.fax)}`);
+    if (lead.website)  z.push(vcFalten(`URL:${vcEscape(lead.website)}`));
+
+    if (lead.street || lead.zip || lead.city || lead.country) {
+        // ADR: Postfach;Zusatz;Strasse;Ort;Region;PLZ;Land
+        z.push(vcFalten(`ADR;TYPE=WORK:;;${vcEscape(lead.street)};${vcEscape(lead.city)};`
+            + `${vcEscape(lead.state)};${vcEscape(lead.zip)};${vcEscape(lead.country)}`));
+    }
+
+    // Herkunft festhalten – sonst weiss man in einem Jahr nicht mehr,
+    // woher der Kontakt stammt.
+    const notiz = [
+        lead.visitor_type ? `Besuchertyp: ${lead.visitor_type}` : '',
+        Array.isArray(lead.interests) && lead.interests.length ? `Interessen: ${lead.interests.join(', ')}` : '',
+        lead.created_at ? `Erfasst über LeadCapture am ${new Date(lead.created_at).toLocaleDateString('de-DE')}` : ''
+    ].filter(Boolean).join('\n');
+    if (notiz) z.push(vcFalten(`NOTE:${vcEscape(notiz)}`));
+
+    z.push('END:VCARD');
+    return z.join('\r\n') + '\r\n';
+}
+
+async function kontaktUebernehmen(leadId) {
+    const lead = (allLeads || []).find(l => l.id === leadId);
+    if (!lead) return;
+
+    const vcard = leadAlsVCard(lead);
+    const datei = new File([vcard], `${(lead.last_name || lead.company || 'kontakt')}.vcf`,
+                           { type: 'text/vcard' });
+
+    // Auf dem Handy ist Teilen der zuverlaessigste Weg: der Nutzer
+    // waehlt "Zu Kontakten hinzufuegen" und bleibt in der App.
+    if (navigator.canShare?.({ files: [datei] })) {
+        try {
+            await navigator.share({ files: [datei] });
+            return;
+        } catch (err) {
+            if (err?.name === 'AbortError') return;   // Nutzer hat abgebrochen
+            console.warn('Teilen nicht moeglich, lade herunter:', err.message);
+        }
+    }
+
+    // Rueckfall: als Datei herunterladen. Auf dem Rechner landet sie
+    // im Download-Ordner, auf dem Handy oeffnet meist direkt die
+    // Kontakte-App.
+    const url = URL.createObjectURL(new Blob([vcard], { type: 'text/vcard;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = datei.name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ============================================================
+// OFFLINE-WARTESCHLANGE
+// ============================================================
+// Am Messestand bricht das WLAN regelmaessig weg. Ohne Puffer
+// waere der Scan verloren und die Karte muesste erneut fotografiert
+// werden - meist ist der Besucher dann schon weg.
+//
+// Ablauf: Schlaegt die Uebertragung wegen fehlender Verbindung fehl,
+// wandert das Bild in eine lokale Warteschlange. Sobald das Netz
+// zurueck ist, werden die Scans automatisch nacheinander verarbeitet
+// und als Lead gespeichert.
+//
+// IndexedDB statt localStorage, weil Fotos mit 150-250 KB die
+// 5-MB-Grenze von localStorage nach wenigen Karten sprengen wuerden.
+
+const WS_DB = 'leadcapture-offline';
+const WS_SPEICHER = 'scans';
+let wsDbVerbindung = null;
+
+function wsOeffnen() {
+    if (wsDbVerbindung) return Promise.resolve(wsDbVerbindung);
+    return new Promise((erfuellen, ablehnen) => {
+        const anfrage = indexedDB.open(WS_DB, 1);
+        anfrage.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(WS_SPEICHER)) {
+                db.createObjectStore(WS_SPEICHER, { keyPath: 'id', autoIncrement: true });
+            }
+        };
+        anfrage.onsuccess = (e) => { wsDbVerbindung = e.target.result; erfuellen(wsDbVerbindung); };
+        anfrage.onerror = () => ablehnen(anfrage.error);
+    });
+}
+
+async function wsAktion(modus, arbeit) {
+    const db = await wsOeffnen();
+    return new Promise((erfuellen, ablehnen) => {
+        const tx = db.transaction(WS_SPEICHER, modus);
+        const speicher = tx.objectStore(WS_SPEICHER);
+        const ergebnis = arbeit(speicher);
+        tx.oncomplete = () => erfuellen(ergebnis?.result ?? ergebnis);
+        tx.onerror = () => ablehnen(tx.error);
+    });
+}
+
+async function wsHinzufuegen(dataUrl) {
+    await wsAktion('readwrite', (sp) => sp.add({
+        bild: dataUrl,
+        erstellt: new Date().toISOString(),
+        versuche: 0
+    }));
+    await wsAnzeigeAktualisieren();
+}
+
+async function wsAlle() {
+    try { return await wsAktion('readonly', (sp) => sp.getAll()) || []; }
+    catch { return []; }
+}
+
+async function wsEntfernen(id) {
+    await wsAktion('readwrite', (sp) => sp.delete(id));
+}
+
+async function wsVersuchZaehlen(eintrag) {
+    eintrag.versuche = (eintrag.versuche || 0) + 1;
+    eintrag.letzterFehler = new Date().toISOString();
+    await wsAktion('readwrite', (sp) => sp.put(eintrag));
+}
+
+// Erkennt, ob ein Fehler auf fehlender Verbindung beruht.
+// Wichtig: NUR dann puffern. Ein abgelehnter Scan wegen fehlender
+// Lizenz oder ungueltigem Bild gehoert nicht in die Warteschlange -
+// er wuerde dort ewig scheitern.
+function istNetzfehler(error) {
+    if (!navigator.onLine) return true;
+    const m = String(error?.message || '').toLowerCase();
+    return m.includes('failed to fetch')
+        || m.includes('networkerror')
+        || m.includes('load failed')
+        || m.includes('netzwerk')
+        || m.includes('timeout');
+}
+
+let wsLaeuft = false;
+
+async function wsVerarbeiten({ still = false } = {}) {
+    if (wsLaeuft || !navigator.onLine) return;
+    const eintraege = await wsAlle();
+    if (eintraege.length === 0) return;
+
+    wsLaeuft = true;
+    let erfolgreich = 0, gescheitert = 0;
+
+    for (const eintrag of eintraege) {
+        try {
+            const res = await apiRequest('/process-image', {
+                method: 'POST',
+                // save:true - der Lead wird direkt angelegt. Eine
+                // Nachbearbeitung waere hier nicht moeglich, der
+                // Nutzer ist laengst bei der naechsten Karte.
+                body: JSON.stringify({ image: eintrag.bild, save: true })
+            });
+            const r = await res.json();
+            if (!r.success) throw new Error(r.error || 'Verarbeitung fehlgeschlagen');
+
+            await wsEntfernen(eintrag.id);
+            erfolgreich++;
+        } catch (error) {
+            if (istNetzfehler(error)) {
+                // Netz wieder weg - Rest bleibt liegen, spaeter erneut
+                break;
+            }
+            await wsVersuchZaehlen(eintrag);
+            gescheitert++;
+            // Nach fuenf erfolglosen Versuchen aufgeben, sonst
+            // blockiert ein unlesbares Bild die ganze Schlange.
+            if (eintrag.versuche >= 5) {
+                console.warn('Scan nach 5 Versuchen verworfen:', error.message);
+                await wsEntfernen(eintrag.id);
+            }
+        }
+    }
+
+    wsLaeuft = false;
+    await wsAnzeigeAktualisieren();
+
+    if (erfolgreich > 0) {
+        await loadLeads();
+        if (!still) {
+            setStatus(`✅ ${erfolgreich} zwischengespeicherte${erfolgreich === 1 ? 'r' : ''} Scan${erfolgreich === 1 ? '' : 's'} verarbeitet.`, true);
+            setTimeout(() => setStatus('', false), 4000);
+        }
+    }
+    if (gescheitert > 0 && !still) {
+        showError(`${gescheitert} Scan(s) konnten nicht ausgewertet werden und werden erneut versucht.`);
+    }
+}
+
+async function wsAnzeigeAktualisieren() {
+    const eintraege = await wsAlle();
+    const leiste = document.getElementById('offlineLeiste');
+    if (!leiste) return;
+
+    if (eintraege.length === 0) { leiste.style.display = 'none'; return; }
+
+    leiste.style.display = 'flex';
+    leiste.classList.toggle('wartet', !navigator.onLine);
+    document.getElementById('offlineText').textContent = navigator.onLine
+        ? `${eintraege.length} Scan${eintraege.length === 1 ? '' : 's'} werden verarbeitet…`
+        : `${eintraege.length} Scan${eintraege.length === 1 ? '' : 's'} warten auf Verbindung`;
+}
+
+window.addEventListener('online',  () => { wsAnzeigeAktualisieren(); wsVerarbeiten(); });
+window.addEventListener('offline', () => wsAnzeigeAktualisieren());
+
+document.getElementById('offlineJetzt')?.addEventListener('click', () => {
+    if (!navigator.onLine) {
+        showError('Noch keine Verbindung. Die Scans bleiben gespeichert.');
+        return;
+    }
+    wsVerarbeiten();
+});
+
 async function processCapturedImage(dataUrl, { showPreview = true } = {}) {
     if (showPreview) {
         previewImage.src = dataUrl;
@@ -2883,6 +3236,20 @@ async function processCapturedImage(dataUrl, { showPreview = true } = {}) {
         setTimeout(() => setStatus('', false), 2500);
     } catch (error) {
         clearInterval(ticker);
+
+        // Kein Netz? Bild puffern statt den Scan zu verlieren.
+        if (istNetzfehler(error)) {
+            try {
+                await wsHinzufuegen(dataUrl);
+                previewContainer.style.display = 'none';
+                setStatus('📥 Kein Netz – Scan gespeichert, wird bei Verbindung nachgeholt.', true);
+                setTimeout(() => setStatus('', false), 4000);
+                return;
+            } catch (dbFehler) {
+                console.error('Warteschlange nicht beschreibbar:', dbFehler);
+            }
+        }
+
         showError('Verarbeitung fehlgeschlagen: ' + error.message);
         setStatus('', false);
     }
@@ -6446,7 +6813,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = getUser();
     if (user && getToken()) showApp(user);
     else showLogin();
-    console.log('🚀 LeadCapture PWA v37.0.0 geladen (Trefferhinweis in der Suche)');
+    console.log('🚀 LeadCapture PWA v39.0.0 geladen (Sitzung, Kontakt-Export)');
 });
 </script>
 </body>
