@@ -158,6 +158,17 @@
             .im-pfeil { display: none; }
         }
 
+        /* Sterne im Formular: groesser als auf der Karte, weil sie
+           dort ohne Zeitdruck gesetzt werden und Platz vorhanden ist. */
+        .prio-eingabe { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+        .prio-eingabe button {
+            background: none; border: none; padding: 3px; cursor: pointer;
+            font-size: 26px; line-height: 1; color: #e2e8f0;
+            min-width: 36px; min-height: 40px;
+        }
+        .prio-eingabe button.an { color: #f5a623; }
+        .prio-eingabe .prio-text { font-size: 12.5px; color: #6b7a8f; margin-left: 4px; }
+
         /* Priorität: Sterne auf der Lead-Karte */
         .prio-sterne { display: inline-flex; gap: 1px; align-items: center; margin-top: 4px; }
         .prio-stern {
@@ -178,10 +189,17 @@
             font-size: 13px; font-weight: 600; padding: 9px 0; min-height: 38px;
         }
         .lead-quick .lq-followup {
-            flex: 2.2; background: #fff7e6; color: #b7791f;
+            flex: 1.6; background: #fff7e6; color: #b7791f;
             border: 1px solid #e2c47a; font-size: 12.5px;
         }
         .lead-quick .lq-followup:active { background: #fdf0d5; }
+        /* Termin in App-Blau, damit der Unterschied zur Aufgabe
+           (bernstein) auf einen Blick erkennbar bleibt. */
+        .lead-quick .lq-termin {
+            flex: 1.4; background: #E8F4FD; color: #0066AA;
+            border: 1px solid #bcdff5; font-size: 12.5px;
+        }
+        .lead-quick .lq-termin:active { background: #d3ebfa; }
         .lead-quick .lq-icon { flex: 1; background: #0066AA; color: #fff; font-size: 15px; }
         .lead-quick .lq-icon:active { background: #004E82; }
         .lead-quick .lq-icon:disabled { background: #eef2f7; color: #cbd5e0; cursor: default; }
@@ -1306,6 +1324,10 @@
                     <div class="form-section-title">Sonstiges</div>
                     <div class="form-group full"><label for="vatId">USt-IdNr.</label><input type="text" id="vatId" placeholder="DE123456789"></div>
                     <div class="form-group full"><label for="interests">Interessensgebiete</label><input type="text" id="interests" placeholder="KI, Automatisierung, Cloud"></div>
+                    <div class="form-group full">
+                        <label>Priorität</label>
+                        <div class="prio-eingabe" id="prioEingabeScan"></div>
+                    </div>
                 </div>
 
                 <!-- FRAGEBOGEN DIREKT BEIM SCAN -->
@@ -1574,6 +1596,10 @@
                         <div class="form-group"><label>Land</label><input type="text" id="editCountry"></div>
                         <div class="form-group full"><label>USt-IdNr.</label><input type="text" id="editVatId"></div>
                         <div class="form-group full"><label>Interessensgebiete</label><input type="text" id="editInterests"></div>
+                        <div class="form-group full">
+                            <label>Priorität</label>
+                            <div class="prio-eingabe" id="prioEingabeEdit"></div>
+                        </div>
                     </div>
                     <div class="actions"><button class="btn btn-success" id="saveEditBtn">💾 Speichern</button><button class="btn btn-secondary" id="cancelEditBtn">Abbrechen</button></div>
                 </div>
@@ -2401,6 +2427,7 @@ function leadActionsHtml(lead) {
     return `
         <div class="lead-quick">
             <button class="lq-followup" onclick="event.stopPropagation(); openTodoModal(null, '${id}', '${escapeHtml(bez).replace(/'/g, "\\'")}')">✓ Follow-up</button>
+            <button class="lq-termin" onclick="event.stopPropagation(); openApptModal(null, '${id}')">📅 Termin</button>
             <button class="lq-icon" ${nummer ? `onclick="event.stopPropagation(); dialNumber('${escapeHtml(nummer)}')"` : 'disabled'}
                 title="${nummer ? escapeHtml(nummer) : 'Keine Nummer hinterlegt'}">${lead.mobile ? '📱' : '📞'}</button>
             <button class="lq-icon" ${lead.email ? `onclick="event.stopPropagation(); window.location.href='mailto:${escapeHtml(lead.email)}'"` : 'disabled'}
@@ -2478,6 +2505,37 @@ function prioSterneHtml(lead) {
             onclick="event.stopPropagation(); prioritaetSetzen('${lead.id}', ${n === aktuell ? 'null' : n})"
             aria-label="${n} von 5 Sternen">${n <= aktuell ? '★' : '☆'}</button>`).join('');
     return `<span class="prio-sterne" data-prio-id="${lead.id}">${sterne}</span>`;
+}
+
+// ------------------------------------------------------------
+// STERNE IN DEN FORMULAREN
+// ------------------------------------------------------------
+// Anders als auf der Lead-Karte wird hier NICHT sofort gespeichert -
+// der Wert gehoert zum Formular und geht erst beim Speichern mit.
+// Sonst waere die Bewertung schon gesetzt, wenn der Nutzer den
+// Vorgang danach abbricht.
+const prioFormular = { scan: null, edit: null };
+
+function prioEingabeZeichnen(bereich) {
+    const el = document.getElementById(bereich === 'scan' ? 'prioEingabeScan' : 'prioEingabeEdit');
+    if (!el) return;
+    const aktuell = prioFormular[bereich] || 0;
+
+    const sterne = [1, 2, 3, 4, 5].map(n => `
+        <button type="button" class="${n <= aktuell ? 'an' : ''}"
+            onclick="prioEingabeSetzen('${bereich}', ${n === aktuell ? 'null' : n})"
+            aria-label="${n} von 5 Sternen">${n <= aktuell ? '★' : '☆'}</button>`).join('');
+
+    const text = aktuell
+        ? `${aktuell} von 5`
+        : 'nicht bewertet';
+
+    el.innerHTML = sterne + `<span class="prio-text">${text}</span>`;
+}
+
+function prioEingabeSetzen(bereich, wert) {
+    prioFormular[bereich] = wert;
+    prioEingabeZeichnen(bereich);
 }
 
 async function prioritaetSetzen(leadId, wert) {
@@ -2846,6 +2904,8 @@ function openLeadDetail(leadId) {
         set('editCountry', lead.country);
         set('editVatId', lead.vat_id);
         set('editInterests', lead.interests?.join(', '));
+        prioFormular.edit = lead.priority || null;
+        prioEingabeZeichnen('edit');
         set('editVisitorType', lead.visitor_type);
     };
 
@@ -2872,6 +2932,7 @@ function openLeadDetail(leadId) {
                 country: val('editCountry')
             },
             interests: val('editInterests').split(',').map(s => s.trim()).filter(Boolean),
+            priority: prioFormular.edit,
             visitorType: val('editVisitorType')
         };
         try {
@@ -2975,6 +3036,8 @@ function fillForm(data) {
     fields.country.value = data.country || data.address?.country || '';
     fields.vatId.value = data.vat_id || data.vatId || '';
     fields.interests.value = Array.isArray(data.interests) ? data.interests.join(', ') : '';
+    prioFormular.scan = data.priority || null;
+    prioEingabeZeichnen('scan');
     fields.visitorType.value = data.visitor_type || data.visitorType || '';
 }
 
@@ -3000,6 +3063,7 @@ function collectFormLead() {
             country: fields.country.value.trim()
         },
         interests: fields.interests.value.split(',').map(s => s.trim()).filter(Boolean),
+        priority: prioFormular.scan,
         visitorType: fields.visitorType.value
     };
 }
@@ -3012,6 +3076,8 @@ function clearForm() {
     statusDiv.style.display = 'none';
     errorBox.style.display = 'none';
     document.getElementById('scanTemplateSelect').value = '';
+    prioFormular.scan = null;
+    prioEingabeZeichnen('scan');
     renderScanQuestionnaire();
 }
 document.getElementById('clearBtn').addEventListener('click', clearForm);
@@ -7041,10 +7107,12 @@ document.getElementById('importUebernehmenBtn').addEventListener('click', async 
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
     loadCachedFeatures();
+    prioEingabeZeichnen('scan');
+    prioEingabeZeichnen('edit');
     const user = getUser();
     if (user && getToken()) showApp(user);
     else showLogin();
-    console.log('🚀 LeadCapture PWA v41.0.0 geladen (Prio-Sortierung, Kontakt-Fix)');
+    console.log('🚀 LeadCapture PWA v42.0.0 geladen (Termin-Knopf, Sterne im Formular)');
 });
 </script>
 </body>
