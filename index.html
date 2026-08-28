@@ -115,6 +115,84 @@
            daneben Anrufen / Mailen / Route als gleich grosse Felder.
            Bewusst grosszuegig, weil sie am Messestand mit dem Daumen
            getroffen werden muessen. */
+        .dup-cleanup-link {
+            display: block; width: 100%; text-align: center; background: none;
+            border: none; color: #6b7a8f; font-size: 12.5px; text-decoration: underline;
+            padding: 8px 0 4px; cursor: pointer;
+        }
+
+        /* Aufräumwerkzeug: ganzer Bestand */
+        #dupCleanupOverlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1750;
+            display: none; justify-content: center; align-items: center; padding: 16px;
+        }
+        #dupCleanupOverlay.active { display: flex; }
+        #dupCleanupModal {
+            background: #fff; max-width: 560px; width: 100%; max-height: 90dvh;
+            border-radius: 20px; padding: clamp(16px,4vw,22px); overflow-y: auto; position: relative;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        #dupCleanupModal .close-btn {
+            position: absolute; top: 12px; right: 16px; background: none; border: none;
+            font-size: 24px; cursor: pointer; color: #6b7a8f;
+        }
+        #dupCleanupModal h3 { font-size: 17px; margin-bottom: 4px; padding-right: 28px; }
+        .dcg-gruppe {
+            border: 1px solid #eef2f7; border-radius: 12px; padding: 12px; margin-top: 12px;
+        }
+        .dcg-grund {
+            font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+            color: #b45309; background: #fff7e6; display: inline-block;
+            padding: 2px 8px; border-radius: 10px; margin-bottom: 8px;
+        }
+        .dcg-lead {
+            display: flex; gap: 9px; align-items: flex-start; padding: 8px 4px;
+            border-top: 1px solid #f1f5f9;
+        }
+        .dcg-lead:first-of-type { border-top: none; }
+        .dcg-lead input[type=radio] { margin-top: 3px; accent-color: #0066AA; flex-shrink: 0; }
+        .dcg-lead b { display: block; font-size: 13.5px; color: #1a1a1a; }
+        .dcg-lead small { display: block; font-size: 11.5px; color: #6b7a8f; margin-top: 1px; overflow-wrap: anywhere; }
+        .dcg-lead .dcg-behalten-tag {
+            font-size: 10px; font-weight: 700; color: #1e9e6a; margin-left: 6px;
+        }
+        .dcg-actions { display: flex; gap: 8px; margin-top: 10px; }
+        .dcg-actions button {
+            flex: 1; padding: 8px; border-radius: 8px; border: none;
+            font-size: 12.5px; font-weight: 600; cursor: pointer;
+        }
+        .dcg-loeschen { background: #fee2e2; color: #dc2626; }
+        .dcg-ignorieren { background: #f1f5f9; color: #4a5568; }
+
+        /* Doublettencheck */
+        #dupOverlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1750;
+            display: none; justify-content: center; align-items: center; padding: 16px;
+        }
+        #dupOverlay.active { display: flex; }
+        #dupModal {
+            background: #fff; max-width: 460px; width: 100%; max-height: 90dvh;
+            border-radius: 20px; padding: clamp(16px,4vw,22px); overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        #dupModal h3 { font-size: 17px; margin-bottom: 6px; }
+        .dup-hinweis { font-size: 13px; color: #6b7a8f; line-height: 1.5; margin-bottom: 12px; }
+        .dup-neu {
+            background: #f8fafc; border: 1px solid #eef2f7; border-radius: 9px;
+            padding: 8px 11px; font-size: 12.5px; color: #1a1a1a; margin-bottom: 12px;
+        }
+        .dup-liste { display: flex; flex-direction: column; gap: 7px; margin-bottom: 6px; }
+        .dup-kandidat {
+            display: flex; gap: 10px; align-items: flex-start; cursor: pointer;
+            padding: 10px 11px; border: 1.5px solid #e2e8f0; border-radius: 10px;
+        }
+        .dup-kandidat:has(input:checked) { border-color: #0066AA; background: #f5faff; }
+        .dup-kandidat input { margin-top: 3px; accent-color: #0066AA; flex-shrink: 0; }
+        .dup-kandidat b { display: block; font-size: 13.5px; color: #1a1a1a; }
+        .dup-kandidat small { display: block; font-size: 11.5px; color: #6b7a8f; margin-top: 2px; overflow-wrap: anywhere; }
+        .dup-actions { display: flex; flex-direction: column; gap: 7px; margin-top: 14px; }
+        .dup-actions .btn { width: 100%; }
+
         /* CSV-Import: Zuordnungsmaske */
         #importOverlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1700;
@@ -1357,6 +1435,7 @@
                 <button class="smt-btn active" id="searchModeAll" data-mode="all">🔍 Alle Felder</button>
                 <button class="smt-btn" id="searchModeCompany" data-mode="company">🏢 Nur Unternehmen</button>
             </div>
+            <button id="dupCleanupOpenBtn" class="dup-cleanup-link">🧹 Duplikate prüfen</button>
             <div class="search-bar">
                 <input type="text" id="searchInput" placeholder="Name, Firma, Ort, E-Mail, Telefon...">
                 <button id="searchBtn">Suchen</button>
@@ -1808,6 +1887,33 @@
         <div class="del-actions">
             <button class="btn btn-secondary" id="delUserCancel">Abbrechen</button>
             <button class="btn btn-danger" id="delUserConfirmBtn" disabled>Endgültig löschen</button>
+        </div>
+    </div>
+</div>
+
+<!-- DUPLIKAT-AUFRÄUMWERKZEUG (gesamter Bestand) -->
+<div id="dupCleanupOverlay" class="modal-overlay">
+    <div id="dupCleanupModal">
+        <button class="close-btn" id="dupCleanupCloseBtn">×</button>
+        <h3>Duplikate im Bestand</h3>
+        <p class="dup-hinweis" id="dupCleanupSub">Wird geladen…</p>
+        <div id="dupCleanupGruppen"></div>
+    </div>
+</div>
+
+<!-- DOUBLETTENCHECK -->
+<div id="dupOverlay" class="modal-overlay">
+    <div id="dupModal">
+        <h3 id="dupTitel">Ähnlicher Kontakt gefunden</h3>
+        <p class="dup-hinweis" id="dupHinweis"></p>
+        <p class="dup-neu" id="dupNeu"></p>
+
+        <div id="dupKandidaten" class="dup-liste"></div>
+
+        <div class="dup-actions">
+            <button class="btn btn-secondary" id="dupAbbrechenBtn">Abbrechen</button>
+            <button class="btn btn-secondary" id="dupNeuAnlegenBtn">Trotzdem neu anlegen</button>
+            <button class="btn btn-primary" id="dupUebernehmenBtn">Ausgewählten aktualisieren</button>
         </div>
     </div>
 </div>
@@ -3515,7 +3621,7 @@ const cameraOverlay = document.getElementById('cameraOverlay');
 const cameraVideo = document.getElementById('cameraVideo');
 const cameraGuide = document.getElementById('cameraGuide');
 
-async function openCamera() {
+async function openCamera(ueberspringeGespeicherteKamera = false) {
     if (!navigator.mediaDevices?.getUserMedia) {
         showError('Kamera-Zugriff wird von diesem Browser nicht unterstützt. Bitte „Aus Galerie wählen" nutzen.');
         return;
@@ -3528,7 +3634,15 @@ async function openCamera() {
                 // desto lesbarer die Kleinschrift auf der Karte.
                 width:  { ideal: 3840 },
                 height: { ideal: 2160 },
-                ...(preferredCameraId ? { deviceId: { exact: preferredCameraId } } : {})
+                // { exact: ... } bedeutet "genau dieses Geraet oder gar
+                // keins". Ist die gemerkte Kamera-ID nicht mehr gueltig
+                // (Browser-Update, anderes Netzwerk, neu installierte
+                // PWA), lehnt der Browser die GESAMTE Anfrage mit
+                // "OverconstrainedError: Invalid constraint" ab - das
+                // war der gemeldete Fehler. Der Fallback unten faengt
+                // genau das ab.
+                ...(preferredCameraId && !ueberspringeGespeicherteKamera
+                    ? { deviceId: { exact: preferredCameraId } } : {})
             },
             audio: false
         });
@@ -3562,6 +3676,19 @@ async function openCamera() {
         chooseVideoFit();
         if (captureMode === 'qr') startQrLoop();
     } catch (error) {
+        // Die gemerkte Kamera-ID ist nicht mehr gueltig: verwerfen
+        // und OHNE feste ID neu versuchen, statt den Nutzer mit einer
+        // technischen Fehlermeldung auszusperren.
+        const istUngueltigeKameraId = preferredCameraId && !ueberspringeGespeicherteKamera
+            && (error.name === 'OverconstrainedError' || /constraint/i.test(error.message || ''));
+
+        if (istUngueltigeKameraId) {
+            console.warn('Gemerkte Kamera nicht mehr verfuegbar, versuche ohne feste Wahl:', error.message);
+            preferredCameraId = null;
+            try { localStorage.removeItem(CAMERA_PREF_KEY); } catch {}
+            return openCamera(true);
+        }
+
         console.error('Kamera-Fehler:', error);
         showError('Kamera konnte nicht gestartet werden: ' + (error.message || 'Zugriff verweigert'));
     }
@@ -4306,6 +4433,196 @@ function collectScanAnswers() {
 scanTemplateSelect.addEventListener('change', renderScanQuestionnaire);
 
 // ============================================================
+// 13b. DOUBLETTENCHECK
+// ============================================================
+// Speichert einen Lead und behandelt eine moegliche 409-Antwort
+// (Duplikat gefunden) mit einem Auswahl-Dialog. Wird sowohl vom
+// Scan-Speichern als auch von "Neuer Kontakt" genutzt.
+//
+// Rueckgabe: das gespeicherte/aktualisierte Lead-Objekt, oder null
+// wenn der Nutzer abgebrochen hat.
+async function leadSpeichernMitDuplikatCheck(leadData, { forceCreate = false } = {}) {
+    const res = await apiRequest('/leads', {
+        method: 'POST',
+        body: JSON.stringify({ lead: leadData, forceCreate })
+    });
+    const result = await res.json();
+
+    if (result.success) return result.data;
+
+    if (res.status === 409 && (result.code === 'DUPLICATE_EXACT' || result.code === 'DUPLICATE_FUZZY')) {
+        const entscheidung = await duplikatDialogZeigen(result, leadData);
+        if (entscheidung === 'neu') return leadSpeichernMitDuplikatCheck(leadData, { forceCreate: true });
+        if (entscheidung && entscheidung.startsWith('update:')) {
+            const zielId = entscheidung.slice(7);
+            const res2 = await apiRequest('/leads', {
+                method: 'POST',
+                body: JSON.stringify({ lead: leadData, updateExistingId: zielId })
+            });
+            const result2 = await res2.json();
+            if (!result2.success) throw new Error(result2.error);
+            return result2.data;
+        }
+        return null;   // Nutzer hat abgebrochen
+    }
+
+    throw new Error(result.error || 'Speichern fehlgeschlagen');
+}
+
+// Zeigt die gefundenen Kandidaten und liefert die Nutzerwahl zurueck:
+// 'neu' | 'update:<id>' | null (Abbruch)
+function duplikatDialogZeigen(duplikatInfo, neuerLead) {
+    return new Promise((resolve) => {
+        const overlay = document.getElementById('dupOverlay');
+        const exakt = duplikatInfo.code === 'DUPLICATE_EXACT';
+
+        document.getElementById('dupTitel').textContent = exakt
+            ? '⚠️ Vermutlich bereits vorhanden'
+            : '🔍 Ähnlicher Kontakt gefunden';
+        document.getElementById('dupHinweis').textContent = exakt
+            ? 'Ein Kontakt mit gleicher E-Mail-Adresse oder Telefonnummer existiert bereits.'
+            : 'Name und Firma ähneln einem bestehenden Kontakt. Das kann derselbe Kontakt oder eine andere Person sein.';
+
+        const neu = `${neuerLead.firstName || ''} ${neuerLead.lastName || ''}`.trim() || neuerLead.company || 'Unbenannt';
+        document.getElementById('dupNeu').textContent = `Neu: ${neu}${neuerLead.company ? ' · ' + neuerLead.company : ''}`;
+
+        const liste = document.getElementById('dupKandidaten');
+        liste.innerHTML = duplikatInfo.matches.map(m => {
+            const name = `${m.first_name || ''} ${m.last_name || ''}`.trim() || m.company || 'Unbenannt';
+            const details = [m.company, m.email, m.phone || m.mobile].filter(Boolean).join(' · ');
+            return `
+            <label class="dup-kandidat">
+                <input type="radio" name="dupWahl" value="update:${m.id}">
+                <span>
+                    <b>${escapeHtml(name)}</b>
+                    ${details ? `<small>${escapeHtml(details)}</small>` : ''}
+                </span>
+            </label>`;
+        }).join('');
+
+        const schliessen = (wert) => { overlay.classList.remove('active'); resolve(wert); };
+
+        document.getElementById('dupNeuAnlegenBtn').onclick = () => schliessen('neu');
+        document.getElementById('dupAbbrechenBtn').onclick = () => schliessen(null);
+        document.getElementById('dupUebernehmenBtn').onclick = () => {
+            const gewaehlt = liste.querySelector('input[name="dupWahl"]:checked');
+            schliessen(gewaehlt ? gewaehlt.value : null);
+        };
+
+        overlay.classList.add('active');
+    });
+}
+
+// ============================================================
+// 13c. DUPLIKAT-AUFRÄUMWERKZEUG
+// ============================================================
+document.getElementById('dupCleanupOpenBtn').addEventListener('click', dupCleanupOeffnen);
+document.getElementById('dupCleanupCloseBtn').addEventListener('click', () =>
+    document.getElementById('dupCleanupOverlay').classList.remove('active'));
+
+async function dupCleanupOeffnen() {
+    const overlay = document.getElementById('dupCleanupOverlay');
+    const sub = document.getElementById('dupCleanupSub');
+    const box = document.getElementById('dupCleanupGruppen');
+    overlay.classList.add('active');
+    sub.textContent = 'Wird geladen…';
+    box.innerHTML = '';
+
+    try {
+        const res = await apiRequest('/leads/duplicates');
+        const r = await res.json();
+        if (!r.success) throw new Error(r.error);
+        dupCleanupGruppenZeichnen(r.gruppen || []);
+    } catch (error) {
+        sub.textContent = '❌ ' + error.message;
+    }
+}
+
+function dupCleanupGruppenZeichnen(gruppen) {
+    const sub = document.getElementById('dupCleanupSub');
+    const box = document.getElementById('dupCleanupGruppen');
+
+    if (gruppen.length === 0) {
+        sub.textContent = 'Keine Duplikate gefunden. Der Bestand ist sauber.';
+        box.innerHTML = '';
+        return;
+    }
+
+    sub.textContent = `${gruppen.length} mögliche Duplikat-Gruppe${gruppen.length === 1 ? '' : 'n'} gefunden.`;
+
+    const grundText = { email: 'Gleiche E-Mail', phone: 'Gleiches Telefon', mobile: 'Gleiches Mobil', fuzzy: 'Ähnlicher Name' };
+
+    box.innerHTML = gruppen.map((g, gi) => `
+        <div class="dcg-gruppe" data-gruppe="${gi}">
+            <span class="dcg-grund">${grundText[g.grund] || 'Ähnlich'}</span>
+            ${g.leads.map((l, li) => {
+                const name = `${l.title ? l.title + ' ' : ''}${l.first_name || ''} ${l.last_name || ''}`.trim() || 'Unbenannt';
+                const details = [l.company, l.email, l.phone || l.mobile, l.city].filter(Boolean).join(' · ');
+                return `
+                <label class="dcg-lead">
+                    <input type="radio" name="dcg${gi}" value="${l.id}" ${li === 0 ? 'checked' : ''}>
+                    <span>
+                        <b>${escapeHtml(name)}${li === 0 ? '<span class="dcg-behalten-tag">BEHALTEN</span>' : ''}</b>
+                        ${details ? `<small>${escapeHtml(details)}</small>` : ''}
+                        <small>Erfasst: ${l.created_at ? new Date(l.created_at).toLocaleDateString('de-DE') : '–'}</small>
+                    </span>
+                </label>`;
+            }).join('')}
+            <div class="dcg-actions">
+                <button class="dcg-ignorieren" onclick="dupCleanupIgnorieren(${gi})">Ignorieren</button>
+                <button class="dcg-loeschen" onclick="dupCleanupZusammenfuehren(${gi})">Übrige löschen</button>
+            </div>
+        </div>
+    `).join('');
+
+    // Auswahl merken, welcher Lead "behalten" markiert ist
+    box.querySelectorAll('.dcg-gruppe').forEach(el => {
+        el.querySelectorAll('input[type=radio]').forEach(r => {
+            r.addEventListener('change', () => {
+                el.querySelectorAll('.dcg-behalten-tag').forEach(t => t.remove());
+                const label = r.closest('label').querySelector('b');
+                label.insertAdjacentHTML('beforeend', '<span class="dcg-behalten-tag">BEHALTEN</span>');
+            });
+        });
+    });
+}
+
+function dupCleanupIgnorieren(gi) {
+    document.querySelector(`.dcg-gruppe[data-gruppe="${gi}"]`)?.remove();
+}
+
+// Loescht alle Leads einer Gruppe AUSSER dem markierten "Behalten"-
+// Eintrag. Nutzt den bereits vorhandenen Einzel-Loeschendpunkt -
+// kein neuer Massenloeschweg noetig, die Gruppen sind klein (2-3).
+async function dupCleanupZusammenfuehren(gi) {
+    const gruppe = document.querySelector(`.dcg-gruppe[data-gruppe="${gi}"]`);
+    if (!gruppe) return;
+
+    const behalten = gruppe.querySelector('input[type=radio]:checked')?.value;
+    const alle = [...gruppe.querySelectorAll('input[type=radio]')].map(r => r.value);
+    const loeschen = alle.filter(id => id !== behalten);
+
+    if (!confirm(`${loeschen.length} Kontakt(e) endgültig löschen? Der markierte Eintrag bleibt erhalten.`)) return;
+
+    const buttons = gruppe.querySelectorAll('.dcg-actions button');
+    buttons.forEach(b => b.disabled = true);
+
+    try {
+        for (const id of loeschen) {
+            await apiRequest(`/leads/${id}`, { method: 'DELETE' });
+        }
+        gruppe.remove();
+        await loadLeads();
+        if (document.querySelectorAll('.dcg-gruppe').length === 0) {
+            document.getElementById('dupCleanupSub').textContent = 'Keine Duplikate mehr übrig.';
+        }
+    } catch (error) {
+        alert('❌ ' + error.message);
+        buttons.forEach(b => b.disabled = false);
+    }
+}
+
+// ============================================================
 // 14. SCAN: SPEICHERN (Lead + Fragebogen in einem Rutsch)
 // ============================================================
 document.getElementById('saveBtn').addEventListener('click', async () => {
@@ -4322,11 +4639,16 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
     saveBtn.textContent = '⏳ Speichere...';
 
     try {
-        const response = await apiRequest('/leads', { method: 'POST', body: JSON.stringify({ lead: leadData }) });
-        const result = await response.json();
-        if (!result.success) throw new Error(result.error || 'Speichern fehlgeschlagen');
+        const gespeichert = await leadSpeichernMitDuplikatCheck(leadData);
+        if (!gespeichert) {
+            // Nutzer hat den Duplikat-Dialog abgebrochen - Formular
+            // bleibt erhalten, nichts wurde veraendert.
+            saveBtn.disabled = false;
+            saveBtn.textContent = '💾 Speichern';
+            return;
+        }
 
-        const leadId = result.data.id;
+        const leadId = gespeichert.id;
 
         // Fragebogen-Antworten direkt mitschicken, falls ausgefüllt
         let questionnaireSaved = false;
@@ -7112,7 +7434,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = getUser();
     if (user && getToken()) showApp(user);
     else showLogin();
-    console.log('🚀 LeadCapture PWA v42.0.0 geladen (Termin-Knopf, Sterne im Formular)');
+    console.log('🚀 LeadCapture PWA v44.0.0 geladen (Kamera-Rückfall)');
 });
 </script>
 </body>
