@@ -105,12 +105,14 @@
         .result-info { font-size: 12px; color: #6b7a8f; margin-bottom: 8px; }
 
         /* ===== LEAD LIST ===== */
-        .lead-card { background: white; border-radius: 12px; padding: 12px; margin-bottom: 8px; border: 1px solid #eef2f7; cursor: pointer; transition: all 0.2s; }
+        .lead-card { background: white; border-radius: 12px; padding: 12px; margin-bottom: 8px; border: 1px solid #eef2f7; cursor: pointer; transition: all 0.2s; position: relative; }
         .lead-card:active { background: #E8F4FD; }
         .lead-card .name { font-weight: 600; color: #1a1a1a; }
         .lead-card .company { color: #0066AA; font-weight: 500; font-size: 13px; }
         .lead-card .details { font-size: 13px; color: #4a5568; margin-top: 2px; }
         .lead-card .meta { font-size: 11px; color: #a0aec0; margin-top: 4px; }
+        /* Platz fuer die beiden runden Historie-Icons oben rechts (wie auf der Terminkarte) */
+        .lead-card .lead-card-head { padding-right: 82px; }
         /* Sofort-Aktionen auf der Lead-Karte: Follow-up breit,
            daneben Anrufen / Mailen / Route als gleich grosse Felder.
            Bewusst grosszuegig, weil sie am Messestand mit dem Daumen
@@ -2678,10 +2680,17 @@ async function prioritaetSetzen(leadId, wert) {
 function leadCardHtml(lead, highlight, term = '') {
     const name = `${lead.title ? highlight(lead.title) + ' ' : ''}${highlight(lead.first_name)} ${highlight(lead.last_name)}`.trim();
     const versteckt = verstecktenTrefferFinden(lead, term);
+    const kontaktName = `${lead.first_name || ''} ${lead.last_name || ''}`.trim();
 
     return `
         <div class="lead-card" onclick="openLeadDetail('${lead.id}')">
-            <div><span class="name">${name || 'Unbekannt'}</span> · <span class="company">${lead.company ? highlight(lead.company) : 'Keine Firma'}</span></div>
+            <div class="appt-hist-group">
+                <button class="appt-history-btn contact" title="Bisherige Termine mit ${escapeHtml(kontaktName || 'diesem Kontakt')}"
+                    onclick="event.stopPropagation(); openContactHistory('${lead.id}')">&#128100;</button>
+                <button class="appt-history-btn" title="Bisherige Termine bei ${escapeHtml(lead.company || 'dieser Firma')}"
+                    onclick="event.stopPropagation(); openLeadHistory('${lead.id}')">&#127970;</button>
+            </div>
+            <div class="lead-card-head"><span class="name">${name || 'Unbekannt'}</span> · <span class="company">${lead.company ? highlight(lead.company) : 'Keine Firma'}</span></div>
             ${prioSterneHtml(lead)}
             <div class="details">${lead.position ? highlight(lead.position) : 'Keine Position'} ${lead.email ? '· ✉️ ' + highlight(lead.email) : ''} ${lead.phone ? '· 📞 ' + highlight(lead.phone) : ''}</div>
             ${lead.city ? `<div class="details">📍 ${highlight(lead.city)}${lead.country ? ', ' + highlight(lead.country) : ''}</div>` : ''}
