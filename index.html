@@ -2669,7 +2669,7 @@ function applyLeadsHistogramFilter(leads) {
         : '';
 
     document.getElementById('leadsFilterBar').style.display = 'flex';
-    document.getElementById('leadsFilterLabel').textContent =
+    document.getElementById('leadsFilterLabel').innerHTML =
         `<i class=lc-i-calendar></i> ${label}: ${filtered.length} Lead${filtered.length === 1 ? '' : 's'}${nutzerHinweis}`;
     leadsCount.textContent = `${filtered.length} / ${leads.length}`;
 
@@ -4342,7 +4342,7 @@ function renderScanQuestionnaire() {
         scanQuestions = [];
         scanQuestionnaireForm.innerHTML = '';
         scanQuestionnaireEmpty.style.display = 'block';
-        scanQuestionnaireEmpty.textContent = Object.keys(templates).length || getActiveQuestions().length
+        scanQuestionnaireEmpty.innerHTML = Object.keys(templates).length || getActiveQuestions().length
             ? 'Wähle oben eine Vorlage, um sie direkt hier auszufüllen.'
             : 'Noch keine Fragebögen angelegt – das geht unter <i class=lc-i-form></i> Fragebogen.';
         return;
@@ -4426,7 +4426,7 @@ function duplikatDialogZeigen(duplikatInfo, neuerLead) {
         const overlay = document.getElementById('dupOverlay');
         const exakt = duplikatInfo.code === 'DUPLICATE_EXACT';
 
-        document.getElementById('dupTitel').textContent = exakt
+        document.getElementById('dupTitel').innerHTML = exakt
             ? '<i class=lc-i-warn></i> Vermutlich bereits vorhanden'
             : '<i class=lc-i-search></i> Ähnlicher Kontakt gefunden';
         document.getElementById('dupHinweis').textContent = exakt
@@ -6528,9 +6528,9 @@ async function loadCompanyOverview(anchorLeadId, scope, mode = 'company') {
         const personName = `${lead?.first_name || ''} ${lead?.last_name || ''}`.trim();
 
         // Im Kontakt-Modus steht die Person im Titel, im Firmen-Modus die Firma
-        document.getElementById('histTitle').textContent = mode === 'contact'
-            ? '<i class=lc-i-user></i> ' + (personName || 'Unbenannt')
-            : '<i class=lc-i-building></i> ' + (result.company || personName || 'Ohne Firma');
+        document.getElementById('histTitle').innerHTML = mode === 'contact'
+            ? '<i class=lc-i-user></i> ' + escapeHtml(personName || 'Unbenannt')
+            : '<i class=lc-i-building></i> ' + escapeHtml(result.company || personName || 'Ohne Firma');
 
         renderHistory(result.data || [], {
             company: result.company,
@@ -6712,7 +6712,7 @@ function renderGoalPanel() {
     if (goal === 0) {
         hint.textContent = 'Zielverfolgung ist aus';
     } else if (currentWeek.achieved) {
-        hint.textContent = streak > 1
+        hint.innerHTML = streak > 1
             ? `Ziel erreicht · ${streak} Wochen in Folge <i class=lc-i-check></i>`
             : 'Ziel erreicht <i class=lc-i-check></i>';
     } else {
