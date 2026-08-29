@@ -2274,7 +2274,7 @@ document.getElementById('featuresBtn').addEventListener('click', async () => {
             : f.active
                 ? (f.validUntil ? `aktiv bis ${new Date(f.validUntil).toLocaleDateString('de-DE')}` : 'aktiv')
                 : 'nicht freigeschaltet';
-        return `${f.active ? '<i class=lc-i-check></i>' : '<i class=lc-i-lock></i>'} ${f.name} – ${status}`;
+        return `${f.name} – ${status}`;
     };
     alert('Ihre Module\n\n' + list.map(fmt).join('\n'));
 });
@@ -3038,7 +3038,7 @@ const statusText = document.getElementById('statusText');
 const errorBox = document.getElementById('errorBox');
 
 function showError(msg) { errorBox.textContent = msg; errorBox.style.display = 'block'; setTimeout(() => errorBox.style.display = 'none', 6000); }
-function setStatus(msg, show) { statusText.textContent = msg; statusDiv.style.display = show ? 'flex' : 'none'; }
+function setStatus(msg, show) { statusText.innerHTML = msg; statusDiv.style.display = show ? 'flex' : 'none'; }
 
 const fields = {
     title: document.getElementById('title'),
@@ -6506,7 +6506,7 @@ apptOverlay.addEventListener('click', (e) => { if (e.target === apptOverlay) clo
 const histOverlay = document.getElementById('histOverlay');
 
 // Gemeinsamer Lader für BEIDE Einstiege:
-//   - <i class=lc-i-building></i>-Icon auf der Terminkarte -> scope 'past' (nur Gelaufenes)
+//   - Firmen-Icon auf der Terminkarte -> scope 'past' (nur Gelaufenes)
 //   - Firma in der Suche anklicken -> scope 'all' (Kontakte + alle Aktivitäten)
 // mode: 'company' = alle Ansprechpartner der Firma (Gebaeude-Icon)
 //       'contact' = nur dieser eine Kontakt (Personen-Icon)
@@ -6571,7 +6571,7 @@ function renderHistory(items, meta = {}) {
     const contactCount = meta.contactCount || contacts.length || 1;
 
     // Kontakte-Block: nur bei der "alle Aktivitäten"-Ansicht relevant,
-    // beim <i class=lc-i-building></i>-Icon (nur Vergangenes) würde er nur Rauschen hinzufügen.
+    // beim Firmen-Icon (nur Vergangenes) würde er nur Rauschen hinzufügen.
     const contactsHtml = (meta.scope === 'all' && contacts.length > 0) ? `
         <div class="hist-contacts-label"><i class=lc-i-users></i> ${contacts.length} Kontakt${contacts.length === 1 ? '' : 'e'}</div>
         <div class="hist-contacts">
