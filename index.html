@@ -2616,9 +2616,9 @@ function leadCardHtml(lead, highlight, term = '') {
         <div class="lead-card" onclick="openLeadDetail('${lead.id}')">
             <div class="appt-hist-group">
                 <button class="appt-history-btn contact" title="Bisherige Termine mit ${escapeHtml(kontaktName || 'diesem Kontakt')}"
-                    onclick="event.stopPropagation(); openContactHistory('${lead.id}')">&#128100;</button>
+                    onclick="event.stopPropagation(); openContactHistory('${lead.id}')"><i class=lc-i-user></i></button>
                 <button class="appt-history-btn" title="Bisherige Termine bei ${escapeHtml(lead.company || 'dieser Firma')}"
-                    onclick="event.stopPropagation(); openLeadHistory('${lead.id}')">&#127970;</button>
+                    onclick="event.stopPropagation(); openLeadHistory('${lead.id}')"><i class=lc-i-building></i></button>
             </div>
             <div class="lead-card-head"><span class="name">${name || 'Unbekannt'}</span> · <span class="company">${lead.company ? highlight(lead.company) : 'Keine Firma'}</span></div>
             ${prioSterneHtml(lead)}
@@ -2910,8 +2910,8 @@ function openLeadDetail(leadId) {
             if (lead.phone && lead.mobile) {
                 const useMobile = confirm(
                     `Welche Nummer anrufen?\n\n`
-                    + `OK = <i class=lc-i-mobile></i> Mobil (${lead.mobile})\n`
-                    + `Abbrechen = <i class=lc-i-phone></i> Festnetz (${lead.phone})`
+                    + `OK = Mobil (${lead.mobile})\n`
+                    + `Abbrechen = Festnetz (${lead.phone})`
                 );
                 dialNumber(useMobile ? lead.mobile : lead.phone);
             } else {
@@ -2988,8 +2988,8 @@ function openLeadDetail(leadId) {
             document.getElementById('detailEditBtn').style.display = 'block';
             openLeadDetail(lead.id);
             alert(result.geocoding
-                ? '<i class=lc-i-check></i> Lead aktualisiert! Die neue Adresse wird im Hintergrund verortet.'
-                : '<i class=lc-i-check></i> Lead aktualisiert!');
+                ? 'Lead aktualisiert! Die neue Adresse wird im Hintergrund verortet.'
+                : 'Lead aktualisiert!');
         } catch (error) { alert('Fehler: ' + error.message); }
     };
 
@@ -4927,7 +4927,7 @@ async function saveTemplate(name) {
         return true;
     } catch (error) {
         console.error('❌ Fragebogen speichern:', error);
-        alert(`❌ ${error.message}`);
+        alert(error.message);
         return false;
     }
 }
@@ -4988,7 +4988,7 @@ async function deleteTemplate(name) {
         alert(`Vorlage "${record.name}" gelöscht.`);
     } catch (error) {
         console.error('❌ Fragebogen löschen:', error);
-        alert(`❌ ${error.message}`);
+        alert(error.message);
     }
 }
 
@@ -5767,9 +5767,9 @@ function renderAppointments() {
         <div class="appt-card status-${escapeHtml(a.status)}">
             ${lead ? `<div class="appt-hist-group">
                 <button class="appt-history-btn contact" title="Bisherige Termine mit ${escapeHtml(contact || 'diesem Kontakt')}"
-                    onclick="openContactHistory('${a.lead_id}')">&#128100;</button>
+                    onclick="openContactHistory('${a.lead_id}')"><i class=lc-i-user></i></button>
                 <button class="appt-history-btn" title="Bisherige Termine bei ${escapeHtml(company)}"
-                    onclick="openLeadHistory('${a.lead_id}')">&#127970;</button>
+                    onclick="openLeadHistory('${a.lead_id}')"><i class=lc-i-building></i></button>
             </div>` : ''}
             <div class="appt-body" onclick="openApptModal('${a.id}')">
                 <div class="appt-company">${escapeHtml(company)}</div>
@@ -5782,17 +5782,17 @@ function renderAppointments() {
                 <!-- Follow-up direkt aus dem Termin: uebernimmt den Lead
                      und schlaegt den naechsten Werktag vor. -->
                 <button class="act-followup" onclick="openTodoModal(null, '${a.lead_id || ''}', '${escapeHtml(company)}')">✓ Follow-up</button>
-                <button class="act-icon" ${(lead?.mobile || lead?.phone) ? `onclick="dialNumber('${escapeHtml(lead.mobile || lead.phone)}')"` : 'disabled'}>${lead?.mobile ? '&#128241;' : '&#128222;'}</button>
+                <button class="act-icon" ${(lead?.mobile || lead?.phone) ? `onclick="dialNumber('${escapeHtml(lead.mobile || lead.phone)}')"` : 'disabled'}>${lead?.mobile ? '<i class=lc-i-mobile></i>' : '<i class=lc-i-phone></i>'}</button>
                 <button class="act-icon" ${lead?.email ? `onclick="window.location.href='mailto:${escapeHtml(lead.email)}'"` : 'disabled'}>&#9993;</button>
                 ${(() => {
                     // Koordinaten bevorzugen, sonst Adresse. a.location
                     // enthaelt die beim Anlegen uebernommene Anschrift.
                     const ziel = navigationsZiel(a, a.location || leadAdresse(lead));
-                    if (!ziel) return `<button class="act-icon" disabled title="Keine Adresse hinterlegt">&#128205;</button>`;
+                    if (!ziel) return `<button class="act-icon" disabled title="Keine Adresse hinterlegt"><i class=lc-i-pin></i></button>`;
                     const ruf = ziel.adresse
                         ? `openMaps('${escapeHtml(ziel.adresse).replace(/'/g, "\\'")}')`
                         : `openMaps(${ziel.lat},${ziel.lon})`;
-                    return `<button class="act-icon" onclick="${ruf}" title="${escapeHtml(ziel.adresse || 'Route anzeigen')}">&#128205;</button>`;
+                    return `<button class="act-icon" onclick="${ruf}" title="${escapeHtml(ziel.adresse || 'Route anzeigen')}"><i class=lc-i-pin></i></button>`;
                 })()}
             </div>
         </div>`);
@@ -6286,7 +6286,7 @@ document.getElementById('apptSaveBtn').addEventListener('click', async () => {
             if (!before && goalStats?.currentWeek?.achieved) {
                 const s = goalStats.streak;
                 alert(`Wochenziel erreicht!\n\n${goalStats.currentWeek.count} von ${goalStats.goal} Terminen`
-                    + (s > 1 ? `\n<i class=lc-i-streak></i> ${s} Wochen in Folge` : ''));
+                    + (s > 1 ? `\n${s} Wochen in Folge` : ''));
             }
         }
     } catch (error) {
@@ -7022,7 +7022,7 @@ document.getElementById('delUserConfirmBtn').addEventListener('click', async () 
             + (verschoben > 0
                 ? `\n\n${verschoben} Datensätze ${mode === 'reassign' ? 'wurden übertragen' : 'bleiben ohne Zuordnung erhalten'}.`
                 : '')
-            + (r.hinweis ? `\n\n<i class=lc-i-warn></i> ${r.hinweis}` : ''));
+            + (r.hinweis ? `\n\n${r.hinweis}` : ''));
     } catch (error) {
         alert('' + error.message);
         btn.disabled = false;
