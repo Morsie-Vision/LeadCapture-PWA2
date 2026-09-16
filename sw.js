@@ -1,11 +1,14 @@
-// sw.js - Verbesserte Version mit automatischem Update
-const CACHE_NAME = 'leadcapture-v6';
+// sw.js - Offline cache for the static app shell.
+const CACHE_NAME = 'leadcapture-v7';
 const urlsToCache = [
     './',
     './index.html',
     './manifest.json',
-    './icons/icon-192.png',
-    './icons/icon-512.png'
+    './integrity.js',
+    './icons/icon-map.svg',
+    './icons/icon-questionnaire.png',
+    './icons/icon-scan.png',
+    './icons/icon-stats.png'
 ];
 
 // Installations-Event
@@ -46,6 +49,10 @@ self.addEventListener('activate', event => {
 
 // Fetch-Event (mit Cache-Fallback)
 self.addEventListener('fetch', event => {
+    const requestUrl = new URL(event.request.url);
+    // Never cache API responses or third-party resources. The app shell is
+    // same-origin only; API calls must always reflect the current session.
+    if (requestUrl.origin !== self.location.origin) return;
     event.respondWith(
         caches.match(event.request)
             .then(response => {
@@ -78,21 +85,6 @@ self.addEventListener('message', event => {
     }
 });
 
-// Service Worker Update erzwingen
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations().then(registrations => {
-        for (let reg of registrations) {
-            reg.update();   // prüft auf neue sw.js
-        }
-    });
-
-    // Auf Änderungen lauschen und neu laden
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-        window.location.reload();
-    });
-}
-
-
 // Klick auf die Benachrichtigung öffnet die App (bzw. holt ein
 // bereits offenes Fenster nach vorn)
 self.addEventListener('notificationclick', (event) => {
@@ -107,4 +99,4 @@ self.addEventListener('notificationclick', (event) => {
     );
 });
 
-console.log('✅ Service Worker geladen (Version 6)');
+console.log('✅ Service Worker geladen (Version 7)');
