@@ -1266,6 +1266,7 @@
         <span>👤 <span id="userName"></span> · <span class="tenant" id="tenantName"></span></span>
         <span>
             <button class="btn-logout" id="featuresBtn" style="background:#E8F4FD; color:#0066AA; margin-right:6px;">Module</button>
+            <button class="btn-logout" id="passwordBtn">Passwort ändern</button>
             <button class="btn-logout" id="logoutBtn2">Logout</button>
         </span>
     </div>
@@ -1274,6 +1275,7 @@
     <div id="offlineLeiste" style="display:none;">
         <span class="ol-punkt"></span>
         <span id="offlineText"></span>
+        <button id="offlineSichern" type="button">Scans sichern</button>
         <button id="offlineJetzt">Jetzt versuchen</button>
     </div>
 
@@ -1963,12 +1965,29 @@
     </div>
 </div>
 
+<dialog id="passwordDialog" style="border:0;border-radius:16px;padding:24px;max-width:420px;width:90%;">
+    <form id="passwordForm" style="display:flex;flex-direction:column;gap:12px;">
+        <h3>Passwort ändern</h3>
+        <p id="passwordHint">Mindestens 12 Zeichen verwenden.</p>
+        <input id="newPassword" type="password" minlength="12" required autocomplete="new-password" placeholder="Neues Passwort" aria-label="Neues Passwort">
+        <input id="repeatPassword" type="password" minlength="12" required autocomplete="new-password" placeholder="Passwort wiederholen" aria-label="Passwort wiederholen">
+        <p id="passwordError" role="alert"></p>
+        <button class="btn btn-primary" id="passwordSave" type="submit">Passwort speichern</button>
+        <button class="btn btn-secondary" id="passwordCancel" type="button">Abbrechen</button>
+        <button class="btn btn-secondary" id="passwordLogout" type="button">Abmelden</button>
+    </form>
+</dialog>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="integrity.js"></script>
 <script>
 // ============================================================
 // 1. KONFIGURATION
 // ============================================================
 const API_URL = 'https://leadcapture-backend.onrender.com/api';
+let authGeneration = 0;
+let passwordRequired = false;
+const { actionAttrs, ownerKey, scopedKey, ApiError } = LCIntegrity;
 let mapInstance = null, mapMarkers = [], currentLeadDetail = null, allLeads = [];
 
 // ============================================================
@@ -1983,12 +2002,17 @@ function setToken(t) { localStorage.setItem(TOKEN_KEY, t); }
 function getRefreshToken() { return localStorage.getItem(REFRESH_TOKEN_KEY); }
 function setRefreshToken(t) { if (t) localStorage.setItem(REFRESH_TOKEN_KEY, t); }
 function removeToken() {
+    authGeneration++;
+    resetSessionView();
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
 }
-function getUser() { const u = localStorage.getItem(USER_KEY); return u ? JSON.parse(u) : null; }
-function setUser(u) { localStorage.setItem(USER_KEY, JSON.stringify(u)); }
+function getUser() { try { return JSON.parse(localStorage.getItem(USER_KEY) || 'null'); } catch { return null; } }
+function setUser(u) {
+    if (ownerKey(getUser()) !== ownerKey(u)) { authGeneration++; resetSessionView(); }
+    localStorage.setItem(USER_KEY, JSON.stringify(u));
+}
 
 // ============================================================
 // 3. API HELPER (MIT AUTOMATISCHEM TOKEN-REFRESH)
@@ -2036,103 +2060,100 @@ async function sitzungSichern() {
 
     if (Date.now() > ablauf - PUFFER_MS) {
         const neu = await refreshAccessToken();
-        if (neu) console.log('🔄 Sitzung erneuert');
+        if (!neu) { removeToken(); showLogin(); throw new ApiError('Bitte erneut anmelden.', 401, 'NO_SESSION'); }
+        console.log('🔄 Sitzung erneuert');
     }
 }
 
 // Beim Zurueckkehren in die App pruefen – das ist der Moment,
 // in dem der Nutzer den Abbruch sonst bemerkt haette.
 document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') sitzungSichern();
+    if (document.visibilityState === 'visible') sitzungSichern().catch(console.warn);
 });
-window.addEventListener('focus', sitzungSichern);
-window.addEventListener('online', sitzungSichern);
+window.addEventListener('focus', () => sitzungSichern().catch(console.warn));
+window.addEventListener('online', () => sitzungSichern().catch(console.warn));
 
 // Zusaetzlich regelmaessig, solange die App offen liegt
-setInterval(sitzungSichern, 4 * 60 * 1000);
+setInterval(() => sitzungSichern().catch(console.warn), 4 * 60 * 1000);
 
 async function refreshAccessToken() {
     const rt = getRefreshToken();
     if (!rt) return null;
     if (refreshPromise) return refreshPromise;
-
-    refreshPromise = (async () => {
+    const generation = authGeneration;
+    const identity = ownerKey(getUser());
+    const task = (async () => {
+        let res;
         try {
-            const res = await fetch(`${API_URL}/auth/refresh`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+            res = await fetch(`${API_URL}/auth/refresh`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ refresh_token: rt })
             });
-            const result = await res.json();
-            if (!res.ok || !result.success) return null;
-            setToken(result.data.token);
-            setRefreshToken(result.data.refreshToken);
-            return result.data.token;
-        } catch (err) {
-            // Netzproblem: Die Sitzung ist deshalb nicht ungueltig.
-            // Ein Abmelden waere hier falsch – der Nutzer haette
-            // seine Arbeit verloren, obwohl nur das WLAN weg war.
-            console.warn('Sitzung konnte nicht erneuert werden:', err.message);
-            return null;
-        } finally {
-            refreshPromise = null;
-        }
+        } catch { throw new ApiError('Verbindung unterbrochen. Die Sitzung bleibt erhalten.', 0, 'NETWORK'); }
+        if (generation !== authGeneration || identity !== ownerKey(getUser())) throw new ApiError('Konto wurde gewechselt.', 0, 'SESSION_CHANGED');
+        if (res.status === 401 || res.status === 403) return null;
+        if (!res.ok) throw new ApiError('Sitzung konnte vorübergehend nicht erneuert werden.', res.status, 'REFRESH_UNAVAILABLE');
+        let result;
+        try { result = await res.json(); } catch { throw new ApiError('Ungültige Serverantwort. Bitte erneut versuchen.', 502); }
+        if (!result.success || !result.data?.token) throw new ApiError('Sitzung konnte nicht erneuert werden.', 502);
+        if (generation !== authGeneration || identity !== ownerKey(getUser())) throw new ApiError('Konto wurde gewechselt.', 0, 'SESSION_CHANGED');
+        setToken(result.data.token);
+        setRefreshToken(result.data.refreshToken);
+        return result.data.token;
     })();
-
-    return refreshPromise;
+    refreshPromise = task;
+    try { return await task; } finally { if (refreshPromise === task) refreshPromise = null; }
 }
 
 async function apiRequest(endpoint, options = {}, isRetry = false) {
-    const token = getToken();
-    if (!token) throw new Error('Nicht eingeloggt');
-
-    const response = await fetch(`${API_URL}${endpoint}`, {
-        ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-            ...(options.headers || {})
+    const generation = authGeneration, identity = ownerKey(getUser());
+    if (!getToken()) throw new ApiError('Nicht eingeloggt', 401, 'NO_SESSION');
+    const { acceptedStatuses = [], expectedOwner, ...fetchOptions } = options;
+    const assertSession = () => {
+        if (generation !== authGeneration || identity !== ownerKey(getUser()) || (expectedOwner && expectedOwner !== identity)) {
+            throw new ApiError('Konto wurde gewechselt.', 0, 'SESSION_CHANGED');
         }
-    });
-
+    };
+    assertSession();
+    if (!isRetry) await sitzungSichern();
+    assertSession();
+    let response;
+    try {
+        response = await fetch(`${API_URL}${endpoint}`, {
+            ...fetchOptions,
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}`, ...(fetchOptions.headers || {}) }
+        });
+    } catch { throw new ApiError('Netzwerkverbindung unterbrochen.', 0, 'NETWORK'); }
+    assertSession();
+    let body = null;
+    if ((response.headers.get('content-type') || '').includes('json')) {
+        try { body = await response.clone().json(); } catch { /* handled as HTTP error below */ }
+    }
+    if (acceptedStatuses.includes(response.status)) return response;
+    if (body?.code === 'PASSWORD_CHANGE_REQUIRED') {
+        openPasswordDialog(true);
+        throw new ApiError(body.error, response.status, body.code);
+    }
+    if (body?.code === 'FEATURE_NOT_LICENSED') {
+        if (body.feature) { activeFeatures.delete(body.feature); applyFeatureVisibility(); }
+        throw new ApiError(body.error, response.status, body.code);
+    }
+    if (body?.code === 'TENANT_NOT_ACTIVATED' || body?.code === 'NOT_TENANT_ADMIN') {
+        throw new ApiError(body.error, response.status, body.code);
+    }
     if (response.status === 401 || response.status === 403) {
-        // WICHTIG: Ein 403 kann zwei Ursachen haben – abgelaufene
-        // Session ODER fehlende Modul-Lizenz. Nur bei Ersterem darf
-        // ausgeloggt werden, sonst fliegt der Nutzer beim Klick auf
-        // ein nicht gebuchtes Modul aus der App.
-        if (response.status === 403) {
-            const clone = response.clone();
-            try {
-                const body = await clone.json();
-                // Mandant wartet noch auf Freigabe -> klare Meldung
-                // statt Logout mit "Session abgelaufen".
-                if (body?.code === 'TENANT_NOT_ACTIVATED') {
-                    throw new Error(body.error || 'Ihr Zugang wurde noch nicht freigeschaltet.');
-                }
-                if (body?.code === 'FEATURE_NOT_LICENSED') {
-                    // Lizenzlage hat sich geändert -> Kacheln aktualisieren
-                    if (body.feature) {
-                        activeFeatures.delete(body.feature);
-                        try { localStorage.setItem(FEATURES_KEY, JSON.stringify([...activeFeatures])); } catch {}
-                        applyFeatureVisibility();
-                    }
-                    throw new Error(body.error || 'Dieses Modul ist nicht freigeschaltet.');
-                }
-            } catch (err) {
-                // Weiterwerfen, wenn es unsere Lizenzmeldung war
-                if (err instanceof Error && err.message && !err.message.includes('JSON')) throw err;
-            }
-        }
-
         if (!isRetry) {
             const newToken = await refreshAccessToken();
+            assertSession();
             if (newToken) return apiRequest(endpoint, options, true);
         }
-        removeToken();
-        showLogin();
-        throw new Error('Session abgelaufen – bitte erneut anmelden');
+        removeToken(); showLogin();
+        throw new ApiError('Session abgelaufen – bitte erneut anmelden', 401, 'NO_SESSION');
     }
-
+    if (!response.ok || body?.success === false) throw new ApiError(body?.error || `Serverfehler (${response.status})`, response.status, body?.code);
+    // Guard delayed consumers too (logout while response body is being read).
+    const readJson = response.json.bind(response);
+    response.json = async () => { const result = await readJson(); assertSession(); return result; };
     return response;
 }
 
@@ -2199,6 +2220,37 @@ function dialNumber(number) {
     if (!number) return;
     window.location.href = `tel:${String(number).replace(/[\s()\-\/]/g, '')}`;
 }
+
+const actionHandlers = {
+    followup: (...args) => openTodoModal(...args),
+    appointment: (...args) => openApptModal(...args),
+    phone: number => dialNumber(number),
+    email: email => { window.location.href = 'mailto:' + email; },
+    navigate: target => target.adresse ? openMaps(target.adresse) : openMaps(target.lat, target.lon),
+    contact: id => kontaktUebernehmen(id),
+    details: id => openLeadDetail(id),
+    questionnaire: id => openLeadQuestionnaire(id),
+    deleteLead: id => confirmDeleteLead(id),
+    history: id => openLeadHistory(id),
+    contactHistory: id => openContactHistory(id),
+    priority: (...args) => prioritaetSetzen(...args),
+    toggleTodo: (...args) => toggleTodo(...args),
+    editTodo: id => openTodoModal(id),
+    deleteTodo: id => deleteTodo(id),
+    jump: (...args) => jumpToAppointment(...args)
+};
+document.addEventListener('click', event => {
+    const element = event.target.closest('[data-lc-action]');
+    if (!element || element.disabled) return;
+    const handler = actionHandlers[element.dataset.lcAction];
+    if (!handler) return;
+    event.stopPropagation();
+    try {
+        const args = JSON.parse(element.dataset.lcArgs || '[]');
+        if (!Array.isArray(args)) return;
+        Promise.resolve(handler(...args)).catch(error => alert('❌ ' + error.message));
+    } catch (error) { console.error('Aktion fehlgeschlagen:', error); }
+});
 
 function normalizeUrl(url) {
     if (!url) return '';
@@ -2280,6 +2332,12 @@ registerForm.addEventListener('submit', async (e) => {
                 </p>
                 <button class="btn btn-secondary" style="margin-top:16px; width:100%;"
                     onclick="location.reload()">Zurueck zur Anmeldung</button>`;
+            return;
+        }
+        if (result.loginRequired) {
+            showLogin();
+            loginError.textContent = result.message || 'Konto erstellt. Bitte anmelden.';
+            loginError.style.display = 'block';
             return;
         }
         showApp(result.data.user, result.data.features);
@@ -2372,7 +2430,10 @@ function showView(viewId) {
     if (viewId === 'questionnaire') { loadTemplates().then(() => loadActiveTemplate()); }
     if (viewId === 'scan') { loadTemplates().then(() => updateScanTemplateSelect()); }
     if (viewId === 'calendar') { loadCalendar(); }
-    if (viewId === 'team') { loadTeamStats(); }
+    if (viewId === 'team') {
+        const tab = hasFeature('stats') ? 'stats' : 'users';
+        document.querySelector(`.tt-btn[data-tab="${tab}"]`).click();
+    }
 }
 document.querySelectorAll('.grid-card').forEach(card => {
     card.addEventListener('click', () => {
@@ -2394,38 +2455,90 @@ document.getElementById('dashboardCalendarBtn')?.addEventListener('click', () =>
 // ============================================================
 // 8. APP ANZEIGEN / LOGOUT
 // ============================================================
-function showApp(user, features) {
+async function showApp(user, features) {
+    if (user.mustChangePassword) { openPasswordDialog(true); return; }
+    const generation = authGeneration;
+    try { await sitzungSichern(); } catch (error) {
+        if (error.code === 'NO_SESSION' || error.code === 'SESSION_CHANGED') return;
+        console.warn(error.message);
+    }
+    if (generation !== authGeneration) return;
     loginContainer.style.display = 'none';
     appContainer.style.display = 'block';
-    renderDashboard();
     userInfo.style.display = 'flex';
     userName.textContent = user.fullName || user.email;
     tenantName.textContent = user.tenant?.name || 'Unbekannt';
     userBadge.textContent = user.fullName ? user.fullName.charAt(0).toUpperCase() : '👤';
-
     if (features) setFeatures(features);
-    else applyFeatureVisibility();   // aus dem Cache
-
+    else applyFeatureVisibility();
+    await refreshFeatures();
+    if (generation !== authGeneration || passwordRequired) return;
     showView('main');
     loadLeads();
-
-    // Sitzung auffrischen, bevor die ersten Anfragen rausgehen
-    sitzungSichern();
-
-    // Beim Start pruefen: liegen noch Scans vom letzten Einsatz?
     wsAnzeigeAktualisieren();
-    if (navigator.onLine) setTimeout(() => wsVerarbeiten({ still: true }), 1200);
-
-    // Mandantenweite Fragebogen-Vorlagen nach erfolgreichem Login laden.
-    // Ohne Questionnaire-Lizenz bleibt die Funktion vollständig inaktiv.
-    if (hasFeature('questionnaire')) {
-        loadTemplates().then(() => loadActiveTemplate());
-    }
-
-    // Lizenzlage im Hintergrund gegen den Server abgleichen,
-    // damit abgelaufene Module auch ohne neuen Login verschwinden
-    refreshFeatures();
+    if (hasFeature('questionnaire')) await loadTemplates().then(() => loadActiveTemplate());
+    if (generation === authGeneration && navigator.onLine) wsVerarbeiten({ still: true });
 }
+
+function resetSessionView() {
+    refreshPromise = null;
+    allLeads = []; currentLeadDetail = null;
+    calAppointments = []; calTodos = []; calCounts = {}; calTodoCounts = {};
+    teamUsers = []; goalStats = null; selectedUserIds = null; statsUsers = [];
+    questionTemplate = []; templates = {}; templateRecords = [];
+    activeTemplateName = ''; activeTemplateId = ''; currentLeadId = null; currentLeadAnswers = {};
+    activeFeatures = new Set(); passwordRequired = false;
+    currentSearchTerm = ''; searchActive = false; showAllActive = false; leadsHistogramFilter = null;
+    document.querySelectorAll('.modal-overlay, #leadDetailOverlay, #apptOverlay, #todoOverlay, #histOverlay').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('dialog[open]').forEach(el => el.close());
+    for (const id of ['leadsList', 'searchResults', 'calList', 'histContent', 'dashboardActions', 'dashboardGoal', 'questionnaireForm', 'questionEditor']) {
+        const el = document.getElementById(id); if (el) el.replaceChildren();
+    }
+    mapMarkers.forEach(marker => mapInstance?.removeLayer(marker)); mapMarkers = [];
+    closeCamera(); clearForm();
+}
+
+function openPasswordDialog(required = false) {
+    passwordRequired = required;
+    document.getElementById('passwordHint').textContent = required
+        ? 'Bitte ersetze dein Startpasswort, bevor du die App verwendest. Mindestens 12 Zeichen.'
+        : 'Mindestens 12 Zeichen verwenden.';
+    document.getElementById('passwordCancel').hidden = required;
+    document.getElementById('passwordError').textContent = '';
+    const dialog = document.getElementById('passwordDialog');
+    if (!dialog.open) dialog.showModal();
+}
+
+const passwordDialog = document.getElementById('passwordDialog');
+passwordDialog.addEventListener('cancel', event => { if (passwordRequired) event.preventDefault(); });
+document.getElementById('passwordBtn').addEventListener('click', () => openPasswordDialog(false));
+document.getElementById('passwordCancel').addEventListener('click', () => passwordDialog.close());
+document.getElementById('passwordLogout').addEventListener('click', () => doLogout());
+document.getElementById('passwordForm').addEventListener('submit', async event => {
+    event.preventDefault();
+    const password = document.getElementById('newPassword').value;
+    const errorBox = document.getElementById('passwordError');
+    if (password.length < 12 || password !== document.getElementById('repeatPassword').value) {
+        errorBox.textContent = 'Bitte mindestens 12 Zeichen und zwei übereinstimmende Passwörter eingeben.'; return;
+    }
+    const button = document.getElementById('passwordSave'); button.disabled = true;
+    const wasRequired = passwordRequired;
+    try {
+        await apiRequest('/account/password', { method: 'POST', body: JSON.stringify({ password }) });
+        const user = getUser(); user.mustChangePassword = false; setUser(user);
+        passwordRequired = false; passwordDialog.close(); event.target.reset();
+        if (wasRequired) await showApp(user);
+    } catch (error) { errorBox.textContent = error.message; }
+    finally { button.disabled = false; }
+});
+
+window.addEventListener('storage', event => {
+    if (event.key === USER_KEY || (event.key === TOKEN_KEY && !event.newValue)) {
+        authGeneration++; resetSessionView(); showLogin();
+        if (getToken() && getUser()) showApp(getUser());
+    }
+});
+
 function showLogin() {
     loginContainer.style.display = 'block';
     appContainer.style.display = 'none';
@@ -2523,37 +2636,22 @@ function sortLeads(leads, mode) {
 // genutzt - Suche, Statistik und Firmenuebersicht sehen dadurch
 // zwingend gleich aus.
 function leadActionsHtml(lead) {
-    // Rueckwaertskompatibel: frueher wurde nur die ID uebergeben
     if (typeof lead === 'string') lead = (allLeads || []).find(l => l.id === lead) || { id: lead };
-    const id = lead.id;
-
-    const nummer = lead.mobile || lead.phone || '';
-    const bez = [lead.company, `${lead.first_name || ''} ${lead.last_name || ''}`.trim()]
-        .filter(Boolean).join(' · ') || 'Unbenannt';
-    const ziel = navigationsZiel(lead, leadAdresse(lead));
-
-    return `
-        <div class="lead-quick">
-            <button class="lq-followup" onclick="event.stopPropagation(); openTodoModal(null, '${id}', '${escapeHtml(bez).replace(/'/g, "\\'")}')">✓ Follow-up</button>
-            <button class="lq-termin" onclick="event.stopPropagation(); openApptModal(null, '${id}')">📅 Termin</button>
-            <button class="lq-icon" ${nummer ? `onclick="event.stopPropagation(); dialNumber('${escapeHtml(nummer)}')"` : 'disabled'}
-                title="${nummer ? escapeHtml(nummer) : 'Keine Nummer hinterlegt'}">${lead.mobile ? '📱' : '📞'}</button>
-            <button class="lq-icon" ${lead.email ? `onclick="event.stopPropagation(); window.location.href='mailto:${escapeHtml(lead.email)}'"` : 'disabled'}
-                title="${lead.email ? escapeHtml(lead.email) : 'Keine E-Mail hinterlegt'}">✉️</button>
-            <button class="lq-icon" onclick="event.stopPropagation(); kontaktUebernehmen('${id}')"
-                title="In die Kontakte des Telefons übernehmen">👤</button>
-            <button class="lq-icon" ${ziel
-                ? `onclick="event.stopPropagation(); ${ziel.adresse
-                    ? `openMaps('${escapeHtml(ziel.adresse).replace(/'/g, "\\'")}')`
-                    : `openMaps(${ziel.lat},${ziel.lon})`}"`
-                : 'disabled'}
-                title="${ziel ? escapeHtml(ziel.adresse || 'Route anzeigen') : 'Keine Adresse hinterlegt'}">📍</button>
-        </div>
-        <div class="actions">
-            <button class="edit" onclick="event.stopPropagation(); openLeadDetail('${id}')">✏️ Details</button>
-            <button class="questionnaire" onclick="event.stopPropagation(); openLeadQuestionnaire('${id}')">📝 Fragebogen</button>
-            <button class="delete" onclick="event.stopPropagation(); confirmDeleteLead('${id}')">🗑️ Löschen</button>
-        </div>`;
+    const id = lead.id, number = lead.mobile || lead.phone || '';
+    const label = [lead.company, `${lead.first_name || ''} ${lead.last_name || ''}`.trim()].filter(Boolean).join(' · ') || 'Unbenannt';
+    const target = navigationsZiel(lead, leadAdresse(lead));
+    return `<div class="lead-quick">
+        <button class="lq-followup" ${actionAttrs('followup', null, id, label)}>✓ Follow-up</button>
+        <button class="lq-termin" ${actionAttrs('appointment', null, id)}>📅 Termin</button>
+        <button class="lq-icon" ${number ? actionAttrs('phone', number) : 'disabled'} title="${escapeHtml(number || 'Keine Nummer hinterlegt')}">${lead.mobile ? '📱' : '📞'}</button>
+        <button class="lq-icon" ${lead.email ? actionAttrs('email', lead.email) : 'disabled'} title="${escapeHtml(lead.email || 'Keine E-Mail hinterlegt')}">✉️</button>
+        <button class="lq-icon" ${actionAttrs('contact', id)} title="In die Kontakte übernehmen">👤</button>
+        <button class="lq-icon" ${target ? actionAttrs('navigate', target) : 'disabled'} title="${escapeHtml(target?.adresse || 'Route anzeigen')}">📍</button>
+    </div><div class="actions">
+        <button class="edit" ${actionAttrs('details', id)}>✏️ Details</button>
+        <button class="questionnaire" ${actionAttrs('questionnaire', id)}>📝 Fragebogen</button>
+        <button class="delete" ${actionAttrs('deleteLead', id)}>🗑️ Löschen</button>
+    </div>`;
 }
 
 // Felder, die durchsucht werden, aber NICHT auf der Karte stehen.
@@ -2610,7 +2708,7 @@ function prioSterneHtml(lead) {
     const aktuell = lead.priority || 0;
     const sterne = [1, 2, 3, 4, 5].map(n => `
         <button class="prio-stern ${n <= aktuell ? 'an' : ''}" type="button"
-            onclick="event.stopPropagation(); prioritaetSetzen('${lead.id}', ${n === aktuell ? 'null' : n})"
+            ${actionAttrs('priority', lead.id, n === aktuell ? null : n)}
             aria-label="${n} von 5 Sternen">${n <= aktuell ? '★' : '☆'}</button>`).join('');
     return `<span class="prio-sterne" data-prio-id="${lead.id}">${sterne}</span>`;
 }
@@ -2683,12 +2781,12 @@ function leadCardHtml(lead, highlight, term = '') {
     const kontaktName = `${lead.first_name || ''} ${lead.last_name || ''}`.trim();
 
     return `
-        <div class="lead-card" onclick="openLeadDetail('${lead.id}')">
+        <div class="lead-card" ${actionAttrs('details', lead.id)}>
             <div class="appt-hist-group">
                 <button class="appt-history-btn contact" title="Bisherige Termine mit ${escapeHtml(kontaktName || 'diesem Kontakt')}"
-                    onclick="event.stopPropagation(); openContactHistory('${lead.id}')">&#128100;</button>
+                    ${actionAttrs('contactHistory', lead.id)}>&#128100;</button>
                 <button class="appt-history-btn" title="Bisherige Termine bei ${escapeHtml(lead.company || 'dieser Firma')}"
-                    onclick="event.stopPropagation(); openLeadHistory('${lead.id}')">&#127970;</button>
+                    ${actionAttrs('history', lead.id)}>&#127970;</button>
             </div>
             <div class="lead-card-head"><span class="name">${name || 'Unbekannt'}</span> · <span class="company">${lead.company ? highlight(lead.company) : 'Keine Firma'}</span></div>
             ${prioSterneHtml(lead)}
@@ -3389,128 +3487,107 @@ async function wsAktion(modus, arbeit) {
         const ergebnis = arbeit(speicher);
         tx.oncomplete = () => erfuellen(ergebnis?.result ?? ergebnis);
         tx.onerror = () => ablehnen(tx.error);
+        tx.onabort = () => ablehnen(tx.error || new Error('Speichervorgang abgebrochen'));
     });
 }
 
-async function wsHinzufuegen(dataUrl) {
-    await wsAktion('readwrite', (sp) => sp.add({
-        bild: dataUrl,
-        erstellt: new Date().toISOString(),
-        versuche: 0
+async function wsHinzufuegen(dataUrl, user = getUser()) {
+    const owner = ownerKey(user);
+    if (!owner) throw new Error('Scans können nur einem angemeldeten Konto zugeordnet werden.');
+    await wsAktion('readwrite', sp => sp.add({
+        bild: dataUrl, erstellt: new Date().toISOString(), versuche: 0,
+        owner, tenantId: user.tenant.id, userId: user.id, scanId: crypto.randomUUID()
     }));
     await wsAnzeigeAktualisieren();
 }
 
 async function wsAlle() {
-    try { return await wsAktion('readonly', (sp) => sp.getAll()) || []; }
-    catch { return []; }
+    const owner = ownerKey(getUser());
+    if (!owner) return [];
+    return (await wsAktion('readonly', sp => sp.getAll()) || []).filter(entry => entry.owner === owner);
 }
 
-async function wsEntfernen(id) {
-    await wsAktion('readwrite', (sp) => sp.delete(id));
-}
+async function wsEntfernen(id) { await wsAktion('readwrite', sp => sp.delete(id)); }
 
-async function wsVersuchZaehlen(eintrag) {
-    eintrag.versuche = (eintrag.versuche || 0) + 1;
-    eintrag.letzterFehler = new Date().toISOString();
-    await wsAktion('readwrite', (sp) => sp.put(eintrag));
-}
-
-// Erkennt, ob ein Fehler auf fehlender Verbindung beruht.
-// Wichtig: NUR dann puffern. Ein abgelehnter Scan wegen fehlender
-// Lizenz oder ungueltigem Bild gehoert nicht in die Warteschlange -
-// er wuerde dort ewig scheitern.
 function istNetzfehler(error) {
-    if (!navigator.onLine) return true;
-    const m = String(error?.message || '').toLowerCase();
-    return m.includes('failed to fetch')
-        || m.includes('networkerror')
-        || m.includes('load failed')
-        || m.includes('netzwerk')
-        || m.includes('timeout');
+    if (error?.code === 'SESSION_CHANGED' || error?.code === 'NO_SESSION') return false;
+    if (error?.code === 'NETWORK' || !navigator.onLine) return true;
+    return /failed to fetch|networkerror|load failed|netzwerk|timeout/i.test(String(error?.message || ''));
 }
 
 let wsLaeuft = false;
-
 async function wsVerarbeiten({ still = false } = {}) {
-    if (wsLaeuft || !navigator.onLine) return;
-    const eintraege = await wsAlle();
-    if (eintraege.length === 0) return;
-
-    wsLaeuft = true;
+    const owner = ownerKey(getUser()), generation = authGeneration;
+    if (wsLaeuft || !navigator.onLine || !getToken() || !owner || !hasFeature('scan') || passwordRequired) return;
+    wsLaeuft = true; // before opening IndexedDB, so simultaneous events cannot race
     let erfolgreich = 0, gescheitert = 0;
-
-    for (const eintrag of eintraege) {
-        try {
-            const res = await apiRequest('/process-image', {
-                method: 'POST',
-                // save:true - der Lead wird direkt angelegt. Eine
-                // Nachbearbeitung waere hier nicht moeglich, der
-                // Nutzer ist laengst bei der naechsten Karte.
-                body: JSON.stringify({ image: eintrag.bild, save: true })
-            });
-            const r = await res.json();
-            if (!r.success) throw new Error(r.error || 'Verarbeitung fehlgeschlagen');
-
-            await wsEntfernen(eintrag.id);
-            erfolgreich++;
-        } catch (error) {
-            if (istNetzfehler(error)) {
-                // Netz wieder weg - Rest bleibt liegen, spaeter erneut
-                break;
-            }
-            await wsVersuchZaehlen(eintrag);
-            gescheitert++;
-            // Nach fuenf erfolglosen Versuchen aufgeben, sonst
-            // blockiert ein unlesbares Bild die ganze Schlange.
-            if (eintrag.versuche >= 5) {
-                console.warn('Scan nach 5 Versuchen verworfen:', error.message);
-                await wsEntfernen(eintrag.id);
+    try {
+        const entries = await wsAlle();
+        for (const entry of entries) {
+            if (generation !== authGeneration || owner !== ownerKey(getUser()) || !getToken()) break;
+            try {
+                if (!entry.scanId) { entry.scanId = crypto.randomUUID(); await wsAktion('readwrite', sp => sp.put(entry)); }
+                const res = await apiRequest('/process-image', {
+                    method: 'POST', expectedOwner: owner,
+                    body: JSON.stringify({ image: entry.bild, save: true, scanId: entry.scanId })
+                });
+                const result = await res.json();
+                if (!result.success || !result.saved?.id) throw new ApiError('Speicherung wurde nicht bestätigt.', 502);
+                await wsEntfernen(entry.id); erfolgreich++;
+            } catch (error) {
+                if (generation !== authGeneration || error.code === 'SESSION_CHANGED') break;
+                entry.versuche = (entry.versuche || 0) + 1;
+                entry.letzterFehler = error.message;
+                await wsAktion('readwrite', sp => sp.put(entry));
+                gescheitert++;
+                // Keep the original image for every failure, including a bad image.
+                // Pause on service/auth failures rather than hammering the remaining queue.
+                if (istNetzfehler(error) || [401, 403, 429].includes(error.status) || error.status >= 500) break;
             }
         }
-    }
-
-    wsLaeuft = false;
-    await wsAnzeigeAktualisieren();
-
-    if (erfolgreich > 0) {
-        await loadLeads();
-        if (!still) {
-            setStatus(`✅ ${erfolgreich} zwischengespeicherte${erfolgreich === 1 ? 'r' : ''} Scan${erfolgreich === 1 ? '' : 's'} verarbeitet.`, true);
-            setTimeout(() => setStatus('', false), 4000);
-        }
-    }
-    if (gescheitert > 0 && !still) {
-        showError(`${gescheitert} Scan(s) konnten nicht ausgewertet werden und werden erneut versucht.`);
-    }
+    } catch (error) { console.warn('Warteschlange:', error.message); }
+    finally { wsLaeuft = false; await wsAnzeigeAktualisieren().catch(console.warn); }
+    if (generation !== authGeneration) return;
+    if (erfolgreich) { await loadLeads(); if (!still) setStatus(`✅ ${erfolgreich} gespeicherte Scans verarbeitet.`, true); }
+    if (gescheitert && !still) showError('Nicht verarbeitete Scans bleiben gespeichert. Bitte erneut versuchen oder sichern.');
 }
 
 async function wsAnzeigeAktualisieren() {
-    const eintraege = await wsAlle();
-    const leiste = document.getElementById('offlineLeiste');
-    if (!leiste) return;
-
-    if (eintraege.length === 0) { leiste.style.display = 'none'; return; }
-
-    leiste.style.display = 'flex';
-    leiste.classList.toggle('wartet', !navigator.onLine);
-    document.getElementById('offlineText').textContent = navigator.onLine
-        ? `${eintraege.length} Scan${eintraege.length === 1 ? '' : 's'} werden verarbeitet…`
-        : `${eintraege.length} Scan${eintraege.length === 1 ? '' : 's'} warten auf Verbindung`;
+    const bar = document.getElementById('offlineLeiste');
+    if (!bar) return;
+    const owner = ownerKey(getUser());
+    if (!owner) { bar.style.display = 'none'; return; }
+    const all = await wsAktion('readonly', sp => sp.getAll()) || [];
+    if (owner !== ownerKey(getUser())) return;
+    const entries = all.filter(entry => entry.owner === owner);
+    const legacy = all.filter(entry => !entry.owner).length;
+    bar.style.display = entries.length || legacy ? 'flex' : 'none';
+    bar.classList.toggle('wartet', !navigator.onLine);
+    document.getElementById('offlineText').textContent =
+        `${entries.length} Scan(s) gespeichert${wsLaeuft ? ' · Verarbeitung läuft' : ' · warten auf Verarbeitung'}`
+        + (legacy ? ` · ${legacy} Alt-Scan(s) ohne Kontozuordnung, bitte sichern` : '');
 }
 
-window.addEventListener('online',  () => { wsAnzeigeAktualisieren(); wsVerarbeiten(); });
-window.addEventListener('offline', () => wsAnzeigeAktualisieren());
-
-document.getElementById('offlineJetzt')?.addEventListener('click', () => {
-    if (!navigator.onLine) {
-        showError('Noch keine Verbindung. Die Scans bleiben gespeichert.');
-        return;
-    }
-    wsVerarbeiten();
+window.addEventListener('online', () => { wsAnzeigeAktualisieren().catch(console.warn); wsVerarbeiten(); });
+window.addEventListener('offline', () => wsAnzeigeAktualisieren().catch(console.warn));
+document.getElementById('offlineJetzt').addEventListener('click', () => wsVerarbeiten());
+document.getElementById('offlineSichern').addEventListener('click', async () => {
+    try {
+        const owner = ownerKey(getUser());
+        if (!owner) return;
+        const entries = await wsAktion('readonly', sp => sp.getAll()) || [];
+        if (owner !== ownerKey(getUser())) return;
+        const backup = entries.filter(entry => entry.owner === owner || !entry.owner);
+        const blob = new Blob([JSON.stringify({ version: 1, scans: backup }, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob), link = document.createElement('a');
+        link.href = url; link.download = 'LeadCapture-gesicherte-Scans.json'; link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) { alert('Sicherung fehlgeschlagen: ' + error.message); }
 });
 
 async function processCapturedImage(dataUrl, { showPreview = true } = {}) {
+    const scanOwner = getUser();
+    const generation = authGeneration;
     if (showPreview) {
         previewImage.src = dataUrl;
         previewContainer.style.display = 'block';
@@ -3548,6 +3625,7 @@ async function processCapturedImage(dataUrl, { showPreview = true } = {}) {
         console.log(`⏱️ Scan gesamt ${gesamt}ms` +
             (server ? ` · davon Server ${server}ms · Übertragung ~${gesamt - server}ms` : ''));
 
+        if (generation !== authGeneration) return;
         fillForm(result.data);
         setStatus('✅ Karte ausgelesen – bitte prüfen und speichern.', true);
         setTimeout(() => setStatus('', false), 2500);
@@ -3557,7 +3635,7 @@ async function processCapturedImage(dataUrl, { showPreview = true } = {}) {
         // Kein Netz? Bild puffern statt den Scan zu verlieren.
         if (istNetzfehler(error)) {
             try {
-                await wsHinzufuegen(dataUrl);
+                await wsHinzufuegen(dataUrl, scanOwner);
                 previewContainer.style.display = 'none';
                 setStatus('📥 Kein Netz – Scan gespeichert, wird bei Verbindung nachgeholt.', true);
                 setTimeout(() => setStatus('', false), 4000);
@@ -4464,7 +4542,8 @@ scanTemplateSelect.addEventListener('change', renderScanQuestionnaire);
 async function leadSpeichernMitDuplikatCheck(leadData, { forceCreate = false } = {}) {
     const res = await apiRequest('/leads', {
         method: 'POST',
-        body: JSON.stringify({ lead: leadData, forceCreate })
+        body: JSON.stringify({ lead: leadData, forceCreate }),
+        acceptedStatuses: [409]
     });
     const result = await res.json();
 
@@ -4659,6 +4738,7 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
     saveBtn.textContent = '⏳ Speichere...';
 
     try {
+        if (Object.keys(answers).length) leadData.questionnaire = answers;
         const gespeichert = await leadSpeichernMitDuplikatCheck(leadData);
         if (!gespeichert) {
             // Nutzer hat den Duplikat-Dialog abgebrochen - Formular
@@ -4668,18 +4748,7 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
             return;
         }
 
-        const leadId = gespeichert.id;
-
-        // Fragebogen-Antworten direkt mitschicken, falls ausgefüllt
-        let questionnaireSaved = false;
-        if (Object.keys(answers).length > 0) {
-            try {
-                await apiRequest(`/questionnaire/${leadId}`, { method: 'POST', body: JSON.stringify({ answers }) });
-                questionnaireSaved = true;
-            } catch (qErr) {
-                console.error('Fragebogen konnte nicht gespeichert werden:', qErr);
-            }
-        }
+        const questionnaireSaved = Object.keys(answers).length > 0;
 
         await loadLeads();
         const hadAddress = !!(leadData.address.city || leadData.address.zip);
@@ -4717,12 +4786,12 @@ let activeTemplateName = '';
 let activeTemplateId = '';
 
 function persistActiveQuestions() {
-    localStorage.setItem(ACTIVE_QUESTIONS_KEY, JSON.stringify(questionTemplate));
+    localStorage.setItem(currentTenantStorageKey(ACTIVE_QUESTIONS_KEY), JSON.stringify(questionTemplate));
 }
 
 function getActiveQuestions() {
     try {
-        return normalizeQuestionList(JSON.parse(localStorage.getItem(ACTIVE_QUESTIONS_KEY) || '[]'));
+        return normalizeQuestionList(JSON.parse(localStorage.getItem(currentTenantStorageKey(ACTIVE_QUESTIONS_KEY)) || '[]'));
     } catch {
         return [];
     }
@@ -4752,9 +4821,7 @@ function normalizeQuestionList(list) {
 }
 
 function currentTenantStorageKey(base) {
-    const user = getUser();
-    const tenantId = user?.tenant_id || user?.tenantId || 'unknown';
-    return `${base}_${tenantId}`;
+    return scopedKey(base, getUser());
 }
 
 function readLegacyTemplates() {
@@ -4788,6 +4855,7 @@ function rebuildTemplateMap(records) {
 }
 
 async function fetchQuestionnaireTemplates() {
+    const generation = authGeneration;
     const response = await apiRequest('/questionnaire-templates');
     const result = await response.json();
 
@@ -4795,70 +4863,15 @@ async function fetchQuestionnaireTemplates() {
         throw new Error(result.error || 'Fragebögen konnten nicht geladen werden.');
     }
 
+    if (generation !== authGeneration) throw new ApiError('Konto wurde gewechselt.', 0, 'SESSION_CHANGED');
     rebuildTemplateMap(result.data || []);
     return templateRecords;
 }
 
 async function migrateLegacyQuestionnaireTemplates() {
-    const migrationKey = currentTenantStorageKey(TEMPLATE_MIGRATION_KEY);
-
-    // Bereits erfolgreich migriert -> nichts mehr anfassen.
-    if (localStorage.getItem(migrationKey) === 'done') return false;
-
-    const legacy = readLegacyTemplates();
-    const names = Object.keys(legacy);
-
-    if (!names.length) {
-        localStorage.setItem(migrationKey, 'done');
-        return false;
-    }
-
-    let changed = false;
-
-    for (const name of names) {
-        // Server-Version gewinnt bei Namenskonflikten. Dadurch wird eine
-        // bereits gemeinsam verwendete Mandanten-Vorlage nicht von einem
-        // alten Browser-Stand überschrieben.
-        if (templateRecords.some(t => t.name === name)) continue;
-
-        try {
-            const response = await apiRequest('/questionnaire-templates', {
-                method: 'POST',
-                body: JSON.stringify({
-                    name,
-                    questions: legacy[name]
-                })
-            });
-
-            const result = await response.json();
-            if (!result.success) {
-                if (result.code === 'FEATURE_NOT_LICENSED') throw new Error(result.error);
-                console.warn(`⚠️ Vorlage "${name}" konnte nicht migriert werden:`, result.error);
-                continue;
-            }
-
-            templateRecords.push(result.data);
-            changed = true;
-        } catch (error) {
-            console.warn(`⚠️ Migration von "${name}" fehlgeschlagen:`, error);
-        }
-    }
-
-    if (changed) rebuildTemplateMap(templateRecords);
-
-    // Nur nach einem abgeschlossenen Migrationslauf entfernen. Falls einzelne
-    // Vorlagen wegen eines Netzwerkfehlers nicht übertragen werden konnten,
-    // bleiben sie lokal erhalten und koennen beim naechsten Lauf erneut werden.
-    const allLegacyNamesNowAvailable = names.every(name =>
-        templateRecords.some(t => t.name === name)
-    );
-
-    if (allLegacyNamesNowAvailable) {
-        localStorage.removeItem(TEMPLATE_STORAGE_KEY);
-        localStorage.setItem(migrationKey, 'done');
-    }
-
-    return changed;
+    // Old unscoped records have no trustworthy owner. Retain them locally,
+    // but never silently upload them into the account that logs in next.
+    return false;
 }
 
 async function loadTemplates() {
@@ -4881,8 +4894,8 @@ async function loadTemplates() {
 }
 
 async function loadActiveTemplate() {
-    const savedId = localStorage.getItem(ACTIVE_TEMPLATE_ID_KEY) || '';
-    const savedName = localStorage.getItem(ACTIVE_TEMPLATE_KEY) || '';
+    const savedId = localStorage.getItem(currentTenantStorageKey(ACTIVE_TEMPLATE_ID_KEY)) || '';
+    const savedName = localStorage.getItem(currentTenantStorageKey(ACTIVE_TEMPLATE_KEY)) || '';
 
     activeTemplateId = savedId;
     activeTemplateName = savedName;
@@ -4899,8 +4912,8 @@ async function loadActiveTemplate() {
     if (record) {
         activeTemplateName = record.name;
         questionTemplate = normalizeQuestionList(record.questions || []);
-        localStorage.setItem(ACTIVE_TEMPLATE_ID_KEY, record.id);
-        localStorage.setItem(ACTIVE_TEMPLATE_KEY, record.name);
+        localStorage.setItem(currentTenantStorageKey(ACTIVE_TEMPLATE_ID_KEY), record.id);
+        localStorage.setItem(currentTenantStorageKey(ACTIVE_TEMPLATE_KEY), record.name);
     } else {
         // Kein gespeicherter Server-Entwurf: lokalen Entwurf nur fuer diesen
         // Benutzer weiterverwenden.
@@ -4984,8 +4997,8 @@ async function saveTemplate(name) {
         activeTemplateName = result.data.name;
         questionTemplate = normalizeQuestionList(result.data.questions || []);
 
-        localStorage.setItem(ACTIVE_TEMPLATE_ID_KEY, activeTemplateId);
-        localStorage.setItem(ACTIVE_TEMPLATE_KEY, activeTemplateName);
+        localStorage.setItem(currentTenantStorageKey(ACTIVE_TEMPLATE_ID_KEY), activeTemplateId);
+        localStorage.setItem(currentTenantStorageKey(ACTIVE_TEMPLATE_KEY), activeTemplateName);
         persistActiveQuestions();
 
         await fetchQuestionnaireTemplates();
@@ -5014,8 +5027,8 @@ async function loadTemplate(name) {
     activeTemplateId = record.id;
     activeTemplateName = record.name;
 
-    localStorage.setItem(ACTIVE_TEMPLATE_ID_KEY, activeTemplateId);
-    localStorage.setItem(ACTIVE_TEMPLATE_KEY, activeTemplateName);
+    localStorage.setItem(currentTenantStorageKey(ACTIVE_TEMPLATE_ID_KEY), activeTemplateId);
+    localStorage.setItem(currentTenantStorageKey(ACTIVE_TEMPLATE_KEY), activeTemplateName);
     persistActiveQuestions();
 
     renderQuestionnaireEditor();
@@ -5046,8 +5059,8 @@ async function deleteTemplate(name) {
             activeTemplateId = '';
             activeTemplateName = '';
             questionTemplate = [];
-            localStorage.removeItem(ACTIVE_TEMPLATE_ID_KEY);
-            localStorage.removeItem(ACTIVE_TEMPLATE_KEY);
+            localStorage.removeItem(currentTenantStorageKey(ACTIVE_TEMPLATE_ID_KEY));
+            localStorage.removeItem(currentTenantStorageKey(ACTIVE_TEMPLATE_KEY));
             persistActiveQuestions();
         }
 
@@ -5069,8 +5082,8 @@ document.getElementById('questionnaireTemplateSelect').addEventListener('change'
         questionTemplate = [];
         activeTemplateId = '';
         activeTemplateName = '';
-        localStorage.removeItem(ACTIVE_TEMPLATE_ID_KEY);
-        localStorage.removeItem(ACTIVE_TEMPLATE_KEY);
+        localStorage.removeItem(currentTenantStorageKey(ACTIVE_TEMPLATE_ID_KEY));
+        localStorage.removeItem(currentTenantStorageKey(ACTIVE_TEMPLATE_KEY));
         persistActiveQuestions();
         renderQuestionnaireEditor();
     }
@@ -5227,8 +5240,8 @@ document.getElementById('resetQuestionnaireBtn').addEventListener('click', () =>
     if (confirm('Alle aktuellen Fragen zurücksetzen? Gespeicherte Vorlagen bleiben erhalten.')) {
         questionTemplate = [];
         activeTemplateName = '';
-        localStorage.removeItem(ACTIVE_TEMPLATE_ID_KEY);
-        localStorage.removeItem(ACTIVE_TEMPLATE_KEY);
+        localStorage.removeItem(currentTenantStorageKey(ACTIVE_TEMPLATE_ID_KEY));
+        localStorage.removeItem(currentTenantStorageKey(ACTIVE_TEMPLATE_KEY));
         persistActiveQuestions();
         updateTemplateSelect();
         renderQuestionnaireEditor();
@@ -5609,7 +5622,7 @@ function displayMapMarkers(leads) {
                     ${lead.email ? '✉️ ' + escapeHtml(lead.email) + '<br>' : ''}
                     ${lead.phone ? '📞 ' + escapeHtml(lead.phone) + '<br>' : ''}
                     ${addrLine ? '📍 ' + escapeHtml(addrLine) : ''}
-                    <br><button onclick="openLeadDetail('${lead.id}')" style="margin-top:6px; padding:4px 12px; background:#0066AA; color:white; border:none; border-radius:6px; cursor:pointer;">Details</button>
+                    <br><button ${actionAttrs('details', lead.id)} style="margin-top:6px; padding:4px 12px; background:#0066AA; color:white; border:none; border-radius:6px; cursor:pointer;">Details</button>
                 </div>
             `);
         mapMarkers.push(marker);
@@ -5810,17 +5823,17 @@ function renderAppointments() {
             <div class="todo-card ${todo.status === 'done' ? 'done' : ''}">
                 <div class="todo-card-inner">
                     <button class="todo-check ${todo.status === 'done' ? 'checked' : ''}"
-                        onclick="toggleTodo('${todo.id}', '${todo.status === 'done' ? 'open' : 'done'}')"
+                        ${actionAttrs('toggleTodo', todo.id, todo.status === 'done' ? 'open' : 'done')}
                         title="${todo.status === 'done' ? 'Als offen markieren' : 'Erledigen'}">
                         ${todo.status === 'done' ? '✓' : ''}
                     </button>
-                    <div class="todo-card-main" onclick="openTodoModal('${todo.id}')">
+                    <div class="todo-card-main" ${actionAttrs('editTodo', todo.id)}>
                         <div class="todo-card-title">${escapeHtml(todo.title)}</div>
                         ${company ? `<div class="todo-card-company">${escapeHtml(company)}</div>` : ''}
                         <div class="todo-card-meta">Follow-up${escapeHtml(due)}${todo.status === 'done' ? ' · erledigt' : ''}</div>
                         ${todo.note ? `<div class="todo-card-note">${escapeHtml(todo.note)}</div>` : ''}
                     </div>
-                    <button class="todo-card-menu" onclick="deleteTodo('${todo.id}')" title="Follow-up löschen">⋮</button>
+                    <button class="todo-card-menu" ${actionAttrs('deleteTodo', todo.id)} title="Follow-up löschen">⋮</button>
                 </div>
             </div>`);
     });
@@ -5837,11 +5850,11 @@ function renderAppointments() {
         <div class="appt-card status-${escapeHtml(a.status)}">
             ${lead ? `<div class="appt-hist-group">
                 <button class="appt-history-btn contact" title="Bisherige Termine mit ${escapeHtml(contact || 'diesem Kontakt')}"
-                    onclick="openContactHistory('${a.lead_id}')">&#128100;</button>
+                    ${actionAttrs('contactHistory', a.lead_id)}>&#128100;</button>
                 <button class="appt-history-btn" title="Bisherige Termine bei ${escapeHtml(company)}"
-                    onclick="openLeadHistory('${a.lead_id}')">&#127970;</button>
+                    ${actionAttrs('history', a.lead_id)}>&#127970;</button>
             </div>` : ''}
-            <div class="appt-body" onclick="openApptModal('${a.id}')">
+            <div class="appt-body" ${actionAttrs('appointment', a.id)}>
                 <div class="appt-company">${escapeHtml(company)}</div>
                 ${contact ? `<div class="appt-contact">${escapeHtml(contact)}</div>` : ''}
                 <div class="appt-sep"></div>
@@ -5851,18 +5864,15 @@ function renderAppointments() {
             <div class="appt-actions">
                 <!-- Follow-up direkt aus dem Termin: uebernimmt den Lead
                      und schlaegt den naechsten Werktag vor. -->
-                <button class="act-followup" onclick="openTodoModal(null, '${a.lead_id || ''}', '${escapeHtml(company)}')">✓ Follow-up</button>
-                <button class="act-icon" ${(lead?.mobile || lead?.phone) ? `onclick="dialNumber('${escapeHtml(lead.mobile || lead.phone)}')"` : 'disabled'}>${lead?.mobile ? '&#128241;' : '&#128222;'}</button>
-                <button class="act-icon" ${lead?.email ? `onclick="window.location.href='mailto:${escapeHtml(lead.email)}'"` : 'disabled'}>&#9993;</button>
+                <button class="act-followup" ${actionAttrs('followup', null, a.lead_id || '', company)}>✓ Follow-up</button>
+                <button class="act-icon" ${(lead?.mobile || lead?.phone) ? actionAttrs('phone', lead.mobile || lead.phone) : 'disabled'}>${lead?.mobile ? '&#128241;' : '&#128222;'}</button>
+                <button class="act-icon" ${lead?.email ? actionAttrs('email', lead.email) : 'disabled'}>&#9993;</button>
                 ${(() => {
                     // Koordinaten bevorzugen, sonst Adresse. a.location
                     // enthaelt die beim Anlegen uebernommene Anschrift.
                     const ziel = navigationsZiel(a, a.location || leadAdresse(lead));
                     if (!ziel) return `<button class="act-icon" disabled title="Keine Adresse hinterlegt">&#128205;</button>`;
-                    const ruf = ziel.adresse
-                        ? `openMaps('${escapeHtml(ziel.adresse).replace(/'/g, "\\'")}')`
-                        : `openMaps(${ziel.lat},${ziel.lon})`;
-                    return `<button class="act-icon" onclick="${ruf}" title="${escapeHtml(ziel.adresse || 'Route anzeigen')}">&#128205;</button>`;
+                    return `<button class="act-icon" ${actionAttrs('navigate', ziel)} title="${escapeHtml(ziel.adresse || 'Route anzeigen')}">&#128205;</button>`;
                 })()}
             </div>
         </div>`);
@@ -5882,7 +5892,7 @@ function formatTodoDate(todo) {
 async function loadDashboardTodos() {
     const today = dateKey(new Date());
     const to = dateKey(addDays(new Date(), 14));
-    const res = await apiRequest(`/todos?from=${encodeURIComponent(today)}&to=${encodeURIComponent(to)}`);
+    const res = await apiRequest(`/todos?status=open&to=${encodeURIComponent(to)}`);
     const result = await res.json();
     if (!result.success) throw new Error(result.error);
     return (result.data || []).filter(t => t.status !== 'done');
@@ -5899,7 +5909,8 @@ async function renderDashboardActions() {
             const company = todo.leads?.company || `${todo.leads?.first_name || ''} ${todo.leads?.last_name || ''}`.trim();
             actions.push({
                 type: 'todo',
-                title: todo.title,
+                due: `${todo.due_date}T${todo.due_time || '00:00'}`,
+                title: (todo.due_date < dateKey(new Date()) ? 'Überfällig: ' : '') + todo.title,
                 meta: [company, formatTodoDate(todo)].filter(Boolean).join(' · ')
             });
         });
@@ -5913,16 +5924,16 @@ async function renderDashboardActions() {
         const res = await apiRequest(`/appointments?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`);
         const result = await res.json();
         if (result.success) {
-            (result.data || []).filter(a => new Date(a.starts_at) >= new Date()).slice(0, 4).forEach(a => {
+            (result.data || []).filter(a => a.status !== 'abgesagt' && new Date(a.starts_at) >= new Date()).slice(0, 4).forEach(a => {
                 const company = a.leads?.company || a.title || 'Termin';
-                actions.push({ type:'appointment', title:company, meta:`${a.leads ? `${a.leads.first_name || ''} ${a.leads.last_name || ''}`.trim() + ' · ' : ''}${new Date(a.starts_at).toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit' })} · ${fmtTime(a.starts_at)}` });
+                actions.push({ type:'appointment', due: `${dateKey(new Date(a.starts_at))}T${fmtTime(a.starts_at)}`, title:company, meta:`${a.leads ? `${a.leads.first_name || ''} ${a.leads.last_name || ''}`.trim() + ' · ' : ''}${new Date(a.starts_at).toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit' })} · ${fmtTime(a.starts_at)}` });
             });
         }
     } catch (error) {
         console.warn('Dashboard Termine:', error);
     }
 
-    const sorted = actions.slice(0, 6);
+    const sorted = actions.sort((a, b) => a.due.localeCompare(b.due)).slice(0, 6);
     container.innerHTML = sorted.length ? sorted.map(action => `
         <div class="dashboard-action ${action.type}">
             <div class="dashboard-action-icon">${action.type === 'todo' ? '✓' : '📅'}</div>
@@ -6655,8 +6666,8 @@ function renderHistory(items, meta = {}) {
                         ${c.position ? `<div class="hist-contact-pos">${escapeHtml(c.position)}</div>` : ''}
                     </div>
                     <div class="hist-contact-actions">
-                        ${num ? `<button onclick="dialNumber('${escapeHtml(num)}')">${c.mobile ? '📱' : '📞'}</button>` : ''}
-                        ${c.email ? `<button onclick="window.location.href='mailto:${escapeHtml(c.email)}'">✉️</button>` : ''}
+                        ${num ? `<button ${actionAttrs('phone', num)}>${c.mobile ? '📱' : '📞'}</button>` : ''}
+                        ${c.email ? `<button ${actionAttrs('email', c.email)}>✉️</button>` : ''}
                     </div>
                 </div>`;
             }).join('')}
@@ -6668,7 +6679,7 @@ function renderHistory(items, meta = {}) {
         box.innerHTML = contactsHtml
             + `<div class="cal-empty">📭 ${
                 meta.mode === 'contact'
-                    ? `Noch keine vergangenen Termine mit ${meta.personName || 'diesem Kontakt'}.`
+                    ? `Noch keine vergangenen Termine mit ${escapeHtml(meta.personName || 'diesem Kontakt')}.`
                     : meta.scope === 'all'
                         ? 'Noch keine Termine bei dieser Firma.'
                         : 'Noch keine vergangenen Termine bei dieser Firma.'
@@ -6700,7 +6711,7 @@ function renderHistory(items, meta = {}) {
                 : '';
 
             return `
-            <div class="hist-item ${offen ? 'offen' : ''}" onclick="jumpToAppointment('${a.id}','${a.starts_at}')">
+            <div class="hist-item ${offen ? 'offen' : ''}" ${actionAttrs('jump', a.id, a.starts_at)}>
                 <div class="hist-date">${escapeHtml(dateStr)}${offen ? ' · nicht abgeschlossen' : ''}</div>
                 <div class="hist-title">${escapeHtml(a.title)}</div>
                 ${who ? `<div class="hist-who">👤 ${escapeHtml(who)}</div>` : ''}
@@ -6838,7 +6849,8 @@ function isTenantAdmin() {
 function applyRoleVisibility() {
     const tile = document.getElementById('teamTile');
     // Team braucht das Statistik-Modul, weil dort die Auswertung sitzt
-    tile.style.display = (isTenantAdmin() && hasFeature('stats')) ? '' : 'none';
+    tile.style.display = isTenantAdmin() ? '' : 'none';
+    document.querySelector('.tt-btn[data-tab="stats"]').style.display = hasFeature('stats') ? '' : 'none';
 }
 
 document.querySelectorAll('.tt-btn').forEach(btn => {
@@ -6846,6 +6858,7 @@ document.querySelectorAll('.tt-btn').forEach(btn => {
         document.querySelectorAll('.tt-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         const stats = btn.dataset.tab === 'stats';
+        if (stats && !hasFeature('stats')) return;
         document.getElementById('teamStatsPane').style.display = stats ? '' : 'none';
         document.getElementById('teamUsersPane').style.display = stats ? 'none' : '';
         if (stats) loadTeamStats(); else loadTeamUsers();
@@ -7363,13 +7376,13 @@ document.getElementById('csvFileInput').addEventListener('change', async (e) => 
 let importAktuell = null;
 
 function importZuordnungOeffnen(daten) {
-    importAktuell = { importId: daten.importId, headers: daten.headers, zielfelder: daten.zielfelder };
+    importAktuell = { importId: daten.importId, headers: daten.headers, zielfelder: daten.zielfelder, nativeExport: !!daten.nativeExport };
 
     document.getElementById('importZeilenInfo').textContent =
         `${daten.zeilenAnzahl} Datenzeile${daten.zeilenAnzahl === 1 ? '' : 'n'} gefunden`;
 
     const liste = document.getElementById('importZuordnungListe');
-    liste.innerHTML = daten.headers.map((h, i) => {
+    liste.innerHTML = daten.nativeExport ? '<p>LeadCapture-Export erkannt. Originalfelder, Bewertungen und Fragebogen-IDs werden wiederhergestellt. Bestehende IDs werden aktualisiert. Der Export muss zu diesem Mandanten gehören.</p>' : daten.headers.map((h, i) => {
         const beispiele = daten.vorschau.map(z => z[i]).filter(v => v).slice(0, 3);
         const optionen = daten.zielfelder.map(f =>
             `<option value="${f.key}" ${f.key === daten.vorschlag[i] ? 'selected' : ''}>${escapeHtml(f.label)}</option>`
@@ -7421,7 +7434,7 @@ document.getElementById('importUebernehmenBtn').addEventListener('click', async 
     btn.disabled = true;
     btn.textContent = 'Importiere…';
 
-    const mapping = importAktuell.headers.map((_, i) =>
+    const mapping = importAktuell.nativeExport ? importAktuell.headers.map(() => '__ignorieren') : importAktuell.headers.map((_, i) =>
         document.querySelector(`.im-ziel[data-spalte="${i}"]`).value);
 
     try {
@@ -7447,6 +7460,12 @@ document.getElementById('importUebernehmenBtn').addEventListener('click', async 
 // ============================================================
 // 21. INIT
 // ============================================================
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(error => console.warn('Offline-Start nicht verfügbar:', error));
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     loadCachedFeatures();
     prioEingabeZeichnen('scan');
