@@ -1179,6 +1179,16 @@
         .upload-area .icon [class^=lc-i-] { color: var(--lc-blue); }
         .view-header h2 [class^=lc-i-] { color: var(--lc-blue); vertical-align: -0.12em; margin-right: 2px; }
         .header h1 [class^=lc-i-] { color: var(--lc-blue); }
+
+        .team-account-panel { margin:16px 0; padding:20px; border:1px solid var(--lc-line); border-radius:12px; background:var(--lc-paper); }
+        .team-account-panel h3 { margin-bottom:16px; font-size:17px; }
+        .team-account-panel fieldset { border:0; padding:0; min-width:0; }
+        .team-account-panel label { display:block; margin:12px 0 6px; font-size:14px; font-weight:600; }
+        .team-account-panel input:not([type="checkbox"]) { display:block; width:100%; padding:12px; border:1px solid var(--lc-line); border-radius:8px; background:white; font-size:16px; }
+        .team-account-panel .team-account-toggle { display:flex; align-items:center; gap:8px; font-weight:400; }
+        #teamAccountHint { color:var(--lc-gray); font-size:13px; margin:12px 0; }
+        #teamAccountError { color:var(--lc-red); margin:8px 0; }
+        #teamAccountNotice { color:var(--lc-green); margin:12px 0; }
     </style>
 </head>
 <body>
@@ -1528,6 +1538,32 @@
             <!-- Nutzerverwaltung -->
             <div id="teamUsersPane" style="display:none;">
                 <div class="team-limit" id="teamLimit"></div>
+                <section id="teamAccountPanel" class="team-account-panel" hidden aria-labelledby="teamAccountTitle">
+                    <h3 id="teamAccountTitle">Nutzer anlegen</h3>
+                    <form id="teamAccountForm">
+                        <fieldset id="teamAccountFields">
+                            <label for="teamAccountEmail">E-Mail-Adresse</label>
+                            <input id="teamAccountEmail" type="email" required autocomplete="off">
+                            <div id="teamAccountNameRow">
+                                <label for="teamAccountName">Name (optional)</label>
+                                <input id="teamAccountName" type="text" autocomplete="off">
+                            </div>
+                            <label for="teamAccountPassword">Startpasswort</label>
+                            <input id="teamAccountPassword" type="password" minlength="6" required autocomplete="new-password" aria-describedby="teamAccountHint">
+                            <label for="teamAccountRepeat">Startpasswort wiederholen</label>
+                            <input id="teamAccountRepeat" type="password" minlength="6" required autocomplete="new-password">
+                            <label class="team-account-toggle"><input id="teamAccountShow" type="checkbox"> Passwörter anzeigen</label>
+                            <p id="teamAccountHint">Mindestens 6 Zeichen. Bitte das Startpasswort persönlich weitergeben; es wird keine E-Mail versendet.</p>
+                            <p id="teamAccountError" role="alert" tabindex="-1"></p>
+                            <div class="actions">
+                                <button class="btn btn-primary" id="teamAccountSave" type="submit">Nutzer anlegen</button>
+                                <button class="btn btn-secondary" id="teamAccountCancel" type="button">Abbrechen</button>
+                            </div>
+                        </fieldset>
+                        <p id="teamAccountProgress" role="status" hidden>Wird gespeichert …</p>
+                    </form>
+                </section>
+                <p id="teamAccountNotice" role="status" hidden></p>
                 <div id="teamUserList"></div>
                 <div class="actions" style="margin-top:12px;">
                     <button class="btn btn-primary" id="addUserBtn"><i class=lc-i-plus></i> Nutzer anlegen</button>
@@ -2527,6 +2563,8 @@ async function showApp(user, features) {
 }
 
 function resetSessionView() {
+    closeTeamAccountForm();
+    document.getElementById('teamAccountNotice').hidden = true;
     refreshPromise = null; recoveryPromise = null; lastRecovery = 0;
     connectionNotice();
     allLeads = []; currentLeadDetail = null;
@@ -7206,39 +7244,103 @@ document.getElementById('delUserConfirmBtn').addEventListener('click', async () 
     }
 });
 
-async function resetUserPassword(userId) {
-    const u = teamUsers.find(x => x.id === userId);
-    if (!u) return;
-    const pw = prompt(`Neues Startpasswort für ${u.email}\n(mindestens 6 Zeichen)`);
-    if (!pw) return;
-    if (pw.length < 6) { alert('Das Passwort muss mindestens 6 Zeichen lang sein.'); return; }
-    try {
-        const res = await apiRequest(`/team/${userId}/password`, { method: 'POST', body: JSON.stringify({ password: pw }) });
-        const r = await res.json();
-        if (!r.success) throw new Error(r.error);
-        alert(`Passwort gesetzt.\n\nTeilen Sie ${u.email} mit:\n${pw}\n\nDer Nutzer sollte es nach dem ersten Login ändern.`);
-        await loadTeamUsers();
-    } catch (error) { alert('' + error.message); }
+let teamAccountTarget = null;
+let teamAccountSaving = false;
+
+function closeTeamAccountForm() {
+    document.getElementById('teamAccountForm').reset();
+    document.getElementById('teamAccountPanel').hidden = true;
+    document.getElementById('teamAccountFields').disabled = false;
+    document.getElementById('teamAccountForm').removeAttribute('aria-busy');
+    document.getElementById('teamAccountProgress').hidden = true;
+    document.getElementById('teamAccountPassword').type = 'password';
+    document.getElementById('teamAccountRepeat').type = 'password';
+    document.getElementById('teamAccountError').textContent = '';
+    teamAccountTarget = null;
+    teamAccountSaving = false;
 }
 
-document.getElementById('addUserBtn').addEventListener('click', async () => {
-    const email = prompt('E-Mail-Adresse des neuen Nutzers:');
-    if (!email) return;
-    const name = prompt('Name (optional):') || '';
-    const pw = prompt('Startpasswort (mindestens 6 Zeichen):');
-    if (!pw) return;
-    if (pw.length < 6) { alert('Das Passwort muss mindestens 6 Zeichen lang sein.'); return; }
+function openTeamAccountForm(user = null) {
+    if (teamAccountSaving) return;
+    closeTeamAccountForm();
+    teamAccountTarget = user ? user.id : null;
+    document.getElementById('teamAccountNotice').hidden = true;
+    document.getElementById('teamAccountTitle').textContent = user ? 'Startpasswort ändern' : 'Nutzer anlegen';
+    document.getElementById('teamAccountSave').textContent = user ? 'Passwort speichern' : 'Nutzer anlegen';
+    const email = document.getElementById('teamAccountEmail');
+    email.value = user ? user.email : '';
+    email.readOnly = !!user;
+    document.getElementById('teamAccountNameRow').hidden = !!user;
+    const panel = document.getElementById('teamAccountPanel');
+    panel.hidden = false;
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    document.getElementById(user ? 'teamAccountPassword' : 'teamAccountEmail').focus();
+}
 
+function resetUserPassword(userId) {
+    const user = teamUsers.find(u => u.id === userId);
+    if (user) openTeamAccountForm(user);
+}
+
+async function submitTeamAccountForm(event) {
+    event.preventDefault();
+    if (teamAccountSaving) return;
+    const form = document.getElementById('teamAccountForm');
+    const errorBox = document.getElementById('teamAccountError');
+    errorBox.textContent = '';
+    const email = document.getElementById('teamAccountEmail').value.trim();
+    document.getElementById('teamAccountEmail').value = email;
+    if (!form.reportValidity()) return;
+    const password = document.getElementById('teamAccountPassword').value;
+    if (password.length < 6 || password !== document.getElementById('teamAccountRepeat').value) {
+        errorBox.textContent = 'Bitte mindestens 6 Zeichen und zwei übereinstimmende Passwörter eingeben.';
+        errorBox.focus();
+        return;
+    }
+    const target = teamAccountTarget;
+    const generation = authGeneration;
+    const body = target === null
+        ? { email, password, fullName: document.getElementById('teamAccountName').value.trim(), role: 'member' }
+        : { password };
+    teamAccountSaving = true;
+    document.getElementById('teamAccountFields').disabled = true;
+    document.getElementById('teamAccountProgress').hidden = false;
+    form.setAttribute('aria-busy', 'true');
     try {
-        const res = await apiRequest('/team', {
-            method: 'POST',
-            body: JSON.stringify({ email, password: pw, fullName: name, role: 'member' })
+        const response = await apiRequest(target === null ? '/team' : `/team/${encodeURIComponent(target)}/password`, {
+            method: 'POST', body: JSON.stringify(body)
         });
-        const r = await res.json();
-        if (!r.success) throw new Error(r.error);
-        alert(`Nutzer angelegt.\n\nZugangsdaten für ${email}:\nPasswort: ${pw}\n\nBitte persönlich weitergeben – es wird keine E-Mail versendet.`);
+        const result = await response.json();
+        if (generation !== authGeneration) return;
+        if (!result.success) throw new Error(result.error || 'Speichern fehlgeschlagen.');
+        closeTeamAccountForm();
+        const notice = document.getElementById('teamAccountNotice');
+        notice.textContent = target === null
+            ? `Nutzer ${email} angelegt. Bitte das Startpasswort persönlich weitergeben.`
+            : `Startpasswort für ${email} geändert. Beim nächsten Anmelden muss der Nutzer es ändern.`;
+        notice.hidden = false;
         await loadTeamUsers();
-    } catch (error) { alert('' + error.message); }
+    } catch (error) {
+        if (generation !== authGeneration) return;
+        errorBox.textContent = error.message || 'Speichern fehlgeschlagen. Bitte erneut versuchen.';
+        errorBox.focus();
+    } finally {
+        if (generation === authGeneration) {
+            teamAccountSaving = false;
+            document.getElementById('teamAccountFields').disabled = false;
+            document.getElementById('teamAccountProgress').hidden = true;
+            form.removeAttribute('aria-busy');
+        }
+    }
+}
+
+document.getElementById('addUserBtn').addEventListener('click', () => openTeamAccountForm());
+document.getElementById('teamAccountForm').addEventListener('submit', submitTeamAccountForm);
+document.getElementById('teamAccountCancel').addEventListener('click', closeTeamAccountForm);
+document.getElementById('teamAccountShow').addEventListener('change', event => {
+    const type = event.target.checked ? 'text' : 'password';
+    document.getElementById('teamAccountPassword').type = type;
+    document.getElementById('teamAccountRepeat').type = type;
 });
 
 // ============================================================
