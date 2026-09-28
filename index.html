@@ -3527,29 +3527,59 @@ async function kontaktUebernehmen(leadId) {
     if (!lead) return;
 
     const vcard = leadAlsVCard(lead);
-    const url = URL.createObjectURL(new Blob([vcard], { type: 'text/vcard;charset=utf-8' }));
+    const blob = new Blob([vcard], { type: 'text/vcard;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
 
-    // WICHTIG, und Ursache des gemeldeten Fehlers: KEIN a.download
-    // setzen! Das download-Attribut zwingt den Browser, die Datei
-    // als generischen Download zu behandeln - genau dadurch wurde
-    // vorher nur "gespeichert" statt der native Kontakt-Dialog
-    // geoeffnet. Ohne download-Attribut erkennt iOS/Android den
-    // MIME-Typ text/vcard beim direkten Aufruf und zeigt die
-    // eingebaute "Neuer Kontakt"-Ansicht - denselben Dialog, der
-    // beim Antippen eines vcf-Anhangs in Mail erscheint.
-    //
-    // Das Teilen-Menue (Web Share) ist dafuer NICHT der richtige
-    // Weg: es zeigt Sende-Ziele wie AirDrop, Mail, WhatsApp - die
-    // Kontakte-App ist dort kein Sende-Ziel, wie der Screenshot
-    // zeigt. Direktes Oeffnen ist der zuverlaessige Weg.
-    const a = document.createElement('a');
-    a.href = url;
-    a.target = '_blank';
-    a.rel = 'noopener';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    // Eine zweite, sichtbare Moeglichkeit anbieten, wenn der Browser
+    // die vCard im neuen Tab nicht an die Kontakte-App weiterreicht.
+    document.getElementById('kontaktExportHinweis')?.remove();
+    const hinweis = document.createElement('div');
+    hinweis.id = 'kontaktExportHinweis';
+    hinweis.setAttribute('role', 'status');
+    hinweis.style.cssText = 'position:fixed;bottom:16px;left:16px;right:16px;max-width:520px;margin:auto;z-index:10000;padding:12px;background:#fff;color:#0B1F33;border:1px solid #DCE3EB;border-radius:12px;box-shadow:0 4px 14px rgba(11,31,51,.18);display:flex;align-items:center;gap:10px;flex-wrap:wrap';
+    const text = document.createElement('span');
+    text.textContent = 'Falls sich kein Kontakt öffnet:';
+    hinweis.appendChild(text);
+    const fallback = document.createElement('button');
+    fallback.type = 'button';
+    fallback.textContent = 'Kontaktdatei (.vcf) herunterladen';
+    fallback.style.cssText = 'padding:8px 10px;border:0;border-radius:8px;background:#0066AA;color:white;cursor:pointer';
+    fallback.addEventListener('click', () => {
+        // Bei Bedarf eine frische URL erzeugen; die urspruengliche kann
+        // bereits vom Browser freigegeben worden sein.
+        const downloadUrl = URL.createObjectURL(blob);
+        const name = [lead.first_name, lead.last_name, lead.company].filter(Boolean).join('_')
+            .replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 80) || 'Kontakt';
+        const file = document.createElement('a');
+        file.href = downloadUrl;
+        file.download = name + '.vcf';
+        document.body.appendChild(file);
+        file.click();
+        file.remove();
+        setTimeout(() => URL.revokeObjectURL(downloadUrl), 120000);
+    });
+    hinweis.appendChild(fallback);
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.textContent = 'Schließen';
+    close.addEventListener('click', () => hinweis.remove());
+    hinweis.appendChild(close);
+    document.body.appendChild(hinweis);
+
+    // Der direkte Aufruf kann auf Mobilgeraeten die Kontaktvorschau
+    // oeffnen. Die URL muss fuer die Weitergabe an die Kontakte-App
+    // laenger gueltig bleiben als die bisher verwendeten 5 Sekunden.
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    document.body.appendChild(link);
+    try { link.click(); }
+    catch (error) { console.warn('Kontaktvorschau konnte nicht geöffnet werden:', error); }
+    finally {
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 120000);
+    }
 }
 
 // ============================================================
