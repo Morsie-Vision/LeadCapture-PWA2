@@ -385,10 +385,10 @@
 
         .histogram-wrapper { background: #f8fafc; border-radius: 12px; padding: 16px; overflow-x: auto; min-height: 200px; }
         .histogram { display: flex; align-items: flex-end; height: clamp(150px, 26dvh, 220px); gap: 3px; min-width: 100%; }
-        .histogram .bar { flex: 1; min-width: 12px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; cursor: pointer; }
-        .histogram .bar .fill { width: 100%; border-radius: 2px 2px 0 0; min-height: 3px; background: #0066AA; transition: height 0.3s; }
-        .histogram .bar .value { font-size: 8px; color: #4a5568; margin-bottom: 2px; }
-        .histogram .bar .date-label { font-size: 7px; color: #a0aec0; margin-top: 2px; text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+        .histogram .bar { flex: 1 0 84px; min-width: 84px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; cursor: pointer; }
+        .histogram .bar .fill { flex-shrink: 0; width: 100%; border-radius: 2px 2px 0 0; min-height: 3px; background: #0066AA; transition: height 0.3s; }
+        .histogram .bar .value { flex-shrink: 0; height: 20px; line-height: 20px; font-size: 11px; color: #4a5568; margin-bottom: 2px; }
+        .histogram .bar .date-label { flex-shrink: 0; height: 28px; line-height: 28px; font-size: 11px; color: #5C6B7A; margin-top: 2px; text-align: center; white-space: nowrap; }
         .histogram-empty { text-align: center; padding: 30px; color: #a0aec0; font-size: 14px; }
 
         /* ===== UPLOAD ===== */
@@ -2824,12 +2824,25 @@ function displayLeads(leads) {
     leadsList.innerHTML = '<div class="empty-leads">👆 Klicke auf einen Balken im Histogramm, um die Leads dieses Zeitraums zu sehen</div>';
 }
 
+// Match the backend's calendar day, not the UTC prefix of a timestamp.
+function statisticsDateKey(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (!Number.isFinite(date.getTime())) return '';
+    const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: getUser()?.timeZone || 'Europe/Berlin',
+        year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(date);
+    const part = type => parts.find(p => p.type === type).value;
+    return `${part('year')}-${part('month')}-${part('day')}`;
+}
+
 function applyLeadsHistogramFilter(leads) {
     const { label, prefix } = leadsHistogramFilter;
     // Zeitraum UND Nutzerfilter anwenden, damit Liste und
     // Histogramm nicht auseinanderlaufen
     const filtered = leads.filter(l =>
-        (l.created_at || '').startsWith(prefix) && leadPassesUserFilter(l));
+        statisticsDateKey(l.created_at).startsWith(prefix) && leadPassesUserFilter(l));
 
     const nutzerHinweis = (typeof selectedUserIds !== 'undefined' && selectedUserIds !== null
         && statsUsers.length > 0 && selectedUserIds.size !== statsUsers.length)
@@ -2857,7 +2870,7 @@ function showLeadsForBar(item, view) {
         year:  item.date
     };
     // item.date ist je nach Ansicht "YYYY-MM-DD", "YYYY-MM" oder "YYYY" -
-    // das ist zugleich der ISO-Präfix, mit dem sich created_at filtern lässt.
+    // Verglichen wird mit dem Kalendertag in der Statistik-Zeitzone.
     leadsHistogramFilter = { label: labels[view] || item.date, prefix: item.date };
     applyLeadsHistogramFilter(allLeads);
     document.getElementById('leadsList').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -5461,9 +5474,15 @@ function leadPassesUserFilter(lead) {
 async function loadHistogram() {
     try {
         const year = histogramYear.value || 'alle';
-        const response = await apiRequest(`/stats/daily?year=${encodeURIComponent(year)}${userFilterParam()}`);
+        const [response, leadsResponse] = await Promise.all([
+            apiRequest(`/stats/daily?year=${encodeURIComponent(year)}${userFilterParam()}`),
+            apiRequest('/leads')
+        ]);
         const result = await response.json();
         if (!result.success) throw new Error(result.error || 'Unbekannter Fehler');
+        const leadsResult = await leadsResponse.json();
+        if (!leadsResult.success || !Array.isArray(leadsResult.data)) throw new Error(leadsResult.error || 'Leads konnten nicht geladen werden');
+        allLeads = leadsResult.data;
 
         // Nutzerliste nur beim ersten Laden aufbauen, damit eine
         // laufende Auswahl nicht bei jedem Abruf zurueckgesetzt wird
@@ -5476,6 +5495,7 @@ async function loadHistogram() {
 
         syncYearOptions(result.availableYears);
         renderHistogram(result.data, histogramView.value);
+        displayLeads(allLeads);
     } catch (error) {
         histogramEmpty.style.display = 'block';
         histogramEmpty.textContent = '❌ Fehler: ' + error.message;
@@ -5503,12 +5523,13 @@ function renderHistogram(data, view) {
         grouped = Object.keys(years).sort().map(y => ({ date: y, count: years[y] }));
     }
     const maxCount = Math.max(...grouped.map(d => d.count), 1);
-    const maxHeight = 160;
+    // Reserve fixed rows for the count and the full date label.
+    const maxHeight = Math.max(20, histogram.clientHeight - 52);
     grouped.forEach(item => {
         const height = (item.count / maxCount) * maxHeight;
         const bar = document.createElement('div');
         bar.className = 'bar';
-        bar.style.height = `${Math.max(height + 18, 20)}px`;
+        bar.style.height = '100%';
         const v = document.createElement('div');
         v.className = 'value'; v.textContent = item.count;
         bar.appendChild(v);
@@ -5516,7 +5537,10 @@ function renderHistogram(data, view) {
         f.className = 'fill'; f.style.height = `${Math.max(height, 4)}px`;
         bar.appendChild(f);
         const l = document.createElement('div');
-        l.className = 'date-label'; l.textContent = item.date;
+        l.className = 'date-label';
+        const [year, month, day] = item.date.split('-');
+        l.textContent = view === 'day' ? `${day}.${month}.${year}`
+            : view === 'month' ? `${month}.${year}` : year;
         bar.appendChild(l);
         bar.title = `${item.date}: ${item.count} Leads`;
         bar.addEventListener('click', () => showLeadsForBar(item, view));
