@@ -1905,9 +1905,9 @@
 <dialog id="passwordDialog" style="border:0;border-radius:16px;padding:24px;max-width:420px;width:90%;">
     <form id="passwordForm" style="display:flex;flex-direction:column;gap:12px;">
         <h3>Passwort ändern</h3>
-        <p id="passwordHint">Mindestens 12 Zeichen verwenden.</p>
-        <input id="newPassword" type="password" minlength="12" required autocomplete="new-password" placeholder="Neues Passwort" aria-label="Neues Passwort">
-        <input id="repeatPassword" type="password" minlength="12" required autocomplete="new-password" placeholder="Passwort wiederholen" aria-label="Passwort wiederholen">
+        <p id="passwordHint">Mindestens 6 Zeichen verwenden.</p>
+        <input id="newPassword" type="password" minlength="6" required autocomplete="new-password" placeholder="Neues Passwort" aria-label="Neues Passwort">
+        <input id="repeatPassword" type="password" minlength="6" required autocomplete="new-password" placeholder="Passwort wiederholen" aria-label="Passwort wiederholen">
         <p id="passwordError" role="alert"></p>
         <button class="btn btn-primary" id="passwordSave" type="submit">Passwort speichern</button>
         <button class="btn btn-secondary" id="passwordCancel" type="button">Abbrechen</button>
@@ -2548,8 +2548,8 @@ function resetSessionView() {
 function openPasswordDialog(required = false) {
     passwordRequired = required;
     document.getElementById('passwordHint').textContent = required
-        ? 'Bitte ersetze dein Startpasswort, bevor du die App verwendest. Mindestens 12 Zeichen.'
-        : 'Mindestens 12 Zeichen verwenden.';
+        ? 'Bitte ersetze dein Startpasswort, bevor du die App verwendest. Mindestens 6 Zeichen.'
+        : 'Mindestens 6 Zeichen verwenden.';
     document.getElementById('passwordCancel').hidden = required;
     document.getElementById('passwordError').textContent = '';
     const dialog = document.getElementById('passwordDialog');
@@ -2565,8 +2565,8 @@ document.getElementById('passwordForm').addEventListener('submit', async event =
     event.preventDefault();
     const password = document.getElementById('newPassword').value;
     const errorBox = document.getElementById('passwordError');
-    if (password.length < 12 || password !== document.getElementById('repeatPassword').value) {
-        errorBox.textContent = 'Bitte mindestens 12 Zeichen und zwei übereinstimmende Passwörter eingeben.'; return;
+    if (password.length < 6 || password !== document.getElementById('repeatPassword').value) {
+        errorBox.textContent = 'Bitte mindestens 6 Zeichen und zwei übereinstimmende Passwörter eingeben.'; return;
     }
     const button = document.getElementById('passwordSave'); button.disabled = true;
     const wasRequired = passwordRequired;
@@ -7209,9 +7209,9 @@ document.getElementById('delUserConfirmBtn').addEventListener('click', async () 
 async function resetUserPassword(userId) {
     const u = teamUsers.find(x => x.id === userId);
     if (!u) return;
-    const pw = prompt(`Neues Startpasswort für ${u.email}\n(mindestens 12 Zeichen)`);
+    const pw = prompt(`Neues Startpasswort für ${u.email}\n(mindestens 6 Zeichen)`);
     if (!pw) return;
-    if (pw.length < 12) { alert('Das Passwort muss mindestens 12 Zeichen lang sein.'); return; }
+    if (pw.length < 6) { alert('Das Passwort muss mindestens 6 Zeichen lang sein.'); return; }
     try {
         const res = await apiRequest(`/team/${userId}/password`, { method: 'POST', body: JSON.stringify({ password: pw }) });
         const r = await res.json();
@@ -7225,9 +7225,9 @@ document.getElementById('addUserBtn').addEventListener('click', async () => {
     const email = prompt('E-Mail-Adresse des neuen Nutzers:');
     if (!email) return;
     const name = prompt('Name (optional):') || '';
-    const pw = prompt('Startpasswort (mindestens 12 Zeichen):');
+    const pw = prompt('Startpasswort (mindestens 6 Zeichen):');
     if (!pw) return;
-    if (pw.length < 12) { alert('Das Passwort muss mindestens 12 Zeichen lang sein.'); return; }
+    if (pw.length < 6) { alert('Das Passwort muss mindestens 6 Zeichen lang sein.'); return; }
 
     try {
         const res = await apiRequest('/team', {
