@@ -9,6 +9,9 @@
     <meta name="theme-color" content="#0066AA">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
+        .session-spinner { display:inline-block; width:16px; height:16px; border:2px solid #DCE3EB; border-top-color:#0066AA; border-radius:50%; animation:session-spin 1s linear infinite; }
+        @keyframes session-spin { to { transform:rotate(360deg); } }
+        .session-placeholder { color:#5C6B7A; padding:12px; background:#F5F7FA; border-radius:8px; }
         /* ===== RESET & GRUNDLAGEN ===== */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
         html { -webkit-text-size-adjust: 100%; }
@@ -1286,7 +1289,8 @@
             <form id="loginForm" style="display:flex; flex-direction:column; gap:10px;">
                 <input type="email" id="loginEmail" placeholder="E-Mail" style="padding:12px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:15px;">
                 <input type="password" id="loginPassword" placeholder="Passwort" style="padding:12px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:15px;">
-                <div class="error" id="loginError"></div>
+                <div class="error" id="loginError" role="alert"></div>
+                <div id="loginProgress" role="status" aria-live="polite" hidden><span class="session-spinner" aria-hidden="true"></span> <span id="loginProgressText"></span></div>
                 <button type="submit" class="btn btn-primary" id="loginBtn">Anmelden</button>
                 <div style="text-align:center; font-size:13px; color:#6b7a8f;">Noch keinen Account? <a href="#" id="showRegisterLink" style="color:#0066AA; text-decoration:underline;">Registrieren</a></div>
             </form>
@@ -1305,6 +1309,10 @@
         </div>
     </div>
 
+    <div id="connectionStatus" role="status" aria-live="polite" hidden style="padding:12px;background:#E8F4FD;border-radius:10px;margin:12px 0;">
+        <span id="connectionText"></span>
+        <button id="connectionRetry" type="button" hidden>Erneut versuchen</button>
+    </div>
     <!-- APP (nach Login) -->
     <div id="appContainer" style="display:none;">
         <button id="homeBtn" class="home-btn" aria-label="Zur Startseite" title="Startseite">
@@ -2019,6 +2027,91 @@ function setUser(u) {
 // ============================================================
 let refreshPromise = null;
 
+// Includes body download in the deadline: headers alone are not completion.
+async function boundedFetch(url, options = {}, timeoutMs = 20000) {
+    const controller = new AbortController();
+    let timer;
+    const abort = () => controller.abort();
+    options.signal?.addEventListener('abort', abort, { once: true });
+    if (options.signal?.aborted) controller.abort();
+    try {
+        return await Promise.race([
+            (async () => {
+                const response = await fetch(url, { ...options, signal: controller.signal });
+                const body = await response.arrayBuffer();
+                return new Response(response.status === 204 || response.status === 205 || response.status === 304 ? null : body, {
+                    status: response.status, statusText: response.statusText, headers: response.headers
+                });
+            })(),
+            new Promise((_, reject) => {
+                timer = setTimeout(() => {
+                    reject(new ApiError('Die Verbindung dauert zu lange. Bitte erneut versuchen.', 0, 'TIMEOUT'));
+                    controller.abort();
+                }, timeoutMs);
+            })
+        ]);
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError('Verbindung unterbrochen. Bitte erneut versuchen.', 0, 'NETWORK');
+    } finally {
+        clearTimeout(timer);
+        options.signal?.removeEventListener('abort', abort);
+    }
+}
+
+let recoveryPromise = null, lastRecovery = 0, connectionFailures = 0;
+function connectionNotice(message = '', retry = false) {
+    const bar = document.getElementById('connectionStatus');
+    bar.hidden = !message;
+    document.getElementById('connectionText').textContent = message;
+    document.getElementById('connectionRetry').hidden = !retry;
+}
+function reportConnectionError(error) {
+    if (['SESSION_CHANGED', 'NO_SESSION', 'PASSWORD_CHANGE_REQUIRED'].includes(error.code)) return;
+    connectionFailures++;
+    document.querySelectorAll('.session-placeholder').forEach(el => {
+        el.textContent = 'Daten konnten noch nicht geladen werden. Bitte erneut versuchen.';
+    });
+    connectionNotice('Aktualisierung fehlgeschlagen. Bereits geladene Daten bleiben erhalten. ' + error.message, true);
+}
+async function recoverSession(force = false, featuresKnown = false) {
+    if (!getToken() || passwordRequired || document.visibilityState === 'hidden') return;
+    if (recoveryPromise) return recoveryPromise;
+    if (!force && Date.now() - lastRecovery < 30000) return;
+    const generation = authGeneration;
+    const task = (async () => {
+        const failures = connectionFailures;
+        connectionNotice('Verbindung wird wiederhergestellt …');
+        try {
+            await sitzungSichern();
+            if (generation !== authGeneration) return;
+            if (!featuresKnown) await refreshFeatures();
+            if (generation !== authGeneration || passwordRequired) return;
+            const view = document.querySelector('.view.active')?.id?.replace('view-', '') || 'main';
+            const jobs = [loadLeads()];
+            if (view === 'main' || view === 'calendar') jobs.push(renderDashboard());
+            if (view === 'calendar') jobs.push(loadCalendar());
+            if (view === 'stats') jobs.push(loadHistogram());
+            if (view === 'map') jobs.push(loadMapData());
+            if (hasFeature('questionnaire') && !['scan', 'questionnaire'].includes(view)) {
+                jobs.push(loadTemplates().then(() => { if (generation === authGeneration) loadActiveTemplate(); }));
+            }
+            await Promise.all(jobs);
+            if (generation !== authGeneration) return;
+            lastRecovery = Date.now();
+            if (failures === connectionFailures) connectionNotice();
+            wsAnzeigeAktualisieren().catch(console.warn);
+            if (navigator.onLine) wsVerarbeiten({ still: true }).catch(console.warn);
+        } catch (error) {
+            if (generation === authGeneration) reportConnectionError(error);
+        }
+    })();
+    recoveryPromise = task;
+    try { await task; } finally { if (recoveryPromise === task) recoveryPromise = null; }
+}
+document.getElementById('connectionRetry').addEventListener('click', () => recoverSession(true));
+
+
 // ============================================================
 // SITZUNG VORAUSSCHAUEND ERNEUERN
 // ============================================================
@@ -2068,13 +2161,13 @@ async function sitzungSichern() {
 // Beim Zurueckkehren in die App pruefen – das ist der Moment,
 // in dem der Nutzer den Abbruch sonst bemerkt haette.
 document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') sitzungSichern().catch(console.warn);
+    if (document.visibilityState === 'visible') recoverSession().catch(console.warn);
 });
-window.addEventListener('focus', () => sitzungSichern().catch(console.warn));
-window.addEventListener('online', () => sitzungSichern().catch(console.warn));
+window.addEventListener('focus', () => recoverSession().catch(console.warn));
+window.addEventListener('online', () => recoverSession(true).catch(console.warn));
 
 // Zusaetzlich regelmaessig, solange die App offen liegt
-setInterval(() => sitzungSichern().catch(console.warn), 4 * 60 * 1000);
+setInterval(() => recoverSession().catch(console.warn), 4 * 60 * 1000);
 
 async function refreshAccessToken() {
     const rt = getRefreshToken();
@@ -2085,11 +2178,11 @@ async function refreshAccessToken() {
     const task = (async () => {
         let res;
         try {
-            res = await fetch(`${API_URL}/auth/refresh`, {
+            res = await boundedFetch(`${API_URL}/auth/refresh`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ refresh_token: rt })
             });
-        } catch { throw new ApiError('Verbindung unterbrochen. Die Sitzung bleibt erhalten.', 0, 'NETWORK'); }
+        } catch (error) { throw error; }
         if (generation !== authGeneration || identity !== ownerKey(getUser())) throw new ApiError('Konto wurde gewechselt.', 0, 'SESSION_CHANGED');
         if (res.status === 401 || res.status === 403) return null;
         if (!res.ok) throw new ApiError('Sitzung konnte vorübergehend nicht erneuert werden.', res.status, 'REFRESH_UNAVAILABLE');
@@ -2106,6 +2199,11 @@ async function refreshAccessToken() {
 }
 
 async function apiRequest(endpoint, options = {}, isRetry = false) {
+    try { return await performApiRequest(endpoint, options, isRetry); }
+    catch (error) { reportConnectionError(error); throw error; }
+}
+
+async function performApiRequest(endpoint, options = {}, isRetry = false) {
     const generation = authGeneration, identity = ownerKey(getUser());
     if (!getToken()) throw new ApiError('Nicht eingeloggt', 401, 'NO_SESSION');
     const { acceptedStatuses = [], expectedOwner, ...fetchOptions } = options;
@@ -2118,12 +2216,21 @@ async function apiRequest(endpoint, options = {}, isRetry = false) {
     if (!isRetry) await sitzungSichern();
     assertSession();
     let response;
-    try {
-        response = await fetch(`${API_URL}${endpoint}`, {
-            ...fetchOptions,
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}`, ...(fetchOptions.headers || {}) }
-        });
-    } catch { throw new ApiError('Netzwerkverbindung unterbrochen.', 0, 'NETWORK'); }
+    const canRetry = ['GET', 'HEAD'].includes((fetchOptions.method || 'GET').toUpperCase());
+    for (let attempt = 0; ; attempt++) {
+        try {
+            response = await boundedFetch(`${API_URL}${endpoint}`, {
+                ...fetchOptions,
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}`, ...(fetchOptions.headers || {}) }
+            }, endpoint === '/process-image' ? 90000 : 20000);
+            if (!(canRetry && attempt === 0 && [502, 503, 504].includes(response.status))) break;
+        } catch (error) {
+            if (!canRetry || attempt > 0 || !['NETWORK', 'TIMEOUT'].includes(error.code) || !navigator.onLine) throw error;
+        }
+        assertSession();
+        await new Promise(resolve => setTimeout(resolve, 500));
+        assertSession();
+    }
     assertSession();
     let body = null;
     if ((response.headers.get('content-type') || '').includes('json')) {
@@ -2145,7 +2252,7 @@ async function apiRequest(endpoint, options = {}, isRetry = false) {
         if (!isRetry) {
             const newToken = await refreshAccessToken();
             assertSession();
-            if (newToken) return apiRequest(endpoint, options, true);
+            if (newToken) return performApiRequest(endpoint, options, true);
         }
         removeToken(); showLogin();
         throw new ApiError('Session abgelaufen – bitte erneut anmelden', 401, 'NO_SESSION');
@@ -2161,7 +2268,7 @@ async function apiRequest(endpoint, options = {}, isRetry = false) {
 // 4. LOGIN / REGISTER
 // ============================================================
 async function login(email, password) {
-    const response = await fetch(`${API_URL}/auth/login`, {
+    const response = await boundedFetch(`${API_URL}/auth/login`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
     });
@@ -2301,14 +2408,27 @@ showLoginLink.addEventListener('click', (e) => {
 loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     loginError.style.display = 'none';
-    loginBtn.disabled = true; loginBtn.textContent = '⏳ ...';
+    loginBtn.disabled = true; loginBtn.textContent = 'Anmelden …';
+    loginForm.setAttribute('aria-busy', 'true');
+    document.getElementById('loginProgress').hidden = false;
+    document.getElementById('loginProgressText').textContent = 'Du wirst angemeldet …';
+    const slowLogin = setTimeout(() => {
+        document.getElementById('loginProgressText').textContent = 'Die Verbindung dauert etwas länger …';
+    }, 4000);
+    let loginSucceeded = false;
     try {
         const data = await login(loginEmail.value, loginPassword.value);
-        showApp(data.user, data.features);
+        await showApp(data.user, data.features);
+        loginSucceeded = true;
     } catch (error) {
         loginError.textContent = error.message || 'Login fehlgeschlagen';
         loginError.style.display = 'block';
-    } finally { loginBtn.disabled = false; loginBtn.textContent = 'Anmelden'; }
+    } finally {
+        clearTimeout(slowLogin);
+        document.getElementById('loginProgress').hidden = true;
+        loginForm.removeAttribute('aria-busy');
+        loginBtn.disabled = false; loginBtn.textContent = loginSucceeded ? 'Anmelden' : 'Erneut versuchen';
+    }
 });
 
 registerForm.addEventListener('submit', async (e) => {
@@ -2388,6 +2508,7 @@ async function refreshFeatures() {
         if (result.success) setFeatures(result.active);
         return result.data || [];
     } catch (error) {
+        reportConnectionError(error);
         console.error('Feature-Abruf fehlgeschlagen:', error);
         return [];
     }
@@ -2410,7 +2531,7 @@ document.getElementById('featuresBtn').addEventListener('click', async () => {
 // ============================================================
 // 7. NAVIGATION
 // ============================================================
-function showView(viewId) {
+function showView(viewId, loadData = true) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     const view = document.getElementById(`view-${viewId}`);
     if (view) view.classList.add('active');
@@ -2423,7 +2544,7 @@ function showView(viewId) {
     if (dashboardPanel) {
         const showDashboard = viewId === 'main' || viewId === 'calendar';
         dashboardPanel.style.display = showDashboard ? 'flex' : 'none';
-        if (showDashboard) renderDashboard();
+        if (showDashboard && loadData) renderDashboard();
     }
     if (viewId === 'map') { initMap(); loadMapData(); }
     if (viewId === 'stats') { loadHistogram(); loadLeads(); }
@@ -2457,12 +2578,6 @@ document.getElementById('dashboardCalendarBtn')?.addEventListener('click', () =>
 // ============================================================
 async function showApp(user, features) {
     if (user.mustChangePassword) { openPasswordDialog(true); return; }
-    const generation = authGeneration;
-    try { await sitzungSichern(); } catch (error) {
-        if (error.code === 'NO_SESSION' || error.code === 'SESSION_CHANGED') return;
-        console.warn(error.message);
-    }
-    if (generation !== authGeneration) return;
     loginContainer.style.display = 'none';
     appContainer.style.display = 'block';
     userInfo.style.display = 'flex';
@@ -2471,17 +2586,19 @@ async function showApp(user, features) {
     userBadge.textContent = user.fullName ? user.fullName.charAt(0).toUpperCase() : '👤';
     if (features) setFeatures(features);
     else applyFeatureVisibility();
-    await refreshFeatures();
-    if (generation !== authGeneration || passwordRequired) return;
-    showView('main');
-    loadLeads();
-    wsAnzeigeAktualisieren();
-    if (hasFeature('questionnaire')) await loadTemplates().then(() => loadActiveTemplate());
-    if (generation === authGeneration && navigator.onLine) wsVerarbeiten({ still: true });
+    for (const id of ['dashboardActions', 'dashboardGoal', 'leadsList']) {
+        const element = document.getElementById(id);
+        if (element && !element.textContent.trim()) element.innerHTML = '<div class="session-placeholder">Daten werden geladen …</div>';
+    }
+    showView('main', false);
+    // Start independent loads after the authenticated shell is visible.
+    void recoverSession(true, !!features);
+
 }
 
 function resetSessionView() {
-    refreshPromise = null;
+    refreshPromise = null; recoveryPromise = null; lastRecovery = 0;
+    connectionNotice();
     allLeads = []; currentLeadDetail = null;
     calAppointments = []; calTodos = []; calCounts = {}; calTodoCounts = {};
     teamUsers = []; goalStats = null; selectedUserIds = null; statsUsers = [];
@@ -2982,7 +3099,7 @@ async function loadLeads() {
         }
     } catch (error) {
         if (error.message.includes('Nicht eingeloggt')) showLogin();
-        else console.error(error);
+        else reportConnectionError(error);
     }
 }
 
@@ -5923,6 +6040,7 @@ async function loadDashboardTodos() {
 }
 
 async function renderDashboardActions() {
+    const generation = authGeneration;
     const container = document.getElementById('dashboardActions');
     if (!container || !hasFeature('calendar')) return;
     const actions = [];
@@ -5940,6 +6058,7 @@ async function renderDashboardActions() {
         });
     } catch (error) {
         console.warn('Dashboard Follow-ups:', error);
+        return;
     }
 
     try {
@@ -5955,8 +6074,10 @@ async function renderDashboardActions() {
         }
     } catch (error) {
         console.warn('Dashboard Termine:', error);
+        return;
     }
 
+    if (generation !== authGeneration) return;
     const sorted = actions.sort((a, b) => a.due.localeCompare(b.due)).slice(0, 6);
     container.innerHTML = sorted.length ? sorted.map(action => `
         <div class="dashboard-action ${action.type}">
@@ -5970,10 +6091,12 @@ async function renderDashboardActions() {
 }
 
 async function renderDashboardGoal() {
+    const generation = authGeneration;
     const container = document.getElementById('dashboardGoal');
     if (!container || !hasFeature('gamification')) return;
     try {
         await loadGoalStats();
+        if (generation !== authGeneration) return;
         const data = goalStats;
         if (!data) { container.innerHTML = ''; return; }
         const current = data.currentWeek?.count || 0;
@@ -5988,7 +6111,6 @@ async function renderDashboardGoal() {
         `;
     } catch (error) {
         console.warn('Dashboard Ziel:', error);
-        container.innerHTML = '';
     }
 }
 
@@ -6002,8 +6124,10 @@ function renderDashboard() {
     actionsSection.style.display = hasCalendar ? '' : 'none';
     goalSection.style.display = hasGamification ? '' : 'none';
     panel.style.display = (hasCalendar || hasGamification) ? 'flex' : 'none';
-    if (hasCalendar) renderDashboardActions();
-    if (hasGamification) renderDashboardGoal();
+    return Promise.all([
+        ...(hasCalendar ? [renderDashboardActions()] : []),
+        ...(hasGamification ? [renderDashboardGoal()] : [])
+    ]);
 }
 
 // Nimmt entweder Koordinaten oder eine Adresse als Text.
