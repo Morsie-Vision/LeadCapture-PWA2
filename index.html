@@ -2605,7 +2605,7 @@ function resetSessionView() {
     questionTemplate = []; templates = {}; templateRecords = [];
     activeTemplateName = ''; activeTemplateId = ''; currentLeadId = null; currentLeadAnswers = {};
     activeFeatures = new Set(); passwordRequired = false;
-    currentSearchTerm = ''; searchActive = false; showAllActive = false; leadsHistogramFilter = null;
+    currentSearchTerm = ''; searchActive = false; showAllActive = false; leadsHistogramFilter = null; histogramLeadIdsByDate = null;
     document.querySelectorAll('.modal-overlay, #leadDetailOverlay, #apptOverlay, #todoOverlay, #histOverlay').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('dialog[open]').forEach(el => el.close());
     for (const id of ['leadsList', 'searchResults', 'calList', 'histContent', 'dashboardActions', 'dashboardGoal', 'questionnaireForm', 'questionEditor']) {
@@ -2930,6 +2930,7 @@ function makeHighlighter(searchTerm) {
 // Ist gerade ein Zeitraum-Filter aktiv, wird er nach jedem Neuladen
 // (z.B. nach dem Löschen eines Leads) automatisch neu angewendet.
 let leadsHistogramFilter = null;   // { label, prefix }
+let histogramLeadIdsByDate = null; // authoritative date buckets returned by the backend
 
 function displayLeads(leads) {
     if (leadsHistogramFilter) {
@@ -2954,12 +2955,14 @@ function statisticsDateKey(value) {
     return `${part('year')}-${part('month')}-${part('day')}`;
 }
 
-function applyLeadsHistogramFilter(leads) {
+function applyLeadsHistogramFilter(leads, authoritativeIds = null) {
     const { label, prefix } = leadsHistogramFilter;
     // Zeitraum UND Nutzerfilter anwenden, damit Liste und
     // Histogramm nicht auseinanderlaufen
     const filtered = leads.filter(l =>
-        statisticsDateKey(l.created_at).startsWith(prefix) && leadPassesUserFilter(l));
+        (authoritativeIds
+            ? authoritativeIds.has(String(l.id))
+            : statisticsDateKey(l.created_at).startsWith(prefix)) && leadPassesUserFilter(l));
 
     const nutzerHinweis = (typeof selectedUserIds !== 'undefined' && selectedUserIds !== null
         && statsUsers.length > 0 && selectedUserIds.size !== statsUsers.length)
@@ -2989,7 +2992,12 @@ function showLeadsForBar(item, view) {
     // item.date ist je nach Ansicht "YYYY-MM-DD", "YYYY-MM" oder "YYYY" -
     // Verglichen wird mit dem Kalendertag in der Statistik-Zeitzone.
     leadsHistogramFilter = { label: labels[view] || item.date, prefix: item.date };
-    applyLeadsHistogramFilter(allLeads);
+    const matchingIds = histogramLeadIdsByDate
+        ? new Set(Object.entries(histogramLeadIdsByDate)
+            .filter(([date]) => date.startsWith(item.date))
+            .flatMap(([, ids]) => ids.map(String)))
+        : null;
+    applyLeadsHistogramFilter(allLeads, matchingIds);
     document.getElementById('leadsList').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
@@ -5597,6 +5605,9 @@ async function loadHistogram() {
         ]);
         const result = await response.json();
         if (!result.success) throw new Error(result.error || 'Unbekannter Fehler');
+        histogramLeadIdsByDate = result.leadIdsByDate && typeof result.leadIdsByDate === 'object'
+            ? result.leadIdsByDate
+            : null;
         const leadsResult = await leadsResponse.json();
         if (!leadsResult.success || !Array.isArray(leadsResult.data)) throw new Error(leadsResult.error || 'Leads konnten nicht geladen werden');
         allLeads = leadsResult.data;
@@ -7626,3 +7637,4 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
