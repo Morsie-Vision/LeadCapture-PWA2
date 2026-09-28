@@ -1,110 +1,50 @@
-// sw.js - Verbesserte Version mit automatischem Update
-const CACHE_NAME = 'leadcapture-v6';
-const urlsToCache = [
-    './',
-    './index.html',
-    './manifest.json',
-    './icons/icon-192.png',
-    './icons/icon-512.png'
-];
+// Cache only the public, same-origin app shell. Navigations prefer fresh HTML.
+const CACHE_NAME = 'leadcapture-v8';
+const urlsToCache = ['./', './index.html', './manifest.json', './integrity.js',
+    './icons/icon-map.svg', './icons/icon-questionnaire.png', './icons/icon-scan.png', './icons/icon-stats.png'];
 
-// Installations-Event
 self.addEventListener('install', event => {
-    console.log('🔄 Service Worker installiert...');
-    event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then(cache => {
-                console.log('📦 Cache geöffnet');
-                return cache.addAll(urlsToCache);
-            })
-            .then(() => {
-                console.log('✅ Alle Dateien gecached');
-                return self.skipWaiting(); // Aktiviert neuen SW sofort
-            })
-    );
+    event.waitUntil(caches.open(CACHE_NAME)
+        .then(cache => cache.addAll(urlsToCache))
+        .then(() => self.skipWaiting()));
 });
-
-// Aktivierungs-Event (alte Caches löschen)
 self.addEventListener('activate', event => {
-    console.log('🚀 Service Worker aktiviert');
-    event.waitUntil(
-        caches.keys().then(cacheNames => {
-            return Promise.all(
-                cacheNames.map(cacheName => {
-                    if (cacheName !== CACHE_NAME) {
-                        console.log(`🗑️ Alter Cache gelöscht: ${cacheName}`);
-                        return caches.delete(cacheName);
-                    }
-                })
-            );
-        }).then(() => {
-            console.log('✅ Alte Caches bereinigt');
-            return self.clients.claim(); // Übernimmt sofort die Kontrolle
-        })
-    );
+    event.waitUntil(caches.keys().then(names => Promise.all(names
+        .filter(name => name.startsWith('leadcapture-') && name !== CACHE_NAME)
+        .map(name => caches.delete(name))))
+        .then(() => self.clients.claim()));
 });
-
-// Fetch-Event (mit Cache-Fallback)
 self.addEventListener('fetch', event => {
-    event.respondWith(
-        caches.match(event.request)
-            .then(response => {
-                if (response) {
-                    // Cache-Treffer – aber prüfe im Hintergrund auf Updates
-                    const fetchPromise = fetch(event.request).then(networkResponse => {
-                        // Aktualisiere den Cache mit der neuen Version
-                        if (networkResponse && networkResponse.status === 200) {
-                            const responseClone = networkResponse.clone();
-                            caches.open(CACHE_NAME).then(cache => {
-                                cache.put(event.request, responseClone);
-                            });
-                        }
-                        return networkResponse;
-                    }).catch(() => {
-                        // Offline – kein Problem, wir haben den Cache
-                    });
-                    return response;
-                }
-                // Kein Cache – direkt laden
-                return fetch(event.request);
-            })
-    );
-});
-
-// Nachricht vom Main-Thread empfangen (für manuelle Updates)
-self.addEventListener('message', event => {
-    if (event.data === 'skipWaiting') {
-        self.skipWaiting();
-    }
-});
-
-// Service Worker Update erzwingen
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations().then(registrations => {
-        for (let reg of registrations) {
-            reg.update();   // prüft auf neue sw.js
-        }
-    });
-
-    // Auf Änderungen lauschen und neu laden
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-        window.location.reload();
-    });
-}
-
-
-// Klick auf die Benachrichtigung öffnet die App (bzw. holt ein
-// bereits offenes Fenster nach vorn)
-self.addEventListener('notificationclick', (event) => {
-    event.notification.close();
-    event.waitUntil(
-        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
-            for (const client of list) {
-                if ('focus' in client) return client.focus();
+    const request = event.request;
+    const url = new URL(request.url);
+    if (request.method !== 'GET' || url.origin !== self.location.origin) return;
+    const shellUrls = urlsToCache.map(path => new URL(path, self.registration.scope).href);
+    // Authenticated routes and arbitrary same-origin pages must never enter this cache.
+    if (!shellUrls.includes(url.origin + url.pathname)) return;
+    const cacheKey = url.origin + url.pathname;
+    event.respondWith((async () => {
+        const cache = await caches.open(CACHE_NAME);
+        try {
+            const response = await fetch(request, { cache: 'no-cache' });
+            if (response.ok) {
+                await cache.put(cacheKey, response.clone());
+                return response;
             }
-            if (self.clients.openWindow) return self.clients.openWindow('/');
-        })
-    );
+            return (await cache.match(cacheKey)) || response;
+        } catch (error) {
+            const cached = await cache.match(cacheKey);
+            if (cached) return cached;
+            throw error;
+        }
+    })());
 });
-
-console.log('✅ Service Worker geladen (Version 6)');
+self.addEventListener('message', event => {
+    if (event.data === 'skipWaiting') self.skipWaiting();
+});
+self.addEventListener('notificationclick', event => {
+    event.notification.close();
+    event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+        for (const client of list) if ('focus' in client) return client.focus();
+        if (self.clients.openWindow) return self.clients.openWindow(self.registration.scope);
+    }));
+});
