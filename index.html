@@ -1421,6 +1421,11 @@
                 </div>
             </div>
 
+            <div class="questionnaire-name-field" style="margin:16px 0;">
+                <label for="questionnaireName" style="display:block;font-weight:600;margin-bottom:6px;">Name des Fragebogens</label>
+                <input id="questionnaireName" type="text" placeholder="z. B. Messegespräch Vision 2026" aria-describedby="questionnaireNameError" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid var(--lc-line);border-radius:var(--lc-radius-sm);font-size:16px;background:var(--lc-white);">
+                <p id="questionnaireNameError" role="alert" hidden style="color:var(--lc-red);margin-top:6px;"></p>
+            </div>
             <div id="questionnaireEditor"></div>
             <button class="builder-add" id="addQuestionBtn">＋ Frage hinzufügen</button>
             <div class="empty-leads" id="emptyQuestions">Noch keine Fragen. Füge deine erste Frage hinzu.</div>
@@ -2572,6 +2577,7 @@ function resetSessionView() {
     teamUsers = []; goalStats = null; selectedUserIds = null; statsUsers = [];
     questionTemplate = []; templates = {}; templateRecords = [];
     activeTemplateName = ''; activeTemplateId = ''; currentLeadId = null; currentLeadAnswers = {};
+    syncQuestionnaireNameField();
     activeFeatures = new Set(); passwordRequired = false;
     currentSearchTerm = ''; searchActive = false; showAllActive = false; leadsHistogramFilter = null; histogramLeadIdsByDate = null;
     document.querySelectorAll('.modal-overlay, #leadDetailOverlay, #apptOverlay, #todoOverlay, #histOverlay').forEach(el => el.classList.remove('active'));
@@ -5030,6 +5036,12 @@ async function loadTemplates() {
     }
 }
 
+function syncQuestionnaireNameField() {
+    document.getElementById('questionnaireName').value = activeTemplateName;
+    document.getElementById('questionnaireName').removeAttribute('aria-invalid');
+    document.getElementById('questionnaireNameError').hidden = true;
+}
+
 async function loadActiveTemplate() {
     const savedId = localStorage.getItem(currentTenantStorageKey(ACTIVE_TEMPLATE_ID_KEY)) || '';
     const savedName = localStorage.getItem(currentTenantStorageKey(ACTIVE_TEMPLATE_KEY)) || '';
@@ -5060,6 +5072,7 @@ async function loadActiveTemplate() {
     }
 
     persistActiveQuestions();
+    syncQuestionnaireNameField();
     renderQuestionnaireEditor();
     updateTemplateSelect();
 }
@@ -5132,6 +5145,7 @@ async function saveTemplate(name) {
 
         activeTemplateId = result.data.id;
         activeTemplateName = result.data.name;
+        syncQuestionnaireNameField();
         questionTemplate = normalizeQuestionList(result.data.questions || []);
 
         localStorage.setItem(currentTenantStorageKey(ACTIVE_TEMPLATE_ID_KEY), activeTemplateId);
@@ -5163,6 +5177,7 @@ async function loadTemplate(name) {
     questionTemplate = normalizeQuestionList(record.questions || []);
     activeTemplateId = record.id;
     activeTemplateName = record.name;
+    syncQuestionnaireNameField();
 
     localStorage.setItem(currentTenantStorageKey(ACTIVE_TEMPLATE_ID_KEY), activeTemplateId);
     localStorage.setItem(currentTenantStorageKey(ACTIVE_TEMPLATE_KEY), activeTemplateName);
@@ -5195,6 +5210,7 @@ async function deleteTemplate(name) {
         if (activeTemplateId === record.id) {
             activeTemplateId = '';
             activeTemplateName = '';
+            syncQuestionnaireNameField();
             questionTemplate = [];
             localStorage.removeItem(currentTenantStorageKey(ACTIVE_TEMPLATE_ID_KEY));
             localStorage.removeItem(currentTenantStorageKey(ACTIVE_TEMPLATE_KEY));
@@ -5219,6 +5235,7 @@ document.getElementById('questionnaireTemplateSelect').addEventListener('change'
         questionTemplate = [];
         activeTemplateId = '';
         activeTemplateName = '';
+        syncQuestionnaireNameField();
         localStorage.removeItem(currentTenantStorageKey(ACTIVE_TEMPLATE_ID_KEY));
         localStorage.removeItem(currentTenantStorageKey(ACTIVE_TEMPLATE_KEY));
         persistActiveQuestions();
@@ -5367,9 +5384,19 @@ document.getElementById('saveQuestionnaireTemplateBtn').addEventListener('click'
         return;
     }
     questionTemplate = cleaned;
-    const name = prompt('Name für den Fragebogen:', activeTemplateName || '');
-    if (!name?.trim()) return;
-    await saveTemplate(name.trim());
+    const nameInput = document.getElementById('questionnaireName');
+    const name = nameInput.value.trim();
+    if (!name) {
+        const error = document.getElementById('questionnaireNameError');
+        error.textContent = 'Bitte gib einen Namen für den Fragebogen ein.';
+        error.hidden = false;
+        nameInput.setAttribute('aria-invalid', 'true');
+        nameInput.focus();
+        return;
+    }
+    nameInput.removeAttribute('aria-invalid');
+    document.getElementById('questionnaireNameError').hidden = true;
+    await saveTemplate(name);
     renderQuestionnaireEditor();
 });
 
@@ -5377,6 +5404,8 @@ document.getElementById('resetQuestionnaireBtn').addEventListener('click', () =>
     if (confirm('Alle aktuellen Fragen zurücksetzen? Gespeicherte Vorlagen bleiben erhalten.')) {
         questionTemplate = [];
         activeTemplateName = '';
+        activeTemplateId = '';
+        syncQuestionnaireNameField();
         localStorage.removeItem(currentTenantStorageKey(ACTIVE_TEMPLATE_ID_KEY));
         localStorage.removeItem(currentTenantStorageKey(ACTIVE_TEMPLATE_KEY));
         persistActiveQuestions();
