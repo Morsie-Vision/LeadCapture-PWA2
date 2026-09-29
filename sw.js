@@ -1,6 +1,7 @@
 // Cache only the public, same-origin app shell. Navigations prefer fresh HTML.
-const CACHE_NAME = 'leadcapture-v8';
+const CACHE_NAME = 'leadcapture-v9';
 const urlsToCache = ['./', './index.html', './manifest.json', './integrity.js',
+    './icons/app-icon-192.png', './icons/app-icon-512.png', './icons/apple-touch-icon.png',
     './icons/icon-map.svg', './icons/icon-questionnaire.png', './icons/icon-scan.png', './icons/icon-stats.png'];
 
 self.addEventListener('install', event => {
