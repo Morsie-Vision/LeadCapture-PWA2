@@ -521,6 +521,11 @@
         .map-controls button { padding: 9px 14px; border: 1px solid var(--lc-blue); border-radius: var(--lc-radius-sm); font-size: 12.5px; font-weight: 600; cursor: pointer; background: #fff; color: var(--lc-blue); }
         .map-controls button:hover { background: var(--lc-blue-light); }
         .map-controls select { padding: 8px 10px; border: 1px solid var(--lc-line); border-radius: var(--lc-radius-sm); font-size: 12.5px; background: #fff; }
+        .map-address-card { margin-top: 12px; padding: 16px; border: 1px solid var(--lc-line); border-radius: 12px; overflow-wrap: anywhere; }
+        .map-address-card summary { cursor: pointer; font-weight: 600; }
+        .map-address-card p { margin: 12px 0; }
+        .map-address-card input { width: 100%; min-width: 0; }
+        .map-address-card button { padding: 10px 16px; background: var(--lc-blue); color: white; border: 0; border-radius: 8px; }
         .map-hint { margin-top: 10px; font-family: var(--lc-mono); font-size: 11px; color: var(--lc-gray); text-align: center; letter-spacing: .04em; }
         .map-warn { margin-top: 8px; font-size: 12.5px; color: #8A4B06; background: var(--lc-amber-bg); border: 1px solid #F2D9A8; padding: 9px 11px; border-radius: var(--lc-radius-sm); text-align: center; display: none; }
         .map-warn button { margin-top: 8px; padding: 8px 14px; border: none; border-radius: var(--lc-radius-sm); background: var(--lc-blue); color: #fff; font-size: 12px; cursor: pointer; }
@@ -1319,17 +1324,7 @@
             <div class="error" id="errorBox"></div>
             <form id="leadForm">
                 <div class="form-grid">
-                    <div class="form-group"><label for="title">Titel</label><input type="text" id="title" placeholder="Dr."></div>
-                    <div class="form-group"><label for="visitorType">Besuchertyp</label>
-                        <select id="visitorType">
-                            <option value="">Bitte wählen...</option>
-                            <option value="Entscheider">Entscheider</option>
-                            <option value="Fachbesucher">Fachbesucher</option>
-                            <option value="Student">Student</option>
-                            <option value="Presse">Presse</option>
-                            <option value="Sonstiges">Sonstiges</option>
-                        </select>
-                    </div>
+                    <div class="form-group full"><label for="title">Titel</label><input type="text" id="title" placeholder="Dr."></div>
                     <div class="form-group"><label for="firstName">Vorname</label><input type="text" id="firstName" placeholder="Max"></div>
                     <div class="form-group"><label for="lastName">Nachname</label><input type="text" id="lastName" placeholder="Mustermann"></div>
                     <div class="form-group full"><label for="company">Firma</label><input type="text" id="company" placeholder="Firma GmbH"></div>
@@ -1585,7 +1580,8 @@
             </div>
             <div id="map"></div>
             <div class="map-hint"><span id="mapCount">0</span> Leads auf der Karte</div>
-            <div class="map-warn" id="mapWarn"></div>
+            <div class="map-warn" id="mapWarn" role="status"></div>
+            <div id="mapUnlocated"></div>
         </div>
 
         <!-- VIEW: LEAD-QUESTIONNAIRE -->
@@ -3339,8 +3335,7 @@ const fields = {
     state: document.getElementById('state'),
     country: document.getElementById('country'),
     vatId: document.getElementById('vatId'),
-    interests: document.getElementById('interests'),
-    visitorType: document.getElementById('visitorType')
+    interests: document.getElementById('interests')
 };
 
 function fillForm(data) {
@@ -3364,7 +3359,6 @@ function fillForm(data) {
     fields.interests.value = Array.isArray(data.interests) ? data.interests.join(', ') : '';
     prioFormular.scan = data.priority || null;
     prioEingabeZeichnen('scan');
-    fields.visitorType.value = data.visitor_type || data.visitorType || '';
 }
 
 function collectFormLead() {
@@ -3389,8 +3383,7 @@ function collectFormLead() {
             country: fields.country.value.trim()
         },
         interests: fields.interests.value.split(',').map(s => s.trim()).filter(Boolean),
-        priority: prioFormular.scan,
-        visitorType: fields.visitorType.value
+        priority: prioFormular.scan
     };
 }
 
@@ -5738,7 +5731,7 @@ function hasCoords(lead) {
 function updateCityFilterOptions(leads) {
     const select = document.getElementById('mapCityFilter');
     const current = select.value;
-    const cities = [...new Set(leads.filter(hasCoords).map(l => l.city).filter(Boolean))]
+    const cities = [...new Set(leads.map(l => l.city).filter(Boolean))]
         .sort((a, b) => collator.compare(a, b));
     const desired = ['', ...cities];
     const existing = Array.from(select.options).map(o => o.value);
@@ -5762,13 +5755,14 @@ function displayMapMarkers(leads) {
     const warnBox = document.getElementById('mapWarn');
 
     const located = leads.filter(hasCoords).filter(l => !cityFilter || l.city === cityFilter);
-    const pending = leads.filter(l => !hasCoords(l) && (l.city || l.zip));
+    const pending = leads.filter(l => !hasCoords(l) && (!cityFilter || l.city === cityFilter));
+    renderUnlocatedLeads(pending);
 
     document.getElementById('mapCount').textContent = located.length;
 
     if (pending.length > 0) {
         warnBox.style.display = 'block';
-        warnBox.innerHTML = `<i class=lc-i-warn></i> ${pending.length} Lead(s) mit Adresse haben noch keine Koordinaten.<br>
+        warnBox.innerHTML = `<i class=lc-i-warn></i> ${pending.length} Lead(s) ohne Koordinaten. Adressen unten prüfen oder ergänzen.<br>
             <button onclick="runGeocodeBackfill()"><i class=lc-i-globe></i> Jetzt verorten</button>`;
     } else {
         warnBox.style.display = 'none';
@@ -5812,6 +5806,91 @@ function displayMapMarkers(leads) {
 
     const group = L.featureGroup(mapMarkers);
     mapInstance.fitBounds(group.getBounds().pad(0.15));
+}
+
+// Keep drafts while map data refreshes (e.g. after returning to the app).
+const mapAddressDrafts = new Map();
+const mapAddressSaving = new Set();
+function mapAddressPayload(lead, address) {
+    return { ...lead, firstName: lead.first_name || '', lastName: lead.last_name || '',
+        vatId: lead.vat_id || '', visitorType: lead.visitor_type || '', address };
+}
+function renderUnlocatedLeads(leads) {
+    const container = document.getElementById('mapUnlocated');
+    container.replaceChildren();
+    if (!leads.length) return;
+    const heading = document.createElement('h3');
+    heading.textContent = `Nicht verortete Leads (${leads.length})`;
+    container.appendChild(heading);
+    leads.forEach(lead => {
+        const card = document.createElement('details');
+        card.className = 'map-address-card';
+        card.open = mapAddressDrafts.has(lead.id);
+        const summary = document.createElement('summary');
+        summary.textContent = [lead.company, [lead.first_name, lead.last_name].filter(Boolean).join(' ')].filter(Boolean).join(' · ') || lead.email || 'Lead ohne Namen';
+        card.appendChild(summary);
+        const current = document.createElement('p');
+        current.textContent = [lead.street, lead.zip, lead.city, lead.state, lead.country].filter(Boolean).join(', ') || 'Noch keine Adresse hinterlegt';
+        card.appendChild(current);
+        const form = document.createElement('form');
+        const grid = document.createElement('div');
+        grid.className = 'form-grid';
+        const inputs = {};
+        for (const [key, labelText] of [['street','Straße und Hausnummer'], ['zip','PLZ'], ['city','Stadt'], ['state','Bundesland / Region'], ['country','Land']]) {
+            const label = document.createElement('label');
+            label.className = 'form-group' + (key === 'street' ? ' full' : '');
+            label.textContent = labelText;
+            const input = document.createElement('input');
+            input.type = 'text'; input.name = key;
+            input.value = mapAddressDrafts.get(lead.id)?.[key] ?? lead[key] ?? '';
+            inputs[key] = input;
+            label.appendChild(input); grid.appendChild(label);
+        }
+        const readAddress = () => Object.fromEntries(Object.entries(inputs).map(([key, input]) => [key, input.value.trim()]));
+        form.addEventListener('input', () => mapAddressDrafts.set(lead.id, readAddress()));
+        form.appendChild(grid);
+        const save = document.createElement('button');
+        save.type = 'submit'; save.textContent = 'Adresse speichern';
+        save.disabled = mapAddressSaving.has(lead.id);
+        const message = document.createElement('p');
+        message.setAttribute('role', 'status');
+        form.append(save, message); card.appendChild(form); container.appendChild(card);
+        form.addEventListener('submit', async event => {
+            event.preventDefault();
+            if (mapAddressSaving.has(lead.id)) return;
+            const address = readAddress();
+            mapAddressDrafts.set(lead.id, address);
+            mapAddressSaving.add(lead.id); save.disabled = true;
+            Object.values(inputs).forEach(input => input.disabled = true);
+            message.textContent = 'Adresse wird gespeichert …';
+            try {
+                // This endpoint replaces contact fields, so retain the latest full record.
+                const latest = allLeads.find(item => item.id === lead.id);
+                if (!latest) throw new Error('Lead nicht mehr verfügbar. Bitte aktualisieren.');
+                const response = await apiRequest(`/leads/${encodeURIComponent(lead.id)}`, {
+                    method: 'PUT', body: JSON.stringify({ lead: mapAddressPayload(latest, address) })
+                });
+                const result = await response.json();
+                if (!result.success || !result.data) throw new Error(result.error || 'Adresse konnte nicht gespeichert werden.');
+                allLeads = allLeads.map(item => item.id === lead.id ? result.data : item);
+                mapAddressDrafts.delete(lead.id);
+                mapAddressSaving.delete(lead.id);
+                displayMapMarkers(allLeads);
+                const status = document.getElementById('mapWarn');
+                status.style.display = 'block';
+                const note = document.createElement('p');
+                note.textContent = result.geocoding
+                    ? 'Adresse gespeichert. Verortung läuft im Hintergrund. Anschließend „Aktualisieren“ wählen.'
+                    : 'Adresse gespeichert. Bei fehlenden Koordinaten „Jetzt verorten“ wählen.';
+                status.appendChild(note);
+            } catch (error) {
+                message.textContent = 'Speichern fehlgeschlagen: ' + error.message;
+            } finally {
+                mapAddressSaving.delete(lead.id); save.disabled = false;
+                Object.values(inputs).forEach(input => input.disabled = false);
+            }
+        });
+    });
 }
 
 // Stößt das Nachverorten offener Adressen an.
@@ -7731,4 +7810,5 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
