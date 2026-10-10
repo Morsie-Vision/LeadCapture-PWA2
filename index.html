@@ -1936,8 +1936,8 @@
     <div id="lensPicker" style="display:none;"></div>
     <div id="zoomWrap" style="display:none;">
         <span class="zoom-lbl">Zoom</span>
-        <input type="range" id="zoomSlider" min="1" max="4" step="0.1" value="2">
-        <span id="zoomValue">2.0×</span>
+        <input type="range" id="zoomSlider" min="1" max="4" step="0.1" value="1">
+        <span id="zoomValue">1.0×</span>
     </div>
     <div id="focusRing"></div>
     <div id="cameraFocusHint">Zum Scharfstellen auf die Karte tippen</div>
@@ -4146,11 +4146,12 @@ function chooseVideoFit() {
 // 30 cm an. Haelt man die Visitenkarte naeher, KANN die Kamera nicht
 // scharfstellen - das ist eine optische Grenze, kein Fokusfehler.
 // Samsungs eigene Empfehlung: Abstand halten und zoomen.
-// Genau das machen wir hier automatisch.
+// Bei Bedarf kann der Nutzer dafür den Zoomregler verwenden.
 
 let zoomCaps = null;
 
 async function setupZoom() {
+    zoomCaps = null;
     const track = cameraTrack();
     const slider = document.getElementById('zoomSlider');
     const wrap = document.getElementById('zoomWrap');
@@ -4166,9 +4167,8 @@ async function setupZoom() {
     slider.max = Math.min(zoomCaps.max, zoomCaps.min * 4);   // 4x reicht voellig
     slider.step = zoomCaps.step || 0.1;
 
-    // Startwert: leicht herangezoomt, damit die Karte auch aus
-    // ~30 cm Abstand den Rahmen fuellt.
-    const start = Math.min(slider.max, zoomCaps.min * 2);
+    // Normalansicht beim Öffnen; auf den unterstützten Bereich begrenzen.
+    const start = Math.max(zoomCaps.min, Math.min(1, Number(slider.max)));
     slider.value = start;
     wrap.style.display = 'flex';
 
@@ -7970,6 +7970,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
