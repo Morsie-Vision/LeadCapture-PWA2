@@ -1326,7 +1326,7 @@
 
         <!-- VIEW: SCAN -->
         <div class="view" id="view-scan">
-            <div class="view-header"><button class="back" data-view="main">←</button><h2><i class=lc-i-camera></i> Lead aufnehmen</h2></div>
+            <div class="view-header"><button type="button" class="back" aria-label="Zur vorherigen Ansicht" title="Zurück">←</button><h2><i class=lc-i-camera></i> Lead aufnehmen</h2></div>
             <div class="capture-modes">
                 <button type="button" class="cap-mode active" id="modeCardBtn"><i class=lc-i-scan></i> Visitenkarte</button>
                 <button type="button" class="cap-mode" id="modeQrBtn"><i class=lc-i-qr></i> QR-Code</button>
@@ -1396,7 +1396,7 @@
 
         <!-- VIEW: SEARCH -->
         <div class="view" id="view-search">
-            <div class="view-header"><button class="back" data-view="main">←</button><h2><i class=lc-i-search></i> Suche</h2></div>
+            <div class="view-header"><button type="button" class="back" aria-label="Zur vorherigen Ansicht" title="Zurück">←</button><h2><i class=lc-i-search></i> Suche</h2></div>
             <div class="search-mode-toggle">
                 <button class="smt-btn active" id="searchModeAll" data-mode="all"><i class=lc-i-search></i> Alle Felder</button>
                 <button class="smt-btn" id="searchModeCompany" data-mode="company"><i class=lc-i-building></i> Nur Unternehmen</button>
@@ -1426,7 +1426,7 @@
 
         <!-- VIEW: QUESTIONNAIRE -->
         <div class="view" id="view-questionnaire">
-            <div class="view-header"><button class="back" data-view="main">←</button><h2><i class=lc-i-form></i> Fragebogen</h2></div>
+            <div class="view-header"><button type="button" class="back" aria-label="Zur vorherigen Ansicht" title="Zurück">←</button><h2><i class=lc-i-form></i> Fragebogen</h2></div>
 
             <div class="questionnaire-toolbar">
                 <div class="questionnaire-toolbar-row">
@@ -1454,7 +1454,7 @@
 
         <!-- VIEW: STATS -->
         <div class="view" id="view-stats">
-            <div class="view-header"><button class="back" data-view="main">←</button><h2><i class=lc-i-chart></i> Statistik</h2></div>
+            <div class="view-header"><button type="button" class="back" aria-label="Zur vorherigen Ansicht" title="Zurück">←</button><h2><i class=lc-i-chart></i> Statistik</h2></div>
             <div class="histogram-controls">
                 <div class="user-filter" id="userFilterWrap">
                     <button type="button" class="uf-toggle" id="userFilterBtn">
@@ -1499,7 +1499,7 @@
         <!-- VIEW: KALENDER -->
         <div class="view" id="view-calendar">
             <div class="view-header">
-                <button class="back" data-view="main">←</button>
+                <button type="button" class="back" aria-label="Zur vorherigen Ansicht" title="Zurück">←</button>
                 <h2><i class=lc-i-calendar></i> Termine</h2>
             </div>
 
@@ -1542,7 +1542,7 @@
 
         <!-- VIEW: TEAM -->
         <div class="view" id="view-team">
-            <div class="view-header"><button class="back" data-view="main">←</button><h2><i class=lc-i-users></i> Team</h2></div>
+            <div class="view-header"><button type="button" class="back" aria-label="Zur vorherigen Ansicht" title="Zurück">←</button><h2><i class=lc-i-users></i> Team</h2></div>
 
             <div class="team-tabs">
                 <button class="tt-btn active" data-tab="stats"><i class=lc-i-chart></i> Auswertung</button>
@@ -1594,7 +1594,7 @@
 
         <!-- VIEW: MAP -->
         <div class="view" id="view-map">
-            <div class="view-header"><button class="back" data-view="main">←</button><h2><i class=lc-i-map></i> Lead-Karte</h2></div>
+            <div class="view-header"><button type="button" class="back" aria-label="Zur vorherigen Ansicht" title="Zurück">←</button><h2><i class=lc-i-map></i> Lead-Karte</h2></div>
             <div class="map-controls">
                 <button id="mapRefreshBtn"><i class=lc-i-refresh></i> Aktualisieren</button>
                 <select id="mapCityFilter"><option value="">Alle Städte</option></select>
@@ -2506,7 +2506,32 @@ document.getElementById('featuresBtn').addEventListener('click', async () => {
 // ============================================================
 // 7. NAVIGATION
 // ============================================================
-function showView(viewId, loadData = true) {
+let currentViewId = 'main';
+const viewHistory = [];
+
+function resetViewHistory() {
+    viewHistory.length = 0;
+    currentViewId = 'main';
+}
+
+function goBackView() {
+    const previous = viewHistory.pop();
+    if (!previous) { showView('main'); return; }
+    // Existing DOM retains filters, form drafts and the selected Team tab.
+    showView(previous.id, false, false);
+    requestAnimationFrame(() => {
+        if (currentViewId === previous.id) window.scrollTo(0, previous.scrollY);
+    });
+}
+
+function showView(viewId, loadData = true, recordHistory = true) {
+    if (viewId !== 'main' && !document.getElementById(`view-${viewId}`)) return;
+    if (viewId === 'main') viewHistory.length = 0;
+    else if (recordHistory && viewId !== currentViewId) {
+        viewHistory.push({ id: currentViewId, scrollY: window.scrollY || 0 });
+        if (viewHistory.length > 50) viewHistory.shift();
+    }
+    currentViewId = viewId;
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     const view = document.getElementById(`view-${viewId}`);
     if (view) view.classList.add('active');
@@ -2520,6 +2545,10 @@ function showView(viewId, loadData = true) {
         const showDashboard = viewId === 'main' || viewId === 'calendar';
         dashboardPanel.style.display = showDashboard ? 'flex' : 'none';
         if (showDashboard && loadData) renderDashboard();
+    }
+    if (!loadData) {
+        if (viewId === 'map' && mapInstance) requestAnimationFrame(() => mapInstance.invalidateSize());
+        return;
     }
     if (viewId === 'map') { initMap(); loadMapData(); }
     if (viewId === 'stats') loadHistogram();
@@ -2543,7 +2572,7 @@ document.querySelectorAll('.grid-card').forEach(card => {
     });
 });
 document.querySelectorAll('.back').forEach(btn => {
-    btn.addEventListener('click', () => showView('main'));
+    btn.addEventListener('click', goBackView);
 });
 document.getElementById('homeBtn')?.addEventListener('click', () => showView('main'));
 document.getElementById('dashboardCalendarBtn')?.addEventListener('click', () => showView('calendar'));
@@ -2573,6 +2602,7 @@ async function showApp(user, features) {
 }
 
 function resetSessionView() {
+    resetViewHistory();
     closeTeamAccountForm();
     document.getElementById('teamAccountNotice').hidden = true;
     refreshPromise = null; recoveryPromise = null; lastRecovery = 0;
@@ -7940,6 +7970,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
