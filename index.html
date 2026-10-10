@@ -1194,6 +1194,25 @@
         #teamAccountHint { color:var(--lc-gray); font-size:13px; margin:12px 0; }
         #teamAccountError { color:var(--lc-red); margin:8px 0; }
         #teamAccountNotice { color:var(--lc-green); margin:12px 0; }
+        .tag-chips { display:flex; gap:6px; flex-wrap:wrap; margin:8px 0; }
+        .tag-chip,.tag-add { border:1px solid var(--lc-line); border-radius:16px; padding:6px 10px; background:var(--lc-blue-light,#E8F4FD); color:var(--lc-blue); font:inherit; font-size:12px; overflow-wrap:anywhere; max-width:100%; }
+        button.tag-chip,.tag-add { cursor:pointer; min-height:36px; }
+        .tag-add { background:white; border-style:dashed; }
+        .tag-picker { padding:12px; border:1px solid var(--lc-line); border-radius:10px; background:white; }
+        .tag-picker input { width:100%; padding:10px; font-size:16px; border:1px solid var(--lc-line); border-radius:8px; }
+        .tag-options { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+        .tag-picker button { padding:8px 12px; border:1px solid var(--lc-line); border-radius:8px; background:var(--lc-paper); cursor:pointer; overflow-wrap:anywhere; }
+        .tag-picker p,.search-filters small { font-size:12px; color:var(--lc-gray); }
+        .lead-tags .tag-chip { font-size:11px; padding:3px 8px; }
+        .lead-card .meta { display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center; }
+        .lead-creator { color:var(--lc-gray); overflow-wrap:anywhere; font-size:11px; }
+        .tm-lead-link { border:0; padding:4px 0; background:none; color:var(--lc-blue); cursor:pointer; text-align:left; font:inherit; font-weight:600; }
+        #searchOwnerFilter { margin:8px 0; font-size:13px; }
+        #searchOwnerFilter button { border:0; background:none; color:var(--lc-blue); cursor:pointer; text-decoration:underline; }
+        #detailQuestionSection h3 { margin-bottom:10px; }
+        #detailQuestionSection>select { width:100%; margin:8px 0 14px; padding:10px; font-size:16px; border:1px solid var(--lc-line); border-radius:8px; }
+        #detailQuestionStatus { margin:10px 0; font-size:13px; }
+        #detailQuestionSection[hidden],.tag-picker[hidden],#searchOwnerFilter[hidden] { display:none; }
     </style>
 </head>
 <body>
@@ -1354,6 +1373,7 @@
                     </div>
                 </div>
 
+                <div class="scan-questionnaire"><label>Tags / Herkunft</label><div id="captureTagPicker"></div><small>Messe oder Kanal auswählen oder mit + Tag anlegen. Mehrere Tags möglich.</small></div>
                 <!-- FRAGEBOGEN DIREKT BEIM SCAN -->
                 <div class="scan-questionnaire" id="scanQuestionnaire">
                     <div class="sq-head">
@@ -1399,6 +1419,7 @@
                     <option value="priority_asc">Priorität (niedrig → hoch)</option>
                 </select>
             </div>
+            <div class="search-filters"><div id="searchTagPicker"></div><small>Bei mehreren Tags müssen alle zutreffen.</small><div id="searchOwnerFilter" hidden><span id="searchOwnerName"></span> <button type="button" id="clearOwnerFilter">Nutzerfilter aufheben</button></div></div>
             <div class="result-info" id="searchResultInfo"></div>
             <div id="searchResults"><div class="empty-leads">Gib einen Suchbegriff ein oder klicke „Alle anzeigen"</div></div>
         </div>
@@ -1584,17 +1605,6 @@
             <div id="mapUnlocated"></div>
         </div>
 
-        <!-- VIEW: LEAD-QUESTIONNAIRE -->
-        <div class="view" id="view-lead-questionnaire">
-            <div class="view-header"><button class="back" data-view="main">←</button><h2><i class=lc-i-form></i> Fragebogen für <span id="questionnaireLeadName"></span></h2></div>
-            <div style="display:flex; gap:8px; margin-bottom:12px; align-items:center; flex-wrap:wrap;">
-                <select id="leadTemplateSelect" style="flex:1; min-width:150px; padding:8px 10px; border:1px solid #DCE3EB; border-radius:10px; font-size:13px; background:white;">
-                    <option value="">Aktive Fragen</option>
-                </select>
-            </div>
-            <div id="questionnaireForm"></div>
-            <div class="actions"><button class="btn btn-success" id="saveQuestionnaireBtn"><i class=lc-i-save></i> Antworten speichern</button></div>
-        </div>
 
     </div>
 
@@ -1611,7 +1621,7 @@
                 <div class="detail-section"><div class="label">Adresse</div><div class="value" id="detailAddress">—</div></div>
                 <div class="detail-section"><div class="label">USt-IdNr.</div><div class="value" id="detailVatId">—</div></div>
                 <div class="detail-section"><div class="label">Interessensgebiete</div><div class="value" id="detailInterests">—</div></div>
-                <div class="detail-section"><div class="label">Besuchertyp</div><div class="value" id="detailVisitorType">—</div></div>
+                <div class="detail-section"><div class="label">Tags / Herkunft</div><div id="detailTags"></div></div>
                 <div class="detail-section"><div class="label">Erfasst am</div><div class="value" id="detailCreated">—</div></div>
                 <div class="detail-actions">
                     <button class="btn btn-phone" id="detailPhoneBtn"><i class=lc-i-phone></i> Anrufen</button>
@@ -1625,17 +1635,7 @@
                 <div id="detailEditMode" style="display:none; margin-top:16px; border-top:1px solid #EDF1F6; padding-top:16px;">
                     <h4 style="font-size:14px; margin-bottom:8px;"><i class=lc-i-edit></i> Lead bearbeiten</h4>
                     <div class="form-grid">
-                        <div class="form-group"><label>Titel</label><input type="text" id="editTitle"></div>
-                        <div class="form-group"><label>Besuchertyp</label>
-                            <select id="editVisitorType">
-                                <option value="">Bitte wählen...</option>
-                                <option value="Entscheider">Entscheider</option>
-                                <option value="Fachbesucher">Fachbesucher</option>
-                                <option value="Student">Student</option>
-                                <option value="Presse">Presse</option>
-                                <option value="Sonstiges">Sonstiges</option>
-                            </select>
-                        </div>
+                        <div class="form-group full"><label>Titel</label><input type="text" id="editTitle"></div>
                         <div class="form-group"><label>Vorname</label><input type="text" id="editFirstName"></div>
                         <div class="form-group"><label>Nachname</label><input type="text" id="editLastName"></div>
                         <div class="form-group full"><label>Firma</label><input type="text" id="editCompany"></div>
@@ -1658,8 +1658,17 @@
                             <div class="prio-eingabe" id="prioEingabeEdit"></div>
                         </div>
                     </div>
+                    <div class="form-group full"><label>Tags / Herkunft</label><div id="editTagPicker"></div></div>
                     <div class="actions"><button class="btn btn-success" id="saveEditBtn"><i class=lc-i-save></i> Speichern</button><button class="btn btn-secondary" id="cancelEditBtn">Abbrechen</button></div>
                 </div>
+                <section id="detailQuestionSection" class="detail-section" hidden>
+                    <h3>Fragebogen</h3>
+                    <label for="leadTemplateSelect">Vorlage</label>
+                    <select id="leadTemplateSelect" aria-describedby="detailQuestionStatus"><option value="">Fragebogen auswählen …</option></select>
+                    <div id="questionnaireForm"></div>
+                    <p id="detailQuestionStatus" role="status" aria-live="polite"></p>
+                    <button type="button" class="btn btn-success" id="saveQuestionnaireBtn">Antworten speichern</button>
+                </section>
             </div>
         </div>
     </div>
@@ -2302,7 +2311,7 @@ const actionHandlers = {
     navigate: target => target.adresse ? openMaps(target.adresse) : openMaps(target.lat, target.lon),
     contact: id => kontaktUebernehmen(id),
     details: id => openLeadDetail(id),
-    questionnaire: id => openLeadQuestionnaire(id),
+    teamLeads: (id, name) => showTeamUserLeads(id, name),
     deleteLead: id => confirmDeleteLead(id),
     history: id => openLeadHistory(id),
     contactHistory: id => openContactHistory(id),
@@ -2569,6 +2578,8 @@ function resetSessionView() {
     refreshPromise = null; recoveryPromise = null; lastRecovery = 0;
     connectionNotice();
     allLeads = []; currentLeadDetail = null;
+    searchTags = []; searchOwner = null; editTags = []; detailQuestionState = null; detailQuestionGeneration++;
+    document.getElementById('searchOwnerFilter').hidden = true; refreshTagFilters();
     calAppointments = []; calTodos = []; calCounts = {}; calTodoCounts = {};
     teamUsers = []; goalStats = null; selectedUserIds = null; statsUsers = [];
     questionTemplate = []; templates = {}; templateRecords = [];
@@ -2665,6 +2676,7 @@ function filterLeads(leads, term) {
             lead.website || '', lead.linkedin || '', lead.vat_id || '',
             lead.street || '', lead.zip || '', lead.city || '', lead.state || '', lead.country || '',
             lead.visitor_type || '',
+            (lead.tags || []).join(' '),
             Array.isArray(lead.interests) ? lead.interests.join(' ') : '',
             ...Object.values(lead.questionnaire || {}).map(v => String(v))
         ];
@@ -2736,7 +2748,6 @@ function leadActionsHtml(lead) {
         <button class="lq-icon" ${target ? actionAttrs('navigate', target) : 'disabled'} title="${escapeHtml(target?.adresse || 'Route anzeigen')}"><i class=lc-i-pin></i></button>
     </div><div class="actions">
         <button class="edit" ${actionAttrs('details', id)}><i class=lc-i-edit></i> Details</button>
-        <button class="questionnaire" ${actionAttrs('questionnaire', id)}><i class=lc-i-form></i> Fragebogen</button>
         <button class="delete" ${actionAttrs('deleteLead', id)}><i class=lc-i-trash></i> Löschen</button>
     </div>`;
 }
@@ -2862,7 +2873,7 @@ async function prioritaetSetzen(leadId, wert) {
     }
 }
 
-function leadCardHtml(lead, highlight, term = '') {
+function leadCardHtml(lead, highlight, term = '', showCreator = false) {
     const name = `${lead.title ? highlight(lead.title) + ' ' : ''}${highlight(lead.first_name)} ${highlight(lead.last_name)}`.trim();
     const versteckt = verstecktenTrefferFinden(lead, term);
     const kontaktName = `${lead.first_name || ''} ${lead.last_name || ''}`.trim();
@@ -2880,7 +2891,8 @@ function leadCardHtml(lead, highlight, term = '') {
             <div class="details">${lead.position ? highlight(lead.position) : 'Keine Position'} ${lead.email ? '· <i class=lc-i-mail></i> ' + highlight(lead.email) : ''} ${lead.phone ? '· <i class=lc-i-phone></i> ' + highlight(lead.phone) : ''}</div>
             ${lead.city ? `<div class="details"><i class=lc-i-pin></i> ${highlight(lead.city)}${lead.country ? ', ' + highlight(lead.country) : ''}</div>` : ''}
             ${versteckt ? `<div class="match-hint"><i class=lc-i-search></i> Treffer in ${highlight(versteckt)}</div>` : ''}
-            <div class="meta"><i class=lc-i-clock></i> ${lead.created_at ? new Date(lead.created_at).toLocaleString() : ''}</div>
+            ${leadTagHtml(lead)}
+            <div class="meta"><span><i class=lc-i-clock></i> ${lead.created_at ? new Date(lead.created_at).toLocaleString() : ''}</span>${showCreator ? creatorMetaHtml(lead) : ''}</div>
             ${leadActionsHtml(lead)}
         </div>`;
 }
@@ -2956,7 +2968,7 @@ function applyLeadsHistogramFilter(leads) {
     const sorted = sortLeads(filtered, 'date_desc');
     leadsList.innerHTML = sorted.length === 0
         ? '<div class="empty-leads"><i class=lc-i-inbox></i> Keine Leads in diesem Zeitraum</div>'
-        : sorted.map(lead => leadCardHtml(lead, highlight, '')).join('');
+        : sorted.map(lead => leadCardHtml(lead, highlight, '', true)).join('');
 }
 
 function showLeadsForBar(item, view) {
@@ -2991,7 +3003,8 @@ function renderSearchResults() {
     }
 
     const term = currentSearchTerm;
-    const filtered = term ? filterLeads(allLeads, term) : allLeads;
+    const scoped = filterSearchScope(allLeads);
+    const filtered = term ? filterLeads(scoped, term) : scoped;
     const sorted = sortLeads(filtered, sortSelect.value);
     const highlight = makeHighlighter(term);
 
@@ -3010,7 +3023,7 @@ function buildCompanyList(term) {
     const t = term.trim().toLowerCase();
     const byKey = new Map();
 
-    allLeads.forEach(l => {
+    filterSearchScope(allLeads).forEach(l => {
         const name = (l.company || '').trim();
         if (!name) return;
         if (t && !name.toLowerCase().includes(t)) return;
@@ -3073,6 +3086,7 @@ async function loadLeads() {
         const result = await response.json();
         if (result.success) {
             allLeads = result.data;
+            refreshTagFilters();
             displayLeads(allLeads);
             renderSearchResults();
         }
@@ -3090,6 +3104,7 @@ async function runSearch(term) {
         const result = await response.json();
         if (result.success) {
             allLeads = result.data;
+            refreshTagFilters();
             renderSearchResults();
         }
     } catch (error) { console.error(error); }
@@ -3145,7 +3160,7 @@ sortSelect.addEventListener('change', renderSearchResults);
 // ============================================================
 const detailOverlay = document.getElementById('leadDetailOverlay');
 
-function openLeadDetail(leadId) {
+function openLeadDetail(leadId, preserveQuestions = false) {
     const lead = allLeads.find(l => l.id === leadId);
     if (!lead) return;
     currentLeadDetail = lead;
@@ -3175,7 +3190,8 @@ function openLeadDetail(leadId) {
 
     document.getElementById('detailVatId').textContent = lead.vat_id || '—';
     document.getElementById('detailInterests').textContent = lead.interests?.length ? lead.interests.join(', ') : '—';
-    document.getElementById('detailVisitorType').textContent = lead.visitor_type || '—';
+    document.getElementById('detailTags').innerHTML = leadTagHtml(lead) || '—';
+    if (!preserveQuestions) openDetailQuestions(lead);
     document.getElementById('detailCreated').textContent = lead.created_at ? new Date(lead.created_at).toLocaleString() : '—';
 
     // Bei zwei Nummern nachfragen, bei einer direkt wählen
@@ -3228,7 +3244,8 @@ function openLeadDetail(leadId) {
         set('editInterests', lead.interests?.join(', '));
         prioFormular.edit = lead.priority || null;
         prioEingabeZeichnen('edit');
-        set('editVisitorType', lead.visitor_type);
+        editTags = [...(lead.tags || [])];
+        renderTagPicker('editTagPicker', editTags, () => {});
     };
 
     document.getElementById('saveEditBtn').onclick = async () => {
@@ -3255,7 +3272,8 @@ function openLeadDetail(leadId) {
             },
             interests: val('editInterests').split(',').map(s => s.trim()).filter(Boolean),
             priority: prioFormular.edit,
-            visitorType: val('editVisitorType')
+            visitorType: lead.visitor_type || '',
+            tags: [...editTags]
         };
         try {
             const res = await apiRequest(`/leads/${lead.id}`, { method: 'PUT', body: JSON.stringify({ lead: updated }) });
@@ -3263,7 +3281,7 @@ function openLeadDetail(leadId) {
             await loadLeads();
             document.getElementById('detailEditMode').style.display = 'none';
             document.getElementById('detailEditBtn').style.display = 'block';
-            openLeadDetail(lead.id);
+            openLeadDetail(lead.id, true);
             alert(result.geocoding
                 ? 'Lead aktualisiert! Die neue Adresse wird im Hintergrund verortet.'
                 : 'Lead aktualisiert!');
@@ -3363,6 +3381,7 @@ function fillForm(data) {
 
 function collectFormLead() {
     return {
+        tags: [...captureTags],
         title: fields.title.value.trim(),
         firstName: fields.firstName.value.trim(),
         lastName: fields.lastName.value.trim(),
@@ -3388,6 +3407,7 @@ function collectFormLead() {
 }
 
 function clearForm() {
+    captureTags = []; renderTagPicker('captureTagPicker', captureTags, () => {});
     Object.values(fields).forEach(f => f.value = '');
     previewContainer.style.display = 'none';
     previewImage.src = '';
@@ -4875,6 +4895,8 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
 
     try {
         if (Object.keys(answers).length) leadData.questionnaire = answers;
+        const selectedTemplate = captureQuestionTemplate();
+        if (selectedTemplate) leadData.questionnaireTemplate = selectedTemplate;
         const gespeichert = await leadSpeichernMitDuplikatCheck(leadData);
         if (!gespeichert) {
             // Nutzer hat den Duplikat-Dialog abgebrochen - Formular
@@ -5413,86 +5435,193 @@ document.getElementById('resetQuestionnaireBtn').addEventListener('click', () =>
 let currentLeadId = null;
 let currentLeadAnswers = {};
 const leadTemplateSelect = document.getElementById('leadTemplateSelect');
-
+// Herkunfts-Tags: reusable tenant vocabulary comes only from accessible leads.
+let captureTags = [], editTags = [], searchTags = [], searchOwner = null;
+let detailQuestionState = null, detailQuestionGeneration = 0;
+function tagKey(tag) { return String(tag).trim().replace(/\s+/g, ' ').toLocaleLowerCase('de'); }
+function knownLeadTags() {
+    const found = new Map();
+    for (const lead of allLeads) for (const tag of lead.tags || []) if (!found.has(tagKey(tag))) found.set(tagKey(tag), tag);
+    return [...found.values()].sort((a, b) => a.localeCompare(b, 'de'));
+}
+function renderTagPicker(id, values, changed, filter = false) {
+    const host = document.getElementById(id);
+    if (!host) return;
+    host.replaceChildren();
+    const chips = document.createElement('div'); chips.className = 'tag-chips';
+    values.forEach(tag => {
+        const chip = document.createElement('button'); chip.type = 'button'; chip.className = 'tag-chip';
+        chip.textContent = tag + ' ×'; chip.setAttribute('aria-label', tag + ' entfernen');
+        chip.onclick = () => { values.splice(values.indexOf(tag), 1); renderTagPicker(id, values, changed, filter); changed(); };
+        chips.appendChild(chip);
+    });
+    const add = document.createElement('button'); add.type = 'button'; add.className = 'tag-add';
+    add.textContent = filter ? '+ Tag filtern' : '+ Tag'; add.setAttribute('aria-expanded', 'false'); chips.appendChild(add);
+    const panel = document.createElement('div'); panel.className = 'tag-picker'; panel.hidden = true;
+    const input = document.createElement('input'); input.type = 'text'; input.maxLength = 60;
+    input.placeholder = filter ? 'Tag suchen …' : 'Messe oder Kanal, z. B. VISION 2026';
+    input.setAttribute('aria-label', filter ? 'Tags durchsuchen' : 'Tag suchen oder anlegen');
+    const options = document.createElement('div'); options.className = 'tag-options';
+    const note = document.createElement('p'); note.setAttribute('role', 'status');
+    const choose = tag => {
+        if (values.length >= 20) { note.textContent = 'Maximal 20 Tags pro Lead.'; return; }
+        if (!values.some(v => tagKey(v) === tagKey(tag))) values.push(tag);
+        renderTagPicker(id, values, changed, filter); changed();
+        host.querySelector('.tag-add')?.focus();
+    };
+    const showOptions = () => {
+        options.replaceChildren(); note.textContent = '';
+        const value = input.value.trim().replace(/\s+/g, ' '), vocabulary = knownLeadTags();
+        const matches = vocabulary.filter(t => !values.some(v => tagKey(v) === tagKey(t)) && tagKey(t).includes(tagKey(value)));
+        matches.slice(0, 12).forEach(tag => {
+            const b = document.createElement('button'); b.type = 'button'; b.textContent = tag; b.onclick = () => choose(tag); options.appendChild(b);
+        });
+        if (!filter && value && ![...vocabulary, ...values].some(t => tagKey(t) === tagKey(value))) {
+            const create = document.createElement('button'); create.type = 'button'; create.textContent = `+ „${value}“ anlegen`; create.onclick = () => choose(value); options.appendChild(create);
+        }
+        if (!options.children.length) note.textContent = filter ? 'Keine passenden Tags vorhanden.' : 'Messe oder Kanal eingeben, um einen Tag anzulegen.';
+    };
+    input.addEventListener('input', showOptions);
+    input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); options.querySelector('button')?.click(); }
+        if (e.key === 'Escape') { e.preventDefault(); panel.hidden = true; add.setAttribute('aria-expanded', 'false'); add.focus(); }
+    });
+    add.onclick = () => { panel.hidden = !panel.hidden; add.setAttribute('aria-expanded', String(!panel.hidden)); if (!panel.hidden) { showOptions(); input.focus(); } };
+    const close = document.createElement('button'); close.type = 'button'; close.textContent = 'Fertig'; close.onclick = () => { panel.hidden = true; add.setAttribute('aria-expanded', 'false'); add.focus(); };
+    panel.append(input, options, note, close); host.append(chips, panel);
+}
+function refreshTagFilters() { renderTagPicker('searchTagPicker', searchTags, () => { searchActive = true; renderSearchResults(); }, true); }
+function filterSearchScope(leads) {
+    return leads.filter(l => (!searchOwner || l.created_by === searchOwner.id) && searchTags.every(tag => (l.tags || []).some(t => tagKey(t) === tagKey(tag))));
+}
+function leadTagHtml(lead) {
+    return (lead.tags || []).length ? `<div class="tag-chips lead-tags">${lead.tags.map(t => `<span class="tag-chip">${escapeHtml(t)}</span>`).join('')}</div>` : '';
+}
+function creatorMetaHtml(lead) {
+    if (statsUsers.length <= 1) return '';
+    const user = statsUsers.find(u => u.id === lead.created_by);
+    const name = user?.name || 'Ohne Zuordnung';
+    return `<span class="lead-creator" title="${escapeHtml('Erfasst von: ' + name)}"><i class=lc-i-user></i> ${escapeHtml(name)}</span>`;
+}
+async function showTeamUserLeads(id, name) {
+    searchOwner = { id, name }; searchTags = []; searchMode = 'all'; currentSearchTerm = ''; searchInput.value = ''; searchActive = true;
+    document.querySelectorAll('.smt-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === 'all'));
+    refreshTagFilters(); showView('search');
+    const marker = document.getElementById('searchOwnerFilter'); marker.hidden = false;
+    document.getElementById('searchOwnerName').textContent = 'Erfasst von: ' + name;
+    await loadLeads(); renderSearchResults();
+}
+function captureQuestionTemplate() {
+    const choice = scanTemplateSelect.value;
+    if (!choice || !scanQuestions.length) return null;
+    const record = templateRecords.find(t => t.name === choice);
+    return { id: record?.id || '', name: record?.name || 'Aktuelle Fragen', questions: JSON.parse(JSON.stringify(scanQuestions)) };
+}
+function resolveLeadQuestions(lead, records) {
+    if (lead.questionnaire_template?.questions?.length) return lead.questionnaire_template;
+    const ids = Object.keys(lead.questionnaire || {});
+    if (!ids.length) return null;
+    const matching = records.filter(t => (t.questions || []).some(q => ids.includes(q.id)));
+    if (!matching.length) return { id: '', name: 'Gespeicherte Antworten', questions: ids.map(id => ({ id, label: id, type: 'text' })) };
+    const questions = new Map();
+    for (const t of matching) for (const q of t.questions) if (!questions.has(q.id)) questions.set(q.id, q);
+    return { id: matching.length === 1 ? matching[0].id : '', name: matching.length === 1 ? matching[0].name : 'Bisherige Fragebögen', questions: [...questions.values()] };
+}
+async function openDetailQuestions(lead) {
+    const generation = ++detailQuestionGeneration, session = authGeneration;
+    const section = document.getElementById('detailQuestionSection'); section.hidden = !hasFeature('questionnaire');
+    detailQuestionState = null;
+    if (section.hidden) return;
+    document.getElementById('questionnaireForm').replaceChildren();
+    const status = document.getElementById('detailQuestionStatus'); status.textContent = 'Fragebogen wird geladen …';
+    document.getElementById('saveQuestionnaireBtn').disabled = true; leadTemplateSelect.disabled = true;
+    try {
+        const [response, records] = await Promise.all([apiRequest(`/questionnaire/${encodeURIComponent(lead.id)}`), fetchQuestionnaireTemplates()]);
+        const result = await response.json(); if (!result.success) throw new Error(result.error || 'Fragebogen konnte nicht geladen werden.');
+        if (generation !== detailQuestionGeneration || session !== authGeneration) return;
+        const source = { ...lead, questionnaire: result.data.answers || {}, questionnaire_template: result.data.template || lead.questionnaire_template };
+        const saved = resolveLeadQuestions(source, records);
+        detailQuestionState = { leadId: lead.id, records, template: saved, saved, answers: { ...source.questionnaire }, saving: false };
+        currentLeadId = lead.id; currentLeadAnswers = detailQuestionState.answers;
+        updateLeadTemplateSelect(); renderLeadQuestionnaire(); status.textContent = '';
+        leadTemplateSelect.disabled = false;
+    } catch (error) {
+        if (generation !== detailQuestionGeneration || session !== authGeneration) return;
+        status.textContent = 'Fragebogen nicht geladen: ' + error.message;
+        const retry = document.createElement('button'); retry.type = 'button'; retry.textContent = 'Erneut versuchen'; retry.onclick = () => openDetailQuestions(lead); status.appendChild(retry);
+    }
+}
 function updateLeadTemplateSelect() {
-    if (!leadTemplateSelect) return;
-    const current = leadTemplateSelect.value;
-    leadTemplateSelect.innerHTML = '<option value="__active__">Aktuelle Fragen</option>';
-    Object.keys(templates).forEach(name => {
-        const opt = document.createElement('option');
-        opt.value = name;
-        opt.textContent = `${name} (${templates[name].length} Fragen)`;
-        leadTemplateSelect.appendChild(opt);
-    });
-    if (current && Array.from(leadTemplateSelect.options).some(o => o.value === current)) {
-        leadTemplateSelect.value = current;
+    if (!leadTemplateSelect || !detailQuestionState) return;
+    leadTemplateSelect.replaceChildren();
+    const option = (value, text) => { const o = document.createElement('option'); o.value = value; o.textContent = text; leadTemplateSelect.appendChild(o); };
+    option('', 'Fragebogen auswählen …');
+    if (detailQuestionState.saved) option('__saved__', detailQuestionState.saved.name + ' · gespeicherter Stand');
+    detailQuestionState.records.forEach(t => option(t.id, t.name));
+    leadTemplateSelect.value = detailQuestionState.template === detailQuestionState.saved && detailQuestionState.saved ? '__saved__' : detailQuestionState.template?.id || '';
+}
+function questionsForLeadView() { return detailQuestionState?.template?.questions || []; }
+function collectDetailAnswers() {
+    if (!detailQuestionState) return;
+    document.querySelectorAll('#questionnaireForm [data-question-id]').forEach(el => { detailQuestionState.answers[el.dataset.questionId] = el.value; });
+}
+function detailQuestionsWithHistory(state) {
+    const questions = [...questionsForLeadView()];
+    for (const id of Object.keys(state.answers)) if (!questions.some(q => q.id === id)) {
+        const known = (state.saved?.questions || []).find(q => q.id === id) || state.records.flatMap(t => t.questions || []).find(q => q.id === id);
+        questions.push(known || { id, label: 'Bisherige Antwort: ' + id, type: 'text' });
     }
+    return questions;
 }
-
-function questionsForLeadView() {
-    const choice = leadTemplateSelect?.value || '__active__';
-    return choice === '__active__' ? getActiveQuestions() : (templates[choice] || []);
-}
-
-async function openLeadQuestionnaire(leadId) {
-    currentLeadId = leadId;
-    await loadTemplates();
-    updateLeadTemplateSelect();
-    showView('lead-questionnaire');
-    try {
-        const response = await apiRequest(`/questionnaire/${leadId}`);
-        const result = await response.json();
-        if (result.success) {
-            document.getElementById('questionnaireLeadName').textContent = result.data.leadName || 'Unbekannt';
-            currentLeadAnswers = result.data.answers || {};
-            renderLeadQuestionnaire();
-        }
-    } catch (error) { alert('Fehler: ' + error.message); }
-}
-
 function renderLeadQuestionnaire() {
-    const container = document.getElementById('questionnaireForm');
-    const questions = questionsForLeadView();
-    const answers = currentLeadAnswers || {};
-
-    if (questions.length === 0) {
-        container.innerHTML = '<div style="color:#8B98A6; text-align:center; padding:20px;">Keine Fragen definiert. Lege sie unter <i class=lc-i-form></i> Fragebogen an oder wähle oben eine Vorlage.</div>';
-        return;
-    }
-    container.innerHTML = questions.map(q => {
-        const val = answers[q.id] || '';
-        const fieldId = `q_${escapeHtml(q.id)}`;
-        let field;
+    const container = document.getElementById('questionnaireForm'); container.replaceChildren();
+    const state = detailQuestionState; if (!state) return;
+    const questions = detailQuestionsWithHistory(state);
+    questions.forEach((q, index) => {
+        const wrap = document.createElement('div'); wrap.className = 'questionnaire-answer';
+        const label = document.createElement('label'); label.textContent = q.label; label.htmlFor = 'detailq_' + index;
+        const value = String(state.answers[q.id] ?? '');
+        const input = document.createElement(q.type === 'select' ? 'select' : 'textarea');
+        input.id = label.htmlFor; input.dataset.questionId = q.id;
         if (q.type === 'select') {
-            const opts = (q.options || []).map(o =>
-                `<option value="${escapeHtml(o)}"${o === val ? ' selected' : ''}>${escapeHtml(o)}</option>`
-            ).join('');
-            field = `<select id="${fieldId}"><option value="">Bitte wählen...</option>${opts}</select>`;
-        } else {
-            field = `<input type="text" id="${fieldId}" value="${escapeHtml(val)}">`;
-        }
-        return `<div class="questionnaire-answer"><label>${escapeHtml(q.label)}</label>${field}</div>`;
-    }).join('');
+            const options = ['', ...(q.options || [])]; if (value && !options.includes(value)) options.push(value);
+            options.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v || 'Bitte wählen …'; input.appendChild(o); });
+        } else input.rows = 2;
+        input.value = value; input.disabled = state.saving; input.addEventListener('input', collectDetailAnswers);
+        wrap.append(label, input); container.appendChild(wrap);
+    });
+    if (!questions.length) {
+        const hint = document.createElement('p'); hint.textContent = state.records.length ? 'Wähle einen Fragebogen, um ihn hier auszufüllen.' : 'Noch keine Vorlage vorhanden. Unter „Fragebogen“ kannst du eine anlegen.'; container.appendChild(hint);
+    }
+    document.getElementById('saveQuestionnaireBtn').disabled = state.saving || (!state.template && !questions.length);
+}
+async function saveDetailQuestionnaire() {
+    const state = detailQuestionState, session = authGeneration;
+    if (!state || state.saving) return;
+    collectDetailAnswers(); state.saving = true; renderLeadQuestionnaire(); leadTemplateSelect.disabled = true;
+    const status = document.getElementById('detailQuestionStatus'); status.textContent = 'Antworten werden gespeichert …';
+    try {
+        const questions = detailQuestionsWithHistory(state);
+        const snapshot = state.template ? { ...state.template, questions } : questions.length ? { id: '', name: 'Gespeicherte Antworten', questions } : null;
+        const res = await apiRequest(`/questionnaire/${encodeURIComponent(state.leadId)}`, { method: 'POST', body: JSON.stringify({ answers: state.answers, template: snapshot }) });
+        const result = await res.json(); if (!result.success) throw new Error(result.error || 'Speichern fehlgeschlagen.');
+        if (session !== authGeneration) return;
+        allLeads = allLeads.map(l => l.id === state.leadId ? result.data : l);
+        displayLeads(allLeads); renderSearchResults();
+        if (detailQuestionState !== state) return;
+        state.template = state.saved = snapshot; updateLeadTemplateSelect(); status.textContent = 'Fragebogen gespeichert.';
+    } catch (error) { if (detailQuestionState === state && session === authGeneration) status.textContent = 'Speichern fehlgeschlagen: ' + error.message; }
+    finally { state.saving = false; if (detailQuestionState === state && session === authGeneration) { renderLeadQuestionnaire(); leadTemplateSelect.disabled = false; } }
 }
 
-leadTemplateSelect?.addEventListener('change', renderLeadQuestionnaire);
-
-document.getElementById('saveQuestionnaireBtn').addEventListener('click', async () => {
-    if (!currentLeadId) { alert('Kein Lead.'); return; }
-    const questions = questionsForLeadView();
-    // Bestehende Antworten erhalten, auch wenn eine andere Vorlage gewählt wurde
-    const answers = { ...currentLeadAnswers };
-    questions.forEach(q => {
-        const el = document.getElementById(`q_${q.id}`);
-        if (el) answers[q.id] = el.value;
-    });
-    try {
-        await apiRequest(`/questionnaire/${currentLeadId}`, { method: 'POST', body: JSON.stringify({ answers }) });
-        await loadLeads();
-        showView('main');
-        alert('Fragebogen gespeichert!');
-    } catch (error) { alert('Fehler: ' + error.message); }
+leadTemplateSelect.addEventListener('change', () => {
+    if (!detailQuestionState) return;
+    collectDetailAnswers();
+    detailQuestionState.template = leadTemplateSelect.value === '__saved__' ? detailQuestionState.saved : detailQuestionState.records.find(t => t.id === leadTemplateSelect.value) || null;
+    renderLeadQuestionnaire();
 });
+document.getElementById('saveQuestionnaireBtn').addEventListener('click', saveDetailQuestionnaire);
+document.getElementById('clearOwnerFilter').addEventListener('click', () => { searchOwner = null; document.getElementById('searchOwnerFilter').hidden = true; renderSearchResults(); });
 
 // ============================================================
 // 18. HISTOGRAMM
@@ -7158,7 +7287,7 @@ async function loadTeamStats() {
             : r.proNutzer.map(p => `
                 <div class="tm-row">
                     <div class="tm-head">
-                        <span class="tm-name">${escapeHtml(p.name)}</span>
+                        <button type="button" class="tm-name tm-lead-link" ${actionAttrs('teamLeads', p.userId, p.name)} title="Leads dieses Nutzers anzeigen">${escapeHtml(p.name)} <span aria-hidden="true">→</span></button>
                         <span class="tm-role ${p.isActive ? (p.role === 'admin' ? '' : 'member') : 'off'}">${
                             p.isActive ? (p.role === 'admin' ? 'Admin' : 'Mitarbeiter') : 'inaktiv'}</span>
                     </div>
@@ -7212,7 +7341,7 @@ async function loadTeamUsers() {
             return `
             <div class="tm-row">
                 <div class="tm-head">
-                    <span class="tm-name">${escapeHtml(name)}${selbst ? ' (Sie)' : ''}</span>
+                    <button type="button" class="tm-name tm-lead-link" ${actionAttrs('teamLeads', u.id, name)} title="Leads dieses Nutzers anzeigen">${escapeHtml(name)}${selbst ? ' (Sie)' : ''} <span aria-hidden="true">→</span></button>
                     <span class="tm-role ${u.is_active ? (u.role === 'admin' ? '' : 'member') : 'off'}">${
                         u.is_active ? (u.role === 'admin' ? 'Admin' : 'Mitarbeiter') : 'inaktiv'}</span>
                 </div>
@@ -7802,6 +7931,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadCachedFeatures();
     prioEingabeZeichnen('scan');
     prioEingabeZeichnen('edit');
+    renderTagPicker('captureTagPicker', captureTags, () => {}); refreshTagFilters();
     const user = getUser();
     if (user && getToken()) showApp(user);
     else showLogin();
@@ -7810,5 +7940,6 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
