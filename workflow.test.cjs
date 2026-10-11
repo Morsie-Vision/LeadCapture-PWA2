@@ -17,6 +17,7 @@ function context() {
     const c = vm.createContext({ console, document: { getElementById:get, createElement:tag=>new Element(tag), querySelectorAll:s=>s.startsWith('#questionnaireForm') ? get('questionnaireForm').querySelectorAll('[data-question-id]') : [] }, encodeURIComponent, structuredClone });
     vm.runInContext("let allLeads=[], statsUsers=[], authGeneration=1, currentLeadId=null, currentLeadAnswers={}; const leadTemplateSelect=document.getElementById('leadTemplateSelect'); const scanTemplateSelect={value:''}; let scanQuestions=[],templateRecords=[]; let searchActive=false,currentSearchTerm='',searchMode='all';const searchInput={value:''}; function hasFeature(){return true} function displayLeads(){} function renderSearchResults(){} function showView(){} async function loadLeads(){}", c);
     vm.runInContext(fn('escapeHtml'), c);
+    vm.runInContext(fn('detailQuestionFingerprint'), c);
     vm.runInContext(html.slice(html.indexOf('// Herkunfts-Tags:'), html.indexOf("leadTemplateSelect.addEventListener('change'", html.indexOf('// Herkunfts-Tags:'))), c);
     return { c, get, run:s=>vm.runInContext(s,c) };
 }

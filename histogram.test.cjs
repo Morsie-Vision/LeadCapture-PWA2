@@ -20,6 +20,7 @@ function setup() {
   leadsCount:element('leadsCount'),leadsList:element('leadsList'),histogram:element('histogram'),histogramEmpty:element('histogramEmpty'),
   histogramYear:{value:'alle'},histogramView:{value:'day'},
   makeHighlighter:()=>x=>x,sortLeads:x=>x,leadCardHtml:l=>`<article>${l.id}</article>`,
+  refreshTagFilters(){},reportConnectionError(error){throw error},
   renderUserFilter(){},syncYearOptions(){},userFilterParam:()=>'',renderSearchResults(){},
   apiRequest:async path=>({json:async()=> path==='/leads'?{success:true,data:leads}:{success:true,data,leadIdsByDate:buckets}})
  };
