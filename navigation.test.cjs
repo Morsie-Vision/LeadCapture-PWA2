@@ -4,7 +4,7 @@ const html = fs.readFileSync(__dirname + '/index.html', 'utf8');
 for (const m of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)) new vm.Script(m[1]);
 function setup() {
     const calls = [], handlers = {}, ids = {};
-    const el = id => ids[id] ||= {style:{},classList:{add(){},remove(){}},addEventListener(n,f){handlers[id]=f}};
+    const el = id => ids[id] ||= {style:{},classList:{add(){},remove(){},contains(){return false}},addEventListener(n,f){handlers[id]=f}};
     const views = ['scan','search','questionnaire','stats','calendar','team','map'];
     const c = vm.createContext({window:{scrollY:120,scrollTo:(x,y)=>calls.push(['scroll',y])},requestAnimationFrame:fn=>fn(),document:{getElementById:id=>id.startsWith('view-')&&!views.includes(id.slice(5))?null:el(id),querySelectorAll:s=>s==='.back'?[el('back')]:[],querySelector:()=>({click:()=>calls.push(['teamTabReset'])})},hasFeature:()=>true,renderDashboard:()=>calls.push(['dashboard']),initMap:()=>calls.push(['map']),loadMapData:()=>calls.push(['mapData']),loadHistogram:()=>calls.push(['histogram']),loadCalendar:()=>calls.push(['calendar']),loadTemplates:async()=>calls.push(['templates']),loadActiveTemplate(){},updateScanTemplateSelect(){},mapInstance:{invalidateSize:()=>calls.push(['mapSize'])}});
     vm.runInContext(html.slice(html.indexOf("let currentViewId = 'main';"),html.indexOf('// 8. APP ANZEIGEN / LOGOUT')),c);

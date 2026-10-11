@@ -1608,6 +1608,15 @@
 
     </div>
 
+    <dialog id="leadExitDialog" aria-labelledby="leadExitTitle" style="margin:auto; padding:24px; border:1px solid #DCE3EB; border-radius:16px; max-width:calc(100% - 32px); color:#0B1F33;">
+        <h3 id="leadExitTitle">Änderungen speichern?</h3>
+        <form method="dialog" class="actions" style="margin-top:20px; flex-wrap:wrap;">
+            <button class="btn btn-success" value="save">Speichern</button>
+            <button class="btn btn-secondary" value="discard">Nicht speichern</button>
+            <button class="btn btn-secondary" value="cancel" autofocus>Abbrechen</button>
+        </form>
+    </dialog>
+
     <!-- LEAD DETAIL MODAL -->
     <div id="leadDetailOverlay">
         <div id="leadDetailModal">
@@ -2574,7 +2583,12 @@ document.querySelectorAll('.grid-card').forEach(card => {
 document.querySelectorAll('.back').forEach(btn => {
     btn.addEventListener('click', goBackView);
 });
-document.getElementById('homeBtn')?.addEventListener('click', () => showView('main'));
+document.getElementById('homeBtn')?.addEventListener('click', () => {
+    if (document.getElementById('leadDetailOverlay').classList.contains('active')) {
+        return requestCloseLeadDetail('main');
+    }
+    showView('main');
+});
 document.getElementById('dashboardCalendarBtn')?.addEventListener('click', () => showView('calendar'));
 
 // ============================================================
@@ -3189,6 +3203,49 @@ sortSelect.addEventListener('change', renderSearchResults);
 // 10. LEAD DETAIL
 // ============================================================
 const detailOverlay = document.getElementById('leadDetailOverlay');
+let leadEditSaving = false, leadExitPending = false;
+
+function detailQuestionFingerprint() {
+    if (!detailQuestionState) return '';
+    collectDetailAnswers();
+    return JSON.stringify([detailQuestionState.template, detailQuestionState.answers]);
+}
+
+function askLeadExit() {
+    const dialog = document.getElementById('leadExitDialog');
+    dialog.returnValue = 'cancel';
+    return new Promise(resolve => {
+        dialog.addEventListener('close', () => resolve(dialog.returnValue), { once: true });
+        dialog.showModal();
+    });
+}
+
+async function requestCloseLeadDetail(destination = null) {
+    if (leadExitPending || leadEditSaving || detailQuestionState?.saving) return;
+    leadExitPending = true;
+    const session = authGeneration;
+    try {
+        const editing = document.getElementById('detailEditMode').style.display !== 'none';
+        const questionsChanged = detailQuestionState && detailQuestionFingerprint() !== detailQuestionState.cleanFingerprint;
+        if (editing || questionsChanged) {
+            const choice = await askLeadExit();
+            if (session !== authGeneration || !detailOverlay.classList.contains('active')) return;
+            if (choice !== 'save' && choice !== 'discard') return;
+            if (choice === 'save') {
+                if (editing && !await document.getElementById('saveEditBtn').onclick({ quiet: true })) return;
+                if (questionsChanged && !await saveDetailQuestionnaire()) return;
+            }
+        }
+        if (session !== authGeneration) return;
+        detailOverlay.classList.remove('active');
+        document.getElementById('detailEditMode').style.display = 'none';
+        document.getElementById('detailEditBtn').style.display = 'block';
+        currentLeadDetail = null; editTags = [];
+        detailQuestionGeneration++; detailQuestionState = null;
+        currentLeadId = null; currentLeadAnswers = {};
+        if (destination) showView(destination);
+    } finally { leadExitPending = false; }
+}
 
 function openLeadDetail(leadId, preserveQuestions = false) {
     const lead = allLeads.find(l => l.id === leadId);
@@ -3278,7 +3335,11 @@ function openLeadDetail(leadId, preserveQuestions = false) {
         renderTagPicker('editTagPicker', editTags, () => {});
     };
 
-    document.getElementById('saveEditBtn').onclick = async () => {
+    document.getElementById('saveEditBtn').onclick = async (options = {}) => {
+        if (leadEditSaving) return false;
+        const session = authGeneration;
+        leadEditSaving = true;
+        document.getElementById('saveEditBtn').disabled = true;
         const val = (id) => document.getElementById(id).value.trim();
         const updated = {
             title: val('editTitle'),
@@ -3308,14 +3369,18 @@ function openLeadDetail(leadId, preserveQuestions = false) {
         try {
             const res = await apiRequest(`/leads/${lead.id}`, { method: 'PUT', body: JSON.stringify({ lead: updated }) });
             const result = await res.json();
+            if (!result.success) throw new Error(result.error || 'Speichern fehlgeschlagen.');
             await loadLeads();
+            if (session !== authGeneration) return false;
             document.getElementById('detailEditMode').style.display = 'none';
             document.getElementById('detailEditBtn').style.display = 'block';
             openLeadDetail(lead.id, true);
-            alert(result.geocoding
+            if (!options.quiet) alert(result.geocoding
                 ? 'Lead aktualisiert! Die neue Adresse wird im Hintergrund verortet.'
                 : 'Lead aktualisiert!');
-        } catch (error) { alert('Fehler: ' + error.message); }
+            return true;
+        } catch (error) { alert('Fehler: ' + error.message); return false; }
+        finally { leadEditSaving = false; document.getElementById('saveEditBtn').disabled = false; }
     };
 
     document.getElementById('cancelEditBtn').onclick = () => {
@@ -3333,8 +3398,8 @@ function openLeadDetail(leadId, preserveQuestions = false) {
 
     detailOverlay.classList.add('active');
 }
-document.getElementById('closeLeadDetail').onclick = () => detailOverlay.classList.remove('active');
-detailOverlay.addEventListener('click', (e) => { if (e.target === detailOverlay) detailOverlay.classList.remove('active'); });
+document.getElementById('closeLeadDetail').onclick = () => requestCloseLeadDetail();
+detailOverlay.addEventListener('click', (e) => { if (e.target === detailOverlay) requestCloseLeadDetail(); });
 
 function confirmDeleteLead(id) {
     const lead = allLeads.find(l => l.id === id);
@@ -5574,6 +5639,7 @@ async function openDetailQuestions(lead) {
         detailQuestionState = { leadId: lead.id, records, template: saved, saved, answers: { ...source.questionnaire }, saving: false };
         currentLeadId = lead.id; currentLeadAnswers = detailQuestionState.answers;
         updateLeadTemplateSelect(); renderLeadQuestionnaire(); status.textContent = '';
+        detailQuestionState.cleanFingerprint = detailQuestionFingerprint();
         leadTemplateSelect.disabled = false;
     } catch (error) {
         if (generation !== detailQuestionGeneration || session !== authGeneration) return;
@@ -5640,6 +5706,8 @@ async function saveDetailQuestionnaire() {
         displayLeads(allLeads); renderSearchResults();
         if (detailQuestionState !== state) return;
         state.template = state.saved = snapshot; updateLeadTemplateSelect(); status.textContent = 'Fragebogen gespeichert.';
+        state.cleanFingerprint = detailQuestionFingerprint();
+        return true;
     } catch (error) { if (detailQuestionState === state && session === authGeneration) status.textContent = 'Speichern fehlgeschlagen: ' + error.message; }
     finally { state.saving = false; if (detailQuestionState === state && session === authGeneration) { renderLeadQuestionnaire(); leadTemplateSelect.disabled = false; } }
 }
