@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>LeadCapture – Lizenzverwaltung</title>
+<meta name="theme-color" content="#10151C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="LC Admin">
+<link rel="manifest" href="./admin-manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="./icons/admin-favicon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="./icons/admin-apple-touch-icon.png">
 <style>
     /* ============================================================
        Bewusst anderes Erscheinungsbild als die Kunden-App:
@@ -34,6 +40,8 @@
     .wrap { max-width: 1180px; margin: 0 auto; }
 
     header { margin-bottom: 22px; }
+    .admin-brand { display: flex; align-items: center; gap: 12px; }
+    .admin-logo { width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0; }
     h1 {
         font-size: clamp(19px, 4vw, 25px); font-weight: 650; letter-spacing: -0.02em;
         display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
@@ -183,7 +191,10 @@
 <body>
 <div class="wrap">
     <header>
-        <h1>Lizenzverwaltung <span class="tag">Adminbereich</span></h1>
+        <div class="admin-brand">
+            <img class="admin-logo" src="./icons/admin-icon-192.png" width="48" height="48" alt="LeadCapture Admin">
+            <h1>Lizenzverwaltung <span class="tag">Adminbereich</span></h1>
+        </div>
         <div class="sub" id="sub">Module je Mandant freischalten und Zugänge freigeben.</div>
     </header>
 
